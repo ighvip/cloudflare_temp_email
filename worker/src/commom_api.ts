@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 
-import utils from './utils';
+import utils, { getJsonSetting } from './utils';
 import { CONSTANTS } from './constants';
 import { isS3Enabled } from './mails_api/s3_attachment';
 import { isAnySendMailEnabled } from './common';
@@ -8,9 +8,13 @@ import { getWebhookAttachment } from './open_api/webhook_attachment';
 
 const api = new Hono<HonoCustomType>
 
+// admin editable site settings, saved via generic /admin/config API
+const SITE_SETTINGS_KEY = 'admin-config:site-settings';
+
 api.get('/open_api/settings', async (c) => {
     // check header x-custom-auth
     let needAuth = false;
+    const siteSettings = await getJsonSetting<Record<string, string>>(c, SITE_SETTINGS_KEY) || {};
     const passwords = utils.getPasswords(c);
     if (passwords && passwords.length > 0) {
         const auth = c.req.raw.headers.get("x-custom-auth");
@@ -23,7 +27,7 @@ api.get('/open_api/settings', async (c) => {
     const imapProxyConfig = smtpImapProxyConfig.imap || {};
 
     return c.json({
-        "title": c.env.TITLE,
+        "title": siteSettings.title || c.env.TITLE,
         "announcement": utils.getStringValue(c.env.ANNOUNCEMENT),
         "alwaysShowAnnouncement": utils.getBooleanValue(c.env.ALWAYS_SHOW_ANNOUNCEMENT),
         "prefix": utils.trimLower(c.env.PREFIX),
@@ -43,7 +47,9 @@ api.get('/open_api/settings', async (c) => {
         "enableMailReadStatus": utils.getBooleanValue(c.env.ENABLE_MAIL_READ_STATUS),
         "enableAutoReply": utils.getBooleanValue(c.env.ENABLE_AUTO_REPLY),
         "enableIndexAbout": utils.getBooleanValue(c.env.ENABLE_INDEX_ABOUT),
-        "copyright": c.env.COPYRIGHT,
+        "copyright": siteSettings.copyright || c.env.COPYRIGHT,
+        "siteIntro": siteSettings.intro || "",
+        "siteGuide": siteSettings.guide || "",
         "cfTurnstileSiteKey": c.env.CF_TURNSTILE_SITE_KEY,
         "enableWebhook": utils.getBooleanValue(c.env.ENABLE_WEBHOOK),
         "isS3Enabled": isS3Enabled(c),
@@ -74,5 +80,25 @@ api.get('/open_api/settings', async (c) => {
 })
 
 api.get('/open_api/a/:mail_id/:index/:expires/:signature', getWebhookAttachment)
+
+// public service status, used by homepage status widget
+api.get('/open_api/status', async (c) => {
+    const start = Date.now();
+    let dbOk = false;
+    try {
+        await c.env.DB.prepare('SELECT 1 as ok').first();
+        dbOk = true;
+    } catch (e) {
+        console.error('status db check failed', e);
+    }
+    return c.json({
+        ok: dbOk,
+        db: dbOk,
+        latencyMs: Date.now() - start,
+        version: CONSTANTS.VERSION,
+        domains: utils.getDomains(c),
+        time: new Date().toISOString(),
+    });
+})
 
 export { api }

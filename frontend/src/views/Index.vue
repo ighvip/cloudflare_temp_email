@@ -9,6 +9,7 @@ import { useIsMobile } from '../utils/composables'
 import { FullscreenExitOutlined } from '@vicons/material'
 
 import AddressBar from './index/AddressBar.vue';
+import HomeInfo from './index/HomeInfo.vue';
 import MailBox from '../components/MailBox.vue';
 import SendBox from '../components/SendBox.vue';
 import AutoReply from './index/AutoReply.vue';
@@ -113,6 +114,7 @@ onMounted(() => {
     </div>
     <div v-else>
       <AddressBar />
+      <HomeInfo />
       <n-tabs v-if="settings.address" type="card" v-model:value="indexTab" :placement="globalTabplacement">
         <template #prefix v-if="!isMobile">
           <n-button @click="useSimpleIndex = true" tertiary size="small">

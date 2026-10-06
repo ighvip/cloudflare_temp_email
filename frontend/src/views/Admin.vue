@@ -28,6 +28,7 @@ import Telegram from './admin/Telegram.vue';
 import Webhook from './admin/Webhook.vue';
 import MailWebhook from './admin/MailWebhook.vue';
 import WorkerConfig from './admin/WorkerConfig.vue';
+import SiteSettings from './admin/SiteSettings.vue';
 import IpBlacklistSettings from './admin/IpBlacklistSettings.vue';
 import AiExtractSettings from './admin/AiExtractSettings.vue';
 import RedeemCodes from './admin/RedeemCodes.vue';
@@ -129,6 +130,9 @@ onMounted(async () => {
         <n-tabs key="quick-setup-tabs" type="bar" justify-content="center" animated>
           <n-tab-pane name="database" :tab="t('database')">
             <DatabaseManager />
+          </n-tab-pane>
+          <n-tab-pane name="site_settings" tab="站点设置">
+            <SiteSettings />
           </n-tab-pane>
           <n-tab-pane name="account_settings" :tab="t('mailbox_settings')">
             <AccountSettings />
