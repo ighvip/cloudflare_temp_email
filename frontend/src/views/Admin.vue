@@ -120,6 +120,11 @@ onMounted(async () => {
       </template>
     </n-modal>
     <n-tabs v-if="showAdminPage" type="card" v-model:value="adminTab" :placement="globalTabplacement">
+      <template #suffix>
+        <n-button size="small" type="warning" secondary class="admin-logout-button" @click="showLogoutModal = true">
+          {{ t('logout') }}
+        </n-button>
+      </template>
       <n-tab-pane name="qucickSetup" :tab="t('qucickSetup')">
         <n-tabs key="quick-setup-tabs" type="bar" justify-content="center" animated>
           <n-tab-pane name="database" :tab="t('database')">
@@ -254,5 +259,10 @@ onMounted(async () => {
 .n-pagination {
   margin-top: 10px;
   margin-bottom: 10px;
+}
+
+.admin-logout-button {
+  margin-left: 12px;
+  align-self: center;
 }
 </style>

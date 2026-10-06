@@ -145,3 +145,5 @@ e2e/.e2e-pids
 
 # SMTP/IMAP proxy persisted IMAP flags (local dev / bare-metal runs)
 smtp_proxy_server/data/
+
+worker/dist-dry/

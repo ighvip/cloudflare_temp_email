@@ -7,9 +7,9 @@ import { useIsMobile } from '../utils/composables'
 import {
     DarkModeFilled, LightModeFilled, MenuFilled,
     AdminPanelSettingsFilled, MonitorHeartFilled,
-    KeyboardArrowDownOutlined, OpenInNewOutlined
+    KeyboardArrowDownOutlined
 } from '@vicons/material'
-import { Envelope, GithubAlt, Language, User } from '@vicons/fa'
+import { Envelope, Language, User } from '@vicons/fa'
 
 import { useGlobalState } from '../store'
 import { api } from '../api'
@@ -101,13 +101,6 @@ const changeLocale = async (lang) => {
 
     if (localeSwitched) preferredLocale.value = lang;
 }
-
-const version = import.meta.env.PACKAGE_VERSION ? `v${import.meta.env.PACKAGE_VERSION}` : "";
-const showGithubForCurrentUser = computed(() => {
-    if (!openSettings.value.showGithub) return false;
-    if (openSettings.value.showGithubForUser) return true;
-    return showAdminPage.value;
-});
 
 const menuOptions = computed(() => [
     {
@@ -274,20 +267,6 @@ onMounted(async () => {
                             <n-icon :component="KeyboardArrowDownOutlined" style="margin-left: 4px;" />
                         </n-button>
                     </n-dropdown>
-                    <n-button
-                        v-if="!isMobile && showGithubForCurrentUser"
-                        text
-                        size="small"
-                        class="header-version-button"
-                        tag="a"
-                        target="_blank"
-                        href="https://github.com/dreamhunter2333/cloudflare_temp_email"
-                    >
-                        <template #icon>
-                            <n-icon :component="GithubAlt" />
-                        </template>
-                        {{ version || 'Github' }}
-                    </n-button>
                 </n-space>
             </template>
         </n-page-header>
@@ -302,17 +281,6 @@ onMounted(async () => {
                             <n-icon :component="KeyboardArrowDownOutlined" class="mobile-menu-action-arrow" />
                         </button>
                     </n-dropdown>
-                    <a
-                        v-if="showGithubForCurrentUser"
-                        class="mobile-menu-utility-button"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        href="https://github.com/dreamhunter2333/cloudflare_temp_email"
-                    >
-                        <n-icon :component="GithubAlt" />
-                        <span class="mobile-menu-action-label">{{ version || 'Github' }}</span>
-                        <n-icon :component="OpenInNewOutlined" class="mobile-menu-action-arrow" />
-                    </a>
                 </div>
             </n-drawer-content>
         </n-drawer>
@@ -400,7 +368,7 @@ onMounted(async () => {
 
 .mobile-menu-actions {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr);
     gap: 6px;
     margin-top: 12px;
     padding-top: 12px;
