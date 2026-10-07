@@ -30,12 +30,80 @@ const API_PATHS = [
 ];
 
 const app = new Hono<HonoCustomType>()
+
+// ---- P0 B1: security response headers -------------------------------------
+// IMPORTANT: `about:srcdoc` iframes (mail body viewer) INHERIT the parent CSP,
+// therefore this policy must stay framing-only. Never add script-src /
+// style-src / base-uri / object-src here, incoming mails would stop rendering.
+const SECURITY_HEADERS: Record<string, string> = {
+	'X-Content-Type-Options': 'nosniff',
+	'X-Frame-Options': 'SAMEORIGIN',
+	'Content-Security-Policy': "frame-ancestors 'self'",
+	'Referrer-Policy': 'strict-origin-when-cross-origin',
+	'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=()',
+	'X-Robots-Tag': 'noindex, nofollow, noarchive',
+	'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+}
+
+// registered first so it also wraps ASSETS responses, CORS preflights and
+// error responses produced deeper in the chain
+app.use('/*', async (c, next) => {
+	await next()
+	const current = c.res
+	const headers = new Headers(current.headers)
+	for (const [key, value] of Object.entries(SECURITY_HEADERS)) {
+		headers.set(key, value)
+	}
+	// 1xx / 204 / 205 / 304 must not carry a body
+	const bodyless = current.status < 200 || current.status === 204
+		|| current.status === 205 || current.status === 304
+	c.res = new Response(bodyless ? null : current.body, {
+		status: current.status,
+		statusText: current.statusText,
+		headers,
+	})
+})
+
+// ---- P0 B1: CORS locked to the site origin (+ opt-in allowlist) -----------
+const isTrustedOrigin = (origin: string, allowed: string[]): boolean => {
+	if (allowed.includes(origin)) return true
+	// local development (vite dev server, wrangler dev)
+	return /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)
+}
+
 //cors
-app.use('/*', cors());
+app.use('/*', cors({
+	origin: (origin, c) => {
+		if (!origin) return null
+		const self = new URL(c.req.url).origin
+		if (origin === self) return origin
+		const allowed = getEnvStringList(c.env.CORS_ORIGINS)
+		return isTrustedOrigin(origin, allowed) ? origin : null
+	},
+	allowHeaders: [
+		'Content-Type', 'Authorization', 'Accept-Language',
+		'x-lang', 'x-fingerprint', 'x-custom-auth',
+		'x-admin-auth', 'x-user-token', 'x-user-access-token',
+	],
+	maxAge: 600,
+}))
 // error handler
+// P0 B1: never leak `err.name` / internal details (D1 SQL, stack, file paths).
+// Plain `Error`s carrying short localized user messages still pass through so
+// the UI keeps showing real validation reasons.
+const INTERNAL_ERROR_MARKER = /D1_ERROR|SQLITE_|\bat\s+\w+\s*\(|file:\/\/|node_modules|\.ts:\d+|\.js:\d+|workerd|wrangler/i
+const toPublicErrorMessage = (err: unknown): string | null => {
+	if (!(err instanceof Error)) return null
+	if (err.name !== 'Error') return null
+	const message = (err.message || '').trim()
+	if (!message || message.length > 300) return null
+	if (INTERNAL_ERROR_MARKER.test(message)) return null
+	return message
+}
 app.onError((err, c) => {
 	console.error(err)
-	return c.json({ code: ErrorCode.INTERNAL_SERVER_ERROR, message: `${err.name} ${err.message}` }, 500)
+	const message = toPublicErrorMessage(err) ?? i18n.getMessagesbyContext(c).OperationFailedMsg
+	return c.json({ code: ErrorCode.INTERNAL_SERVER_ERROR, message }, 500)
 })
 // global middlewares
 app.use('/*', async (c, next) => {

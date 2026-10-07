@@ -4,6 +4,7 @@ import { useScopedI18n } from '@/i18n/app'
 
 import { useGlobalState } from '../../store'
 import { api } from '../../api'
+import { randomAddressName } from '../../utils'
 import AddressCredentialModal from '../../components/AddressCredentialModal.vue'
 
 const {
@@ -39,9 +40,7 @@ const generateNameLoading = ref(false);
 const generateName = async () => {
     try {
         generateNameLoading.value = true;
-        const { faker } = await import('https://esm.sh/@faker-js/faker');
-        emailName.value = faker.internet.email()
-            .split('@')[0]
+        emailName.value = randomAddressName()
             .replace(/\s+/g, '.')
             .replace(/\.{2,}/g, '.')
             .replace(addressRegex.value, '')

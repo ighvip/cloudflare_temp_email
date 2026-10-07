@@ -19,6 +19,26 @@ export const getRouterPathWithLang = (path: string, lang: string) => {
     return getPathWithLocale(path, normalizedLang);
 }
 
+// P0 B1: local replacement for the esm.sh @faker-js/faker dynamic import.
+// Keeps the previous shape (`word.word123`) without pulling a remote CDN module.
+const RANDOM_NAME_ADJECTIVES = [
+    'amber', 'bold', 'brave', 'calm', 'clever', 'crisp', 'eager', 'gentle',
+    'happy', 'lucky', 'merry', 'mild', 'neat', 'polite', 'proud', 'quick',
+    'quiet', 'rapid', 'shiny', 'smart', 'sunny', 'tidy', 'warm', 'wise',
+];
+const RANDOM_NAME_NOUNS = [
+    'falcon', 'harbor', 'meadow', 'orchid', 'otter', 'pebble', 'quartz',
+    'rabbit', 'raven', 'river', 'robin', 'sunrise', 'thunder', 'tiger',
+    'willow', 'winter', 'cloud', 'comet', 'maple', 'ocean', 'pixel',
+];
+const pickRandom = (items: string[]) =>
+    items[Math.floor(Math.random() * items.length)];
+
+export const randomAddressName = () => {
+    const digits = Math.floor(100 + Math.random() * 900);
+    return `${pickRandom(RANDOM_NAME_ADJECTIVES)}.${pickRandom(RANDOM_NAME_NOUNS)}${digits}`;
+}
+
 export const utcToLocalDate = (utcDate: string | null | undefined, useUTCDate: boolean) => {
     if (!utcDate) return '';
     const utcDateString = `${utcDate} UTC`;

@@ -9,7 +9,7 @@ import Turnstile from '../../components/Turnstile.vue'
 
 import { useGlobalState } from '../../store'
 import { api } from '../../api'
-import { getRouterPathWithLang, hashPassword } from '../../utils'
+import { getRouterPathWithLang, hashPassword, randomAddressName } from '../../utils'
 
 const props = defineProps({
     bindUserAddress: {
@@ -160,9 +160,7 @@ const generateNameLoading = ref(false);
 const generateName = async () => {
     try {
         generateNameLoading.value = true;
-        const { faker } = await import('https://esm.sh/@faker-js/faker');
-        emailName.value = faker.internet.email()
-            .split('@')[0]
+        emailName.value = randomAddressName()
             .replace(/\s+/g, '.')
             .replace(/\.{2,}/g, '.')
             .replace(addressRegex.value, '')
