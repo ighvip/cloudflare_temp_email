@@ -5,7 +5,7 @@ import { useRouter } from 'vue-router'
 
 import { useGlobalState } from '../store'
 import { api } from '../api'
-import { getRouterPathWithLang, hashPassword } from '../utils'
+import { getRouterPathWithLang, hashPassword, getAdminPath } from '../utils'
 import Turnstile from '../components/Turnstile.vue'
 
 import SenderAccess from './admin/SenderAccess.vue'
@@ -105,11 +105,58 @@ const currentLoginMethod = computed(() => {
   return '';
 })
 
+// P0-B4: one-time admin gate tokens (?k=)
+const gateTtlHours = ref(24)
+const gateTokens = ref([])
+const newGateUrl = ref('')
+const copyText = async (text) => {
+  try {
+    await navigator.clipboard.writeText(text);
+    message.success('已复制');
+  } catch (_) {
+    message.warning('复制失败，请手动选择复制');
+  }
+}
+const loadGateTokens = async () => {
+  try {
+    const res = await api.fetch('/admin/gate_tokens');
+    gateTokens.value = res?.tokens || [];
+    return res;
+  } catch (error) {
+    return null;
+  }
+}
+const createGateToken = async () => {
+  try {
+    const res = await api.fetch('/admin/gate_tokens', {
+      method: 'POST',
+      body: JSON.stringify({ ttl_hours: gateTtlHours.value })
+    });
+    newGateUrl.value = res?.url || '';
+    await loadGateTokens();
+  } catch (error) {
+    message.error(error.message || "error");
+  }
+}
+const gateTokenUrl = (token) => `${location.origin}${getAdminPath()}?k=${token}`;
+const revokeGateToken = async (token) => {
+  try {
+    await api.fetch('/admin/gate_tokens/revoke', {
+      method: 'POST',
+      body: JSON.stringify({ token })
+    });
+    await loadGateTokens();
+  } catch (error) {
+    message.error(error.message || "error");
+  }
+}
+
 onMounted(async () => {
   // make sure openSettings is fetched for turnstile check
   if (!openSettings.value.fetched) await api.getOpenSettings(message);
   // make sure user_id is fetched
   if (!userSettings.value.user_id) await api.getUserSettings(message);
+  if (showAdminPage.value) await loadGateTokens();
 })
 </script>
 
@@ -246,6 +293,59 @@ onMounted(async () => {
               <n-button v-if="isAdminPasswordLogin" type="warning" @click="showLogoutModal = true" block>
                 {{ t('logout') }}
               </n-button>
+            </n-space>
+          </n-card>
+        </div>
+        <div style="display: flex; justify-content: center; padding: 0 20px 20px;">
+          <n-card style="width: 600px;">
+            <n-space vertical>
+              <n-text strong>后台访问令牌（?k= 一次性）</n-text>
+              <n-text depth="3">
+                直接输入后台地址会返回 404。用带 ?k= 的链接换取 7 天访问 Cookie 后才能打开后台；
+                一次性令牌只能用一次，静态引导秘钥（ADMIN_GATE_TOKEN）可重复使用。
+              </n-text>
+              <n-space align="center">
+                <n-input-number v-model:value="gateTtlHours" :min="1" :max="720" size="small" style="width: 150px;">
+                  <template #suffix>小时</template>
+                </n-input-number>
+                <n-button type="primary" size="small" :loading="loading" @click="createGateToken">
+                  生成一次性令牌
+                </n-button>
+              </n-space>
+              <n-alert v-if="newGateUrl" type="success" title="新链接（仅此一次展示）" closable
+                @close="newGateUrl = ''">
+                <n-space vertical size="small">
+                  <n-text code style="word-break: break-all; user-select: all;">{{ newGateUrl }}</n-text>
+                  <n-button size="tiny" tertiary @click="copyText(newGateUrl)">复制链接</n-button>
+                </n-space>
+              </n-alert>
+              <n-divider style="margin: 8px 0;" />
+              <n-text strong>未使用的令牌</n-text>
+              <n-empty v-if="!gateTokens.length" size="small" description="暂无未使用令牌" />
+              <n-table v-else size="small" :bordered="false">
+                <thead>
+                  <tr>
+                    <th>令牌</th>
+                    <th>过期时间</th>
+                    <th style="width: 110px;">操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="tk in gateTokens" :key="tk.token">
+                    <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
+                      :title="tk.token">{{ tk.token }}</td>
+                    <td>{{ new Date(tk.expires_at * 1000).toLocaleString() }}</td>
+                    <td>
+                      <n-space size="small">
+                        <n-button size="tiny" tertiary @click="copyText(gateTokenUrl(tk.token))">复制</n-button>
+                        <n-button size="tiny" tertiary type="error" @click="revokeGateToken(tk.token)">
+                          删除
+                        </n-button>
+                      </n-space>
+                    </td>
+                  </tr>
+                </tbody>
+              </n-table>
             </n-space>
           </n-card>
         </div>

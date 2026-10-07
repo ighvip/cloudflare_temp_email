@@ -18,6 +18,10 @@ import { email } from './email';
 import { scheduled } from './scheduled';
 import { getPasswords, getBooleanValue, getDomains, checkIsAdmin, getEnvStringList, checkIsAdminWithJwt } from './utils';
 import { checkAccessControl } from './ip_blacklist';
+import {
+	getAdminPath, hasValidGate, injectAdminPath, isAdminPagePath,
+	notFoundPage, redeemGateKey, issueGateCookie,
+} from './admin_gate';
 
 const API_PATHS = [
 	"/api/",
@@ -105,15 +109,79 @@ app.onError((err, c) => {
 	const message = toPublicErrorMessage(err) ?? i18n.getMessagesbyContext(c).OperationFailedMsg
 	return c.json({ code: ErrorCode.INTERNAL_SERVER_ERROR, message }, 500)
 })
+// P0-B4 G1/G2: admin gate — registered before the global middleware so an
+// ungated request never reaches the credential checks and cannot leak them.
+app.use('/admin/*', async (c, next) => {
+	const gateKey = new URL(c.req.url).searchParams.get("k");
+	let gateOk = await hasValidGate(c);
+	if (!gateOk && gateKey && await redeemGateKey(c, gateKey)) {
+		c.header("Set-Cookie", await issueGateCookie(c));
+		gateOk = true;
+	}
+	if (!gateOk) {
+		// browser navigations get the branded 404, API calls the plain one
+		c.header("Cache-Control", "no-store");
+		const accept = c.req.raw.headers.get("Accept") || "";
+		if (accept.includes("text/html")) return notFoundPage(c.env.COPYRIGHT || "Not Found");
+		return c.notFound();
+	}
+	await next();
+});
+
 // global middlewares
 app.use('/*', async (c, next) => {
 
 	// check if the request is for static files
 	if (c.env.ASSETS && !API_PATHS.some(path => c.req.path.startsWith(path))) {
 		const url = new URL(c.req.raw.url);
+		const adminPath = getAdminPath(c);
+
+		// page routes: SPA shell, but the admin page is gated (P0-B4 G2)
 		if (!url.pathname.includes('.')) {
-			url.pathname = ""
+			// P0-B4 G1: `?k=` redemption on page routes
+			const gateKey = url.searchParams.get("k");
+			if (gateKey) {
+				if (await redeemGateKey(c, gateKey)) {
+					url.searchParams.delete("k");
+					let target = url.pathname;
+					if (target === "/" || isAdminPagePath(target, adminPath) || isAdminPagePath(target, "/admin")) {
+						target = adminPath;
+					}
+					const query = url.searchParams.toString();
+					return new Response(null, {
+						status: 302,
+						headers: {
+							"Location": target + (query ? `?${query}` : ""),
+							"Set-Cookie": await issueGateCookie(c),
+							"Cache-Control": "no-store",
+						},
+					});
+				}
+				// unknown / spent key: behave like a missing page
+				return notFoundPage(c.env.COPYRIGHT || "Not Found");
+			}
+
+			// the configured admin path needs a gate; every other /admin location
+			// (including the default one after ADMIN_PATH was customized) is hidden
+			const isAdminish = isAdminPagePath(url.pathname, adminPath)
+				|| isAdminPagePath(url.pathname, "/admin");
+			if (isAdminish) {
+				const configured = isAdminPagePath(url.pathname, adminPath);
+				if (!configured || !(await hasValidGate(c))) {
+					return notFoundPage(c.env.COPYRIGHT || "Not Found");
+				}
+			}
+			const indexUrl = new URL(url);
+			indexUrl.pathname = "";
+			indexUrl.search = "";
+			const res = await c.env.ASSETS.fetch(indexUrl);
+			const html = injectAdminPath(await res.text(), adminPath);
+			const headers = new Headers(res.headers);
+			headers.delete("ETag");
+			headers.set("Content-Type", "text/html; charset=utf-8");
+			return new Response(html, { status: res.status, headers });
 		}
+
 		return c.env.ASSETS.fetch(url);
 	}
 

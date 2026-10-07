@@ -13,7 +13,7 @@ import { Envelope, Language, User } from '@vicons/fa'
 
 import { useGlobalState } from '../store'
 import { api } from '../api'
-import { getRouterPathWithLang, hashPassword } from '../utils'
+import { getRouterPathWithLang, hashPassword, getAdminPath } from '../utils'
 import { DEFAULT_LOCALE, isSupportedLocale, replaceLocaleInFullPath } from '../i18n/utils'
 import { getLocaleLabel, SUPPORTED_LOCALES } from '../i18n/locale-registry'
 import Turnstile from '../components/Turnstile.vue'
@@ -153,7 +153,7 @@ const menuOptions = computed(() => [
                 style: "width: 100%",
                 onClick: async () => {
                     loading.value = true;
-                    await router.push(getRouterPathWithLang('/admin', locale.value));
+                    await router.push(getRouterPathWithLang(getAdminPath(), locale.value));
                     loading.value = false;
                     showMobileMenu.value = false;
                 }
@@ -226,7 +226,7 @@ const logoClick = async () => {
         logoClickCount.value = 0;
         message.info("Change to admin Page");
         loading.value = true;
-        await router.push(getRouterPathWithLang('/admin', locale.value));
+        await router.push(getRouterPathWithLang(getAdminPath(), locale.value));
         loading.value = false;
     } else {
         logoClickCount.value++;
@@ -237,6 +237,8 @@ const logoClick = async () => {
 }
 
 // ---- header clock ----
+// P0-B4: admin entry dot (opens in a new tab, see template)
+const adminPath = getAdminPath();
 const now = ref(new Date());
 const pad2 = (n) => String(n).padStart(2, '0');
 // Intl keeps the weekday name correct for every supported locale
@@ -286,6 +288,9 @@ onUnmounted(() => {
                 <div class="header-title-row">
                     <h3 v-if="openSettings.fetched">{{ openSettings.title || t('title') }}</h3>
                     <h3 v-else>&nbsp;</h3>
+                    <!-- P0-B4: inconspicuous 4px dot — new-window admin entry -->
+                    <a class="header-admin-dot" :href="adminPath" target="_blank" rel="noopener noreferrer"
+                        title="Admin" aria-label="Admin"></a>
                     <div class="header-clock">
                         <div class="header-clock-date">{{ clockDate }}</div>
                         <div class="header-clock-time">{{ clockTime }}</div>
@@ -400,6 +405,23 @@ onUnmounted(() => {
     display: inline-flex;
     align-items: center;
     cursor: pointer;
+}
+
+/* P0-B4: 4px admin entry dot between the logo and the clock */
+.header-admin-dot {
+    width: 4px;
+    height: 4px;
+    flex: 0 0 auto;
+    border-radius: 50%;
+    background: rgba(128, 128, 128, 0.55);
+    text-decoration: none;
+    transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.header-admin-dot:hover,
+.header-admin-dot:focus-visible {
+    background: #58a6ff;
+    box-shadow: 0 0 4px rgba(88, 166, 255, 0.8);
 }
 
 .header-title-row {

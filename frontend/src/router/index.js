@@ -4,6 +4,7 @@ import User from '../views/User.vue'
 import UserOauth2Callback from '../views/user/UserOauth2Callback.vue'
 import i18n from '../i18n'
 import { useGlobalState } from '../store'
+import { getAdminPath } from '../utils'
 import {
     DEFAULT_LOCALE,
     replaceLocaleInFullPath,
@@ -37,8 +38,9 @@ const router = createRouter({
             component: UserOauth2Callback
         },
         {
-            path: '/admin',
-            alias: '/:lang/admin',
+            // P0-B4: server-injected admin path (ADMIN_PATH), default /admin
+            path: getAdminPath(),
+            alias: '/:lang' + getAdminPath(),
             component: () => import('../views/Admin.vue')
         },
         {

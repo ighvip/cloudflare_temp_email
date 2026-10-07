@@ -155,6 +155,13 @@ CREATE TABLE IF NOT EXISTS admin_token_blacklist (
 );
 
 CREATE INDEX IF NOT EXISTS idx_admin_token_blacklist_expires ON admin_token_blacklist(expires_at);
+
+CREATE TABLE IF NOT EXISTS admin_gate_tokens (
+    token TEXT PRIMARY KEY,
+    created_at INTEGER NOT NULL,
+    expires_at INTEGER NOT NULL,
+    used_at INTEGER
+);
 `
 
 export default {

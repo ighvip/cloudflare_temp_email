@@ -7,6 +7,15 @@ export const hashPassword = async (password: string) => {
     return hashArray.map(byte => byte.toString(16).padStart(2, '0')).join('');
 }
 
+// P0-B4: admin path is configurable server-side (ADMIN_PATH) and injected
+// into the SPA shell as window.__ADMIN_PATH__ — defaults to /admin.
+export const getAdminPath = (): string => {
+    const injected = typeof window !== "undefined"
+        ? (window as unknown as { __ADMIN_PATH__?: string }).__ADMIN_PATH__
+        : undefined;
+    return typeof injected === "string" && injected.startsWith("/") ? injected : "/admin";
+}
+
 export const getRouterPathWithLang = (path: string, lang: string) => {
     const normalizedLang = lang === 'en'
         || lang === 'es'
