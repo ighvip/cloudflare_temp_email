@@ -143,6 +143,12 @@ app.use('/*', async (c, next) => {
 		|| c.req.path.startsWith("/user_api/register")
 		|| c.req.path.startsWith("/user_api/verify_code")
 		|| c.req.path.startsWith("/redeem_api/")
+		// P0 B2: burst cap on the login endpoints (15min/exponential lockout is
+		// handled per-route in login_rate_limit.ts)
+		|| c.req.path.startsWith("/open_api/site_login")
+		|| c.req.path.startsWith("/open_api/admin_login")
+		|| c.req.path.startsWith("/open_api/credential_login")
+		|| c.req.path.startsWith("/user_api/login")
 	) {
 		const reqIp = c.req.raw.headers.get("cf-connecting-ip")
 		if (reqIp && c.env.RATE_LIMITER) {

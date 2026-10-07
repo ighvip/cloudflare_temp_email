@@ -6,6 +6,7 @@ import utils, { checkCfTurnstile, getJsonSetting, checkUserPassword, getUserRole
 import { CONSTANTS } from "../constants";
 import { GeoData, UserInfo, UserSettings } from "../models";
 import { sendMail } from "../mails_api/send_mail_api";
+import { checkLoginRateLimit, recordLoginFailure, clearLoginFailures } from "../login_rate_limit";
 
 export default {
     verifyCode: async (c: Context<HonoCustomType>) => {
@@ -184,6 +185,9 @@ export default {
     login: async (c: Context<HonoCustomType>) => {
         const { email, password, cf_token } = await c.req.json();
         const msgs = i18n.getMessagesbyContext(c);
+        // P0 B2: lock out brute force attempts before the credential comparison
+        const rateLimited = await checkLoginRateLimit(c, 'user_login');
+        if (rateLimited) return rateLimited;
         if (!email || !password) return c.text(msgs.InvalidEmailOrPasswordMsg, 400);
         // check cf turnstile if global turnstile is enabled
         if (utils.isGlobalTurnstileEnabled(c)) {
@@ -197,12 +201,15 @@ export default {
             `SELECT id, password FROM users where user_email = ?`
         ).bind(email).first() || {};
         if (!dbPassword) {
+            await recordLoginFailure(c, 'user_login');
             return c.text(msgs.UserNotFoundMsg, 400)
         }
         // TODO: need check password use random salt
         if (dbPassword != password) {
+            await recordLoginFailure(c, 'user_login');
             return c.text(msgs.InvalidEmailOrPasswordMsg, 400)
         }
+        await clearLoginFailures(c, 'user_login');
         // create jwt
         const jwt = await Jwt.sign({
             user_email: email,

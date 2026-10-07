@@ -140,6 +140,14 @@ CREATE TABLE IF NOT EXISTS redeem_codes (
 );
 
 CREATE INDEX IF NOT EXISTS idx_redeem_codes_type ON redeem_codes(redeem_type);
+
+CREATE TABLE IF NOT EXISTS login_attempts (
+    key TEXT PRIMARY KEY,
+    fail_count INTEGER NOT NULL DEFAULT 0,
+    first_fail_at INTEGER NOT NULL DEFAULT 0,
+    locked_until INTEGER NOT NULL DEFAULT 0,
+    updated_at INTEGER NOT NULL DEFAULT 0
+);
 `
 
 export default {

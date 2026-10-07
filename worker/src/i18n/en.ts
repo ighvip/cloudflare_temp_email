@@ -10,6 +10,7 @@ const messages: LocaleMessages = {
     UserRoleIsNotAdminMsg: "Your user role is not admin, no access to visit this page",
     NeedAdminPasswordMsg: "You need to provide the admin password to access this page",
     AdminApiIpNotAllowedMsg: "Your IP address isn't on the admin whitelist",
+    RateLimitedMsg: "Too many failed login attempts, please try again later",
 
     KVNotAvailableMsg: "KV is not available, please contact the administrator",
     DBNotAvailableMsg: "DB is not available, please contact the administrator",

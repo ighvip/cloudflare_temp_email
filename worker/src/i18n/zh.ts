@@ -10,6 +10,7 @@ const messages: LocaleMessages = {
     UserRoleIsNotAdminMsg: "您的用户角色不是管理员, 无权访问",
     NeedAdminPasswordMsg: "您需要提供管理员密码才能访问此页面",
     AdminApiIpNotAllowedMsg: "当前 IP 不在管理员白名单中",
+    RateLimitedMsg: "登录失败次数过多，请稍后再试",
 
     KVNotAvailableMsg: "KV 不可用, 请联系管理员",
     DBNotAvailableMsg: "DB 不可用, 请联系管理员",

@@ -4,12 +4,16 @@ import { verifyAddressToken } from '../address_auth';
 import utils, { checkCfTurnstile, getPasswords, getAdminPasswords, hashPassword } from '../utils';
 import i18n from '../i18n';
 import { ErrorCode } from '../error_codes';
+import { checkLoginRateLimit, recordLoginFailure, clearLoginFailures } from '../login_rate_limit';
 
 const api = new Hono<HonoCustomType>()
 
 api.post('/open_api/site_login', async (c) => {
     const { password, cf_token } = await c.req.json();
     const msgs = i18n.getMessagesbyContext(c);
+    // P0 B2: lock out brute force attempts before the credential comparison
+    const rateLimited = await checkLoginRateLimit(c, 'site_login');
+    if (rateLimited) return rateLimited;
     if (utils.isGlobalTurnstileEnabled(c)) {
         try {
             await checkCfTurnstile(c, cf_token);
@@ -20,14 +24,19 @@ api.post('/open_api/site_login', async (c) => {
     const passwords = getPasswords(c);
     const hashedPasswords = await Promise.all(passwords.map(p => hashPassword(p)));
     if (!hashedPasswords.length || !password || !hashedPasswords.includes(password)) {
+        await recordLoginFailure(c, 'site_login');
         return c.json({ code: ErrorCode.AUTH_SITE_PASSWORD_INVALID, message: msgs.CustomAuthPasswordMsg }, 401)
     }
+    await clearLoginFailures(c, 'site_login');
     return c.json({ success: true })
 })
 
 api.post('/open_api/admin_login', async (c) => {
     const { password, cf_token } = await c.req.json();
     const msgs = i18n.getMessagesbyContext(c);
+    // P0 B2: lock out brute force attempts before the credential comparison
+    const rateLimited = await checkLoginRateLimit(c, 'admin_login');
+    if (rateLimited) return rateLimited;
     if (utils.isGlobalTurnstileEnabled(c)) {
         try {
             await checkCfTurnstile(c, cf_token);
@@ -38,14 +47,19 @@ api.post('/open_api/admin_login', async (c) => {
     const adminPasswords = getAdminPasswords(c);
     const hashedPasswords = await Promise.all(adminPasswords.map(p => hashPassword(p)));
     if (!hashedPasswords.length || !password || !hashedPasswords.includes(password)) {
+        await recordLoginFailure(c, 'admin_login');
         return c.json({ code: ErrorCode.AUTH_ADMIN_CREDENTIAL_INVALID, message: msgs.NeedAdminPasswordMsg }, 401)
     }
+    await clearLoginFailures(c, 'admin_login');
     return c.json({ success: true })
 })
 
 api.post('/open_api/credential_login', async (c) => {
     const { credential, cf_token } = await c.req.json();
     const msgs = i18n.getMessagesbyContext(c);
+    // P0 B2: lock out brute force attempts before the credential comparison
+    const rateLimited = await checkLoginRateLimit(c, 'credential_login');
+    if (rateLimited) return rateLimited;
     if (utils.isGlobalTurnstileEnabled(c)) {
         try {
             await checkCfTurnstile(c, cf_token);
@@ -54,13 +68,16 @@ api.post('/open_api/credential_login', async (c) => {
         }
     }
     if (!credential) {
+        await recordLoginFailure(c, 'credential_login');
         return c.text(msgs.InvalidAddressCredentialMsg, 401)
     }
     try {
         await verifyAddressToken(c, credential);
     } catch (error) {
+        await recordLoginFailure(c, 'credential_login');
         return c.text(msgs.InvalidAddressCredentialMsg, 401)
     }
+    await clearLoginFailures(c, 'credential_login');
     return c.json({ success: true })
 })
 
