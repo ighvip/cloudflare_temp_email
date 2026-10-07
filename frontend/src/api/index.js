@@ -15,7 +15,7 @@ const API_BASE = APP_CONFIG.API_BASE || "";
 const {
     loading, auth, jwt, settings, openSettings,
     userOpenSettings, userSettings, announcement,
-    showAuth, adminAuth, showAdminAuth, userJwt
+    showAuth, adminAuth, showAdminAuth, userJwt, adminJwt
 } = useGlobalState();
 
 const instance = axios.create({
@@ -56,6 +56,8 @@ const apiFetch = async (path, options = {}) => {
         if (customAuthHeader) headers['x-custom-auth'] = customAuthHeader;
         const adminAuthHeader = safeHeaderValue(adminAuth.value);
         if (adminAuthHeader) headers['x-admin-auth'] = adminAuthHeader;
+        const adminJwtHeader = safeBearerHeader(adminJwt.value);
+        if (adminJwtHeader) headers['Authorization'] = adminJwtHeader;
         const authorizationHeader = safeBearerHeader(jwt.value);
         if (authorizationHeader) headers['Authorization'] = authorizationHeader;
 

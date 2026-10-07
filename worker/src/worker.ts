@@ -16,7 +16,7 @@ import i18n from './i18n';
 import { ErrorCode } from './error_codes';
 import { email } from './email';
 import { scheduled } from './scheduled';
-import { getPasswords, getBooleanValue, getDomains, checkIsAdmin, getEnvStringList } from './utils';
+import { getPasswords, getBooleanValue, getDomains, checkIsAdmin, getEnvStringList, checkIsAdminWithJwt } from './utils';
 import { checkAccessControl } from './ip_blacklist';
 
 const API_PATHS = [
@@ -321,8 +321,8 @@ app.use('/admin/*', async (c, next) => {
 		console.error("Failed to check admin API IP whitelist", e);
 	}
 
-	// check header x-admin-auth
-	if (checkIsAdmin(c)) {
+	// P0-B3: try JWT auth first, fall back to legacy x-admin-auth
+	if (await checkIsAdminWithJwt(c)) {
 		await next();
 		return;
 	}

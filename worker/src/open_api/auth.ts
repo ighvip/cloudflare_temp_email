@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import { verifyAddressToken } from '../address_auth';
+import { Jwt } from 'hono/utils/jwt';
 
 import utils, { checkCfTurnstile, getPasswords, getAdminPasswords, hashPassword } from '../utils';
 import i18n from '../i18n';
@@ -51,7 +52,34 @@ api.post('/open_api/admin_login', async (c) => {
         return c.json({ code: ErrorCode.AUTH_ADMIN_CREDENTIAL_INVALID, message: msgs.NeedAdminPasswordMsg }, 401)
     }
     await clearLoginFailures(c, 'admin_login');
-    return c.json({ success: true })
+
+    // P0-B3: issue an admin-scoped JWT (30 min, jti, D1 revocable)
+    const jti = typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    const exp = Math.floor(Date.now() / 1000) + 30 * 60;
+    const adminToken = await Jwt.sign({ scope: "admin", jti, exp, iat: Math.floor(Date.now() / 1000) }, c.env.JWT_SECRET, "HS256");
+
+    return c.json({ success: true, admin_token: adminToken })
+})
+
+// P0-B3: revoke the current admin JWT so subsequent requests are rejected
+api.post('/open_api/admin_logout', async (c) => {
+    const authHeader = c.req.raw.headers.get("Authorization");
+    const bearerMatch = authHeader?.match(/^Bearer\s+(\S+)$/i);
+    if (bearerMatch) {
+        try {
+            const payload: any = await Jwt.verify(bearerMatch[1], c.env.JWT_SECRET, "HS256");
+            if (payload.jti) {
+                await c.env.DB.prepare(
+                    `INSERT OR REPLACE INTO admin_token_blacklist (jti, expires_at) VALUES (?, ?)`
+                ).bind(payload.jti, payload.exp ?? 0).run();
+            }
+        } catch (e) {
+            console.error("admin_logout JWT parse failed", e);
+        }
+    }
+    return c.json({ success: true });
 })
 
 api.post('/open_api/credential_login', async (c) => {

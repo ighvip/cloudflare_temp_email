@@ -148,6 +148,13 @@ CREATE TABLE IF NOT EXISTS login_attempts (
     locked_until INTEGER NOT NULL DEFAULT 0,
     updated_at INTEGER NOT NULL DEFAULT 0
 );
+
+CREATE TABLE IF NOT EXISTS admin_token_blacklist (
+    jti TEXT PRIMARY KEY,
+    expires_at INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_admin_token_blacklist_expires ON admin_token_blacklist(expires_at);
 `
 
 export default {

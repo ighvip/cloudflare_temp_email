@@ -36,7 +36,7 @@ import RedeemCodes from './admin/RedeemCodes.vue';
 const {
   adminAuth, showAdminAuth, adminTab, loading,
   globalTabplacement, showAdminPage, userSettings,
-  openSettings
+  openSettings, adminJwt
 } = useGlobalState()
 const message = useMessage()
 const router = useRouter()
@@ -52,13 +52,16 @@ const turnstileRef = ref(null)
 
 const authFunc = async () => {
   try {
-    await api.fetch('/open_api/admin_login', {
+    const res = await api.fetch('/open_api/admin_login', {
       method: 'POST',
       body: JSON.stringify({
         password: await hashPassword(tmpAdminAuth.value),
         cf_token: cfToken.value
       })
     });
+    if (res && res.admin_token) {
+      adminJwt.value = res.admin_token;
+    }
     adminAuth.value = tmpAdminAuth.value;
     location.reload()
   } catch (error) {
@@ -70,12 +73,15 @@ const authFunc = async () => {
 const showLogoutModal = ref(false)
 
 const handleLogout = async () => {
-  // 清空管理员认证
+  if (adminJwt.value) {
+    try {
+      await api.fetch('/open_api/admin_logout', { method: 'POST' });
+    } catch (_) { /* best-effort revocation */ }
+  }
   adminAuth.value = '';
-  // 重置管理员相关状态
+  adminJwt.value = '';
   showAdminAuth.value = false;
   adminTab.value = 'account';
-  // 显示成功提示并跳转
   message.success(t('logoutSuccess'));
   await router.push(getRouterPathWithLang('/', locale.value));
 }

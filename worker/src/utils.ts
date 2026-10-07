@@ -1,4 +1,5 @@
 import { Context } from "hono";
+import { Jwt } from "hono/utils/jwt";
 import { UserSettings, RoleAddressConfig } from "./models";
 import { CONSTANTS } from "./constants";
 
@@ -332,6 +333,47 @@ export const checkIsAdmin = (c: Context<HonoCustomType>): boolean => {
     if (!adminPasswords.length) return false;
     const adminAuth = c.req.raw.headers.get("x-admin-auth");
     return !!adminAuth && adminPasswords.includes(adminAuth);
+}
+
+/**
+ * P0-B3: async JWT-based admin check.
+ * Verifies Authorization: Bearer <jwt> with scope=admin, checks exp and D1 revocation.
+ * Falls back to legacy x-admin-auth plaintext password when JWT is absent.
+ */
+export const checkIsAdminWithJwt = async (
+    c: Context<HonoCustomType>
+): Promise<boolean> => {
+    const authHeader = c.req.raw.headers.get("Authorization");
+    const bearerMatch = authHeader?.match(/^Bearer\s+(\S+)$/i);
+
+    if (bearerMatch) {
+        const token = bearerMatch[1];
+        try {
+            const payload: any = await Jwt.verify(token, c.env.JWT_SECRET, "HS256");
+            // scope must be 'admin'
+            if (payload.scope !== "admin") {
+                return false;
+            }
+            // check expiry
+            const now = Math.floor(Date.now() / 1000);
+            if (payload.exp && payload.exp < now) {
+                return false;
+            }
+            // check revocation blacklist
+            if (payload.jti) {
+                const row = await c.env.DB.prepare(
+                    `SELECT 1 FROM admin_token_blacklist WHERE jti = ? AND expires_at > ?`
+                ).bind(payload.jti, now).first();
+                if (row) return false;
+            }
+            return true;
+        } catch (e) {
+            console.error("[checkIsAdminWithJwt] JWT verify failed:", e instanceof Error ? e.message : e);
+            return false;
+        }
+    }
+
+    return checkIsAdmin(c);
 }
 
 export const getEnvStringList = (value: string | string[] | undefined): string[] => {
