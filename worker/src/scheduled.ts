@@ -1,12 +1,16 @@
 import { Context } from 'hono';
 import { cleanup } from './common'
 import { CONSTANTS } from './constants'
-import { getJsonSetting } from './utils';
+import { getJsonSetting, saveSetting } from './utils';
 import { CleanupSettings } from './models';
 import { executeCustomSqlCleanup } from './admin_api/cleanup_api';
+import { runUptimeProbe } from './uptime';
 
-export async function scheduled(event: ScheduledEvent, env: Bindings, ctx: any) {
-    console.log("Scheduled event: ", event);
+// crons = ["* * * * *", "0 0 * * *"] — every minute runs the uptime probes,
+// the daily run performs the mail / address cleanup below
+const CLEANUP_CRON = '0 0 * * *';
+
+async function runCleanup(env: Bindings) {
     const autoCleanupSetting = await getJsonSetting<CleanupSettings>(
         { env: env, } as Context<HonoCustomType>,
         CONSTANTS.AUTO_CLEANUP_KEY
@@ -78,5 +82,34 @@ export async function scheduled(event: ScheduledEvent, env: Bindings, ctx: any) 
                 }
             }
         }
+    }
+}
+
+export async function scheduled(event: ScheduledEvent, env: Bindings, ctx: any) {
+    console.log("Scheduled event: ", event.cron);
+    // debug marker: proves the trigger fired and records which branch ran
+    const markerKey = 'admin-config:last-scheduled';
+    let status = 'ok';
+    try {
+        if (event.cron === CLEANUP_CRON) {
+            await runCleanup(env);
+        } else {
+            // every other cron (the every-minute one) runs the probes —
+            // do not trust event.cron string equality as the only gate
+            status = await runUptimeProbe(env);
+        }
+    } catch (e) {
+        // one failing tick must never wedge the trigger
+        status = `error: ${(e && (e as Error).message) || e}`;
+        console.error("Scheduled task failed", event.cron, e);
+    }
+    try {
+        await saveSetting(
+            { env } as Context<HonoCustomType>,
+            markerKey,
+            `${new Date().toISOString()}|${event.cron}|${status}`
+        );
+    } catch (e) {
+        console.error("scheduled marker write failed", e);
     }
 }

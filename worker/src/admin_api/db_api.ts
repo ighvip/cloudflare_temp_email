@@ -174,6 +174,18 @@ CREATE TABLE IF NOT EXISTS admin_gate_sessions (
 );
 
 CREATE INDEX IF NOT EXISTS idx_admin_gate_sessions_expires ON admin_gate_sessions(expires_at);
+
+CREATE TABLE IF NOT EXISTS uptime_heartbeats (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    monitor TEXT NOT NULL,
+    ts INTEGER NOT NULL,
+    up INTEGER NOT NULL,
+    latency_ms INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS idx_uptime_heartbeats_monitor_ts ON uptime_heartbeats(monitor, ts);
+
+CREATE INDEX IF NOT EXISTS idx_uptime_heartbeats_ts ON uptime_heartbeats(ts);
 `
 
 export default {

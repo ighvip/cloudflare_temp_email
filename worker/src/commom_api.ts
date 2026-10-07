@@ -6,6 +6,7 @@ import { CONSTANTS } from './constants';
 import { isS3Enabled } from './mails_api/s3_attachment';
 import { isAnySendMailEnabled } from './common';
 import { getWebhookAttachment } from './open_api/webhook_attachment';
+import { getUptimePayload } from './uptime';
 
 const api = new Hono<HonoCustomType>
 
@@ -190,6 +191,24 @@ api.get('/open_api/stats', async (c) => {
             week: 0,
             month: 0,
             updatedAt: new Date().toISOString(),
+            error: true,
+        });
+    }
+})
+
+// public uptime monitor (Uptime Kuma style bars), cached for 60s
+api.get('/open_api/uptime', async (c) => {
+    try {
+        return c.json(await getUptimePayload(c));
+    } catch (e) {
+        console.error('public uptime failed', e);
+        return c.json({
+            ok: false,
+            overall: 'unknown',
+            version: CONSTANTS.VERSION,
+            windowHours: 48,
+            updatedAt: new Date().toISOString(),
+            monitors: [],
             error: true,
         });
     }
