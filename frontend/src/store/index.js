@@ -89,6 +89,10 @@ export const useGlobalState = createGlobalState(
         const showAuth = ref(false);
         const showAddressCredential = ref(false);
         const showAdminAuth = ref(false);
+        // P0 redesign: true while the redesigned homepage (left/right split)
+        // is mounted — the guide/FAQ then lives as a permanent section
+        // instead of the login card's help tab
+        const homeGuideEmbedded = ref(false);
         const auth = useStorage('auth', '');
         const adminAuth = useStorage('adminAuth', '');
         const adminJwt = useSessionStorage('adminJwt', '');
@@ -165,6 +169,7 @@ export const useGlobalState = createGlobalState(
             openSettings,
             showAuth,
             showAddressCredential,
+            homeGuideEmbedded,
             auth,
             jwt,
             adminAuth,

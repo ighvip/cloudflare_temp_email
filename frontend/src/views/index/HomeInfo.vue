@@ -1,31 +1,34 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { computed, onMounted, onUnmounted } from 'vue'
 import { useScopedI18n } from '@/i18n/app'
 import { useGlobalState } from '../../store'
-import { api } from '../../api'
+import { useSiteHealth } from './useSiteHealth'
 
 const { openSettings } = useGlobalState()
 const { t } = useScopedI18n('views.index.HomeInfo')
 
+// P0 redesign: on the split homepage the intro text becomes the hero
+// subtitle, so the card can drop its own copy (`hideIntro`) — the text is
+// still shown, just in the hero (nothing is removed from the page).
+const props = defineProps({
+    hideIntro: {
+        type: Boolean,
+        default: false,
+    },
+})
+
 const introText = computed(() => (openSettings.value.siteIntro || '').trim() || t('defaultIntro'))
 
-const status = ref(null)
-const statusError = ref(false)
-const checkedAt = ref('')
-let timer = null
+// shared poller: one set of requests serves this card and the compact
+// status line in the action card
+const {
+    status, statusError, checkedAt,
+    stats, statsError, statsUpdatedAt,
+    fetchStatus, start, stop,
+} = useSiteHealth()
 
-const fetchStatus = async (showLoading) => {
-    try {
-        const res = await api.fetch('/open_api/status', { showLoading: !!showLoading });
-        status.value = res;
-        statusError.value = !res || res.ok === false;
-        checkedAt.value = res?.time ? new Date(res.time).toLocaleTimeString() : new Date().toLocaleTimeString();
-    } catch (error) {
-        status.value = null;
-        statusError.value = true;
-        checkedAt.value = new Date().toLocaleTimeString();
-    }
-}
+onMounted(start)
+onUnmounted(stop)
 
 const statusType = computed(() => {
     if (statusError.value) return 'error';
@@ -38,30 +41,6 @@ const statusText = computed(() => {
     if (!status.value) return t('statusChecking');
     return status.value.db ? t('statusOk') : t('statusDbDown');
 })
-
-// ---- public stats ----
-const stats = ref({ today: 0, week: 0, month: 0 })
-const statsError = ref(false)
-const statsUpdatedAt = ref('')
-let statsTimer = null
-
-const fetchStats = async (showLoading) => {
-    try {
-        const res = await api.fetch('/open_api/stats', { showLoading: !!showLoading });
-        stats.value = {
-            today: Number(res?.today) || 0,
-            week: Number(res?.week) || 0,
-            month: Number(res?.month) || 0,
-        };
-        statsError.value = false;
-        statsUpdatedAt.value = res?.updatedAt
-            ? new Date(res.updatedAt).toLocaleTimeString()
-            : new Date().toLocaleTimeString();
-    } catch (error) {
-        statsError.value = true;
-        statsUpdatedAt.value = new Date().toLocaleTimeString();
-    }
-}
 
 const statItems = computed(() => [
     { key: 'today', label: t('statToday'), value: stats.value.today, tone: 'blue' },
@@ -76,24 +55,12 @@ const formatCount = (value) => {
     if (value >= 1000) return `${(value / 1000).toFixed(1)}k`
     return String(value)
 }
-
-onMounted(() => {
-    fetchStatus(false);
-    fetchStats(false);
-    timer = setInterval(() => fetchStatus(false), 30000);
-    statsTimer = setInterval(() => fetchStats(false), 60000);
-})
-
-onUnmounted(() => {
-    if (timer) clearInterval(timer)
-    if (statsTimer) clearInterval(statsTimer)
-})
 </script>
 
 <template>
     <n-card class="home-info" :bordered="false" embedded>
-        <div class="home-info-grid">
-            <div class="home-info-section">
+        <div class="home-info-grid" :class="{ 'home-info-grid-2': props.hideIntro }">
+            <div v-if="!props.hideIntro" class="home-info-section">
                 <div class="home-info-title">{{ t('introTitle') }}</div>
                 <p class="home-info-intro">{{ introText }}</p>
             </div>
@@ -152,8 +119,14 @@ onUnmounted(() => {
     gap: 20px;
 }
 
+/* intro moved to the hero: stats + status share the card */
+.home-info-grid-2 {
+    grid-template-columns: 1.4fr 1fr;
+}
+
 @media (max-width: 768px) {
-    .home-info-grid {
+    .home-info-grid,
+    .home-info-grid-2 {
         grid-template-columns: 1fr;
     }
 }
