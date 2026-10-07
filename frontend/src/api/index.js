@@ -9,6 +9,7 @@ import { sanitizeHtml } from '../utils/sanitize-html'
 import { APP_CONFIG } from '../config'
 import { createUserAccessTokenInterceptor } from './user-access-token-interceptor'
 import { ErrorCode } from './error-codes'
+import { setSiteDefaultLocale } from '../i18n/utils'
 
 const API_BASE = APP_CONFIG.API_BASE || "";
 const {
@@ -136,7 +137,14 @@ const getOpenSettings = async (message, notification) => {
             smtpImapProxyConfig: res["smtpImapProxyConfig"] || openSettings.value.smtpImapProxyConfig,
             statusUrl: res["statusUrl"] || "",
             enableGlobalTurnstileCheck: res["enableGlobalTurnstileCheck"] || false,
+            siteIntro: res["siteIntro"] || "",
+            siteGuide: res["siteGuide"] || "",
+            announcements: Array.isArray(res["announcements"]) ? res["announcements"] : [],
+            defaultLocale: res["defaultLocale"] || "",
         });
+        // admin-selected default language; it outranks the browser guess but
+        // still loses to a language the visitor picked themselves
+        setSiteDefaultLocale(openSettings.value.defaultLocale);
         if (openSettings.value.needAuth) {
             showAuth.value = true;
         }

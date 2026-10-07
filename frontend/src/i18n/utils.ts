@@ -1,3 +1,5 @@
+import { ref } from 'vue'
+
 import { LOCALE_REGISTRY, SUPPORTED_LOCALES } from './locale-registry'
 import { APP_CONFIG } from '../config'
 
@@ -11,6 +13,16 @@ export const PREFERRED_LOCALE_STORAGE_KEY = 'preferredLocale'
 export const EMPTY_LOCALE_MESSAGES = Object.fromEntries(
   SUPPORTED_LOCALES.map((supportedLocale) => [supportedLocale, {}]),
 ) as Record<SupportedLocale, Record<string, never>>
+
+/**
+ * Admin-selected default language, delivered asynchronously by
+ * `/open_settings`. Empty means "not configured".
+ */
+export const siteDefaultLocale = ref<SupportedLocale | ''>('')
+
+export const setSiteDefaultLocale = (value: unknown) => {
+  siteDefaultLocale.value = isSupportedLocale(value) ? value : ''
+}
 
 export const isSupportedLocale = (locale: unknown): locale is SupportedLocale => {
   return typeof locale === 'string' && SUPPORTED_LOCALES.includes(locale as SupportedLocale)
@@ -36,13 +48,25 @@ export const matchSupportedLocale = (locale: string | null | undefined): Support
   if (!locale) return null
   const normalizedLocale = locale.trim().toLowerCase()
 
+  // Prefer the longest matching prefix so `zh-TW` / `zh-Hant-TW` resolve to
+  // Traditional Chinese instead of falling through to the generic `zh` entry.
+  let best: SupportedLocale | null = null
+  let bestPrefixLength = -1
+
   for (const entry of LOCALE_REGISTRY) {
-    if (entry.browserMatches.some((prefix) => normalizedLocale === prefix || normalizedLocale.startsWith(`${prefix}-`))) {
-      return entry.locale
+    for (const prefix of entry.browserMatches) {
+      const normalizedPrefix = prefix.toLowerCase()
+      const matched = normalizedLocale === normalizedPrefix
+        || normalizedLocale.startsWith(`${normalizedPrefix}-`)
+      if (!matched) continue
+      if (normalizedPrefix.length > bestPrefixLength) {
+        bestPrefixLength = normalizedPrefix.length
+        best = entry.locale
+      }
     }
   }
 
-  return null
+  return best
 }
 
 export const getBrowserLocales = (): string[] => {
@@ -77,6 +101,28 @@ export const getPreferredLocale = (
 }
 
 export const getInitialLocale = () => DEFAULT_LOCALE
+
+/**
+ * Locale to use when the URL carries no `/:lang/` prefix.
+ *
+ * Priority: a language the visitor picked themselves > the admin-configured
+ * default > whatever the browser reports > the build default.
+ *
+ * Deliberately does NOT remember the browser guess in localStorage, otherwise
+ * it would outrank the admin default on every later visit.
+ */
+export const resolveLocaleWithoutRoute = (): SupportedLocale => {
+  const stored = getStoredLocale()
+  if (stored) return stored
+  if (siteDefaultLocale.value) return siteDefaultLocale.value
+
+  for (const browserLocale of getBrowserLocales()) {
+    const matched = matchSupportedLocale(browserLocale)
+    if (matched) return matched
+  }
+
+  return DEFAULT_LOCALE
+}
 
 const splitPathSuffix = (fullPath: string) => {
   const match = fullPath.match(/^([^?#]*)(.*)$/)

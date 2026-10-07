@@ -6,9 +6,8 @@ import i18n from '../i18n'
 import { useGlobalState } from '../store'
 import {
     DEFAULT_LOCALE,
-    getBrowserLocales,
-    getPreferredLocale,
     replaceLocaleInFullPath,
+    resolveLocaleWithoutRoute,
     resolveSupportedLocale,
 } from '../i18n/utils'
 
@@ -57,13 +56,13 @@ const router = createRouter({
 
 router.beforeEach((to, from, next) => {
     const routeLocale = resolveSupportedLocale(to.path.split('/')[1])
-    const resolvedLocale = routeLocale || DEFAULT_LOCALE
+    const resolvedLocale = routeLocale || resolveLocaleWithoutRoute()
     i18n.global.locale.value = resolvedLocale
 
     if (routeLocale) {
+        // remember an explicit `/:lang/` the visitor chose, it outranks
+        // the admin default on later visits
         preferredLocale.value = routeLocale
-    } else if (!preferredLocale.value) {
-        preferredLocale.value = getPreferredLocale('', getBrowserLocales())
     }
 
     if (Object.prototype.hasOwnProperty.call(to.query, 'jwt')) {

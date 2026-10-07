@@ -15,6 +15,9 @@ export const useGlobalState = createGlobalState(
             fetched: false,
             title: '',
             announcement: '',
+            /** @type {string[]} */
+            announcements: [],
+            defaultLocale: '',
             alwaysShowAnnouncement: false,
             prefix: '',
             addressRegex: '',
@@ -59,6 +62,8 @@ export const useGlobalState = createGlobalState(
             },
             statusUrl: '',
             enableGlobalTurnstileCheck: false,
+            siteIntro: '',
+            siteGuide: '',
         })
         const settings = ref({
             fetched: false,

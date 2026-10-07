@@ -6,6 +6,8 @@ import { deMessages } from './locales/source/de'
 import { esMessages } from './locales/source/es'
 import { jaMessages } from './locales/source/ja'
 import { ptBRMessages } from './locales/source/ptBR'
+// generated from the zh source by scripts/gen-zhtw.mjs
+import { zhTWMessages } from './locales/source/zhTW'
 
 import type { SupportedLocale } from './locale-registry'
 
@@ -18,6 +20,7 @@ const additionalLocaleSources: Record<AdditionalLocale, Record<string, string>> 
   'pt-BR': ptBRMessages,
   ja: jaMessages,
   de: deMessages,
+  'zh-TW': zhTWMessages,
 }
 
 const setNestedValue = (target: LocaleTree, path: string, value: unknown) => {
@@ -66,6 +69,9 @@ const buildAdditionalLocaleMessages = (locale: AdditionalLocale) => {
 export const I18N_MESSAGES: Record<SupportedLocale, LocaleTree> = {
   zh: buildSourceLocaleMessages('zh'),
   en: buildSourceLocaleMessages('en'),
+  // Traditional Chinese is pre-generated from the zh source (OpenCC),
+  // keys it does not cover still fall back to `zh`.
+  'zh-TW': buildAdditionalLocaleMessages('zh-TW'),
   es: buildAdditionalLocaleMessages('es'),
   'pt-BR': buildAdditionalLocaleMessages('pt-BR'),
   ja: buildAdditionalLocaleMessages('ja'),

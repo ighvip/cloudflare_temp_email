@@ -72,6 +72,9 @@ importers:
       jsdom:
         specifier: ^28.1.0
         version: 28.1.0
+      opencc-js:
+        specifier: ^1.4.2
+        version: 1.4.2
       unplugin-auto-import:
         specifier: ^20.3.0
         version: 20.3.0(@vueuse/core@14.4.0(vue@3.5.42(typescript@5.4.5)))
@@ -2528,6 +2531,9 @@ packages:
   obug@2.2.1:
     resolution: {integrity: sha512-XrsrhT5sybtKI6wakr2SPOlGZWWYbUXZ7a0jT8/QOeAPau+1X/bSegNe5YR75oJmEZQbKningirmGOEJCIk61Q==}
     engines: {node: '>=12.20.0'}
+
+  opencc-js@1.4.2:
+    resolution: {integrity: sha512-EdcspgdROiCCZDM+jZR6Pa670xW+EW2QhctPBQ8gRjg6lrx4IHEl+2s+kt5izk/TkxVRgdWuFgaGkaEdIUfdaw==}
 
   own-keys@1.0.2:
     resolution: {integrity: sha512-19YVAg7T+WTrxggPukVq7DjTv6+PJ867TmhCvBsYwmbFCsZd344rq2Ld1p0wo8f8Qrrhgp82c6FJRqdXWtSEhg==}
@@ -5813,6 +5819,8 @@ snapshots:
       object-keys: 1.1.1
 
   obug@2.2.1: {}
+
+  opencc-js@1.4.2: {}
 
   own-keys@1.0.2:
     dependencies:

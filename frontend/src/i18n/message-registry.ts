@@ -581,6 +581,22 @@ export const MESSAGE_REGISTRY = {
       "en": "TempMail",
       "zh": "TempMail"
     },
+    "announcementTag": {
+      "en": "News",
+      "zh": "公告"
+    },
+    "announcementMore": {
+      "en": "More ({count})",
+      "zh": "更多({count})"
+    },
+    "announcementTitle": {
+      "en": "Site Announcements",
+      "zh": "站点公告"
+    },
+    "announcementEmpty": {
+      "en": "No announcements yet",
+      "zh": "暂无公告"
+    },
     "userCenter": {
       "en": "User Center",
       "zh": "用户中心"
@@ -1454,6 +1470,96 @@ export const MESSAGE_REGISTRY = {
     "unbindMailAddress": {
       "en": "Unbind Mail Address",
       "zh": "解绑邮箱地址"
+    }
+  },
+  "views.index.HomeInfo": {
+    "introTitle": {
+      "en": "About This Site",
+      "zh": "站点简介"
+    },
+    "defaultIntro": {
+      "en": "TempMail is a free temporary email service built on Cloudflare. Generate an address in one click to receive signup codes and verification emails, keeping your real inbox clean.",
+      "zh": "TempMail 是基于 Cloudflare 构建的免费临时邮箱服务，无需注册即可快速生成临时邮件地址，用于接收注册验证码、验证邮件等，保护你的私人邮箱不被滥用。"
+    },
+    "statsTitle": {
+      "en": "Live Stats",
+      "zh": "运行统计"
+    },
+    "statsBadge": {
+      "en": "public",
+      "zh": "公开数据"
+    },
+    "statToday": {
+      "en": "Received today",
+      "zh": "今日收信"
+    },
+    "statWeek": {
+      "en": "Received this week",
+      "zh": "本周收信"
+    },
+    "statMonth": {
+      "en": "Received this month",
+      "zh": "本月收信"
+    },
+    "statsUpdatedAt": {
+      "en": "Updated at {time} (auto refresh every minute)",
+      "zh": "更新于 {time}（每分钟自动刷新）"
+    },
+    "statsUnavailable": {
+      "en": "Stats are temporarily unavailable",
+      "zh": "统计数据暂时不可用"
+    },
+    "statusTitle": {
+      "en": "Server Status",
+      "zh": "服务器状态"
+    },
+    "refresh": {
+      "en": "Refresh",
+      "zh": "刷新"
+    },
+    "statusChecking": {
+      "en": "Checking...",
+      "zh": "检测中…"
+    },
+    "statusOk": {
+      "en": "All systems normal",
+      "zh": "服务正常"
+    },
+    "statusError": {
+      "en": "Service degraded",
+      "zh": "服务异常"
+    },
+    "statusDbDown": {
+      "en": "Database unavailable",
+      "zh": "数据库不可用"
+    },
+    "latency": {
+      "en": "Latency {ms}ms",
+      "zh": "响应延迟 {ms}ms"
+    },
+    "database": {
+      "en": "Database",
+      "zh": "数据库"
+    },
+    "online": {
+      "en": "online",
+      "zh": "在线"
+    },
+    "offline": {
+      "en": "offline",
+      "zh": "离线"
+    },
+    "version": {
+      "en": "Version",
+      "zh": "版本"
+    },
+    "statusUnavailable": {
+      "en": "Unable to fetch status",
+      "zh": "无法获取状态"
+    },
+    "statusCheckedAt": {
+      "en": "Checked at {time} (auto refresh every 30s)",
+      "zh": "检测于 {time}（每 30 秒自动刷新）"
     }
   },
   "views.index.AddressBar": {
@@ -2906,6 +3012,98 @@ export const MESSAGE_REGISTRY = {
     "help": {
       "en": "Help",
       "zh": "帮助"
+    },
+    "guide": {
+      "en": "Guide",
+      "zh": "操作指南"
+    },
+    "step1Title": {
+      "en": "Create a mailbox",
+      "zh": "创建邮箱"
+    },
+    "step1Desc": {
+      "en": "Fill in a name and pick a domain under \"Create Email\", then click create.",
+      "zh": "在「创建邮箱」中填写名称、选择域名，点击创建"
+    },
+    "step2Title": {
+      "en": "Copy the address",
+      "zh": "复制地址"
+    },
+    "step2Desc": {
+      "en": "Copy the generated address and keep the mailbox credential safe (it lets you return later).",
+      "zh": "复制生成的邮箱地址，同时保存好邮箱凭证（可随时找回）"
+    },
+    "step3Title": {
+      "en": "Sign up",
+      "zh": "前往注册"
+    },
+    "step3Desc": {
+      "en": "Paste the address into the signup / login / verification field of the target site.",
+      "zh": "把地址粘贴到目标网站的注册 / 登录 / 验证栏位"
+    },
+    "step4Title": {
+      "en": "Come back here",
+      "zh": "回到本页"
+    },
+    "step4Desc": {
+      "en": "Switch back to the inbox. Mail arrives automatically, no manual refresh needed.",
+      "zh": "切回收件箱，邮件会自动进入，无需手动刷新"
+    },
+    "step5Title": {
+      "en": "Read the code",
+      "zh": "读取验证码"
+    },
+    "step5Desc": {
+      "en": "Open the message to grab the verification code or link and finish signing up.",
+      "zh": "打开邮件即可看到验证码 / 验证链接，完成注册"
+    },
+    "step6Title": {
+      "en": "(Optional) Set a password",
+      "zh": "（可选）绑定密码"
+    },
+    "step6Desc": {
+      "en": "Set a password in mailbox settings so you can log back in with \"Password Login\" later.",
+      "zh": "在邮箱设置中设置密码，下次可用「密码登录」找回地址"
+    },
+    "faqCreate": {
+      "en": "How do I generate an address?",
+      "zh": "怎么生成地址？"
+    },
+    "faqCreateAnswer": {
+      "en": "Open the \"Create Email\" tab, hit \"Random\" for a generated name or type your own, then choose a suffix from the dropdown. If random subdomains are enabled you can also pick a random or custom subdomain.",
+      "zh": "切到「创建邮箱」标签，可点「随机生成」取一个名字，也能自己输入；下方下拉框选择要使用的邮箱后缀。若站点开启了随机子域名，还可选择随机 / 自定义子域名。"
+    },
+    "faqReceive": {
+      "en": "How do I receive mail?",
+      "zh": "怎么收信？"
+    },
+    "faqReceiveAnswer": {
+      "en": "The inbox opens as soon as the address exists. New mail shows up within about 30 seconds, or click \"Refresh\" to pull immediately. Attachments download directly; click \"Load remote images\" if inline images are blocked.",
+      "zh": "地址创建后页面即刻进入收件箱。新邮件约 30 秒内自动推送进来，也可点击「刷新」立即收取。附件可直接下载，图片若未显示可点「加载远程图片」。"
+    },
+    "faqLost": {
+      "en": "Forgot the address or switched browsers?",
+      "zh": "地址忘了 / 换了浏览器怎么办？"
+    },
+    "faqLostAnswer": {
+      "en": "The mailbox credential (that long string) is your key. Paste it on the \"Log In\" tab to get back to the same mailbox. Save it somewhere, or bind a password and use password login instead.",
+      "zh": "地址凭证（一长串字符串）就是你的「钥匙」。在「登录」标签粘贴凭证即可回到原邮箱；建议先复制保存，或为地址绑定密码后改用密码登录。"
+    },
+    "faqLifetime": {
+      "en": "How long does a mailbox last?",
+      "zh": "邮箱能用多久？"
+    },
+    "faqLifetimeAnswer": {
+      "en": "Temporary mailboxes are anonymous, so long-inactive ones may be cleaned up automatically. To keep one, bind a password or attach it to a user account.",
+      "zh": "临时邮箱为匿名使用，长期不活跃可能被系统清理。需要长期保留时，请在邮箱设置中绑定密码或绑定用户账号。"
+    },
+    "faqMissing": {
+      "en": "Not receiving mail?",
+      "zh": "收不到邮件？"
+    },
+    "faqMissingAnswer": {
+      "en": "Check the spelling and suffix first, then wait about a minute. If nothing arrives, the sender most likely blocks temporary domains — try another suffix. If you suspect spam filtering, contact the admin below.",
+      "zh": "先确认地址拼写与后缀无误，再等待约 1 分钟；仍无邮件则多半是对方网站屏蔽了临时邮箱域名，可换一个后缀重试。确认是垃圾邮件问题可在下方联系管理员。"
     },
     "login": {
       "en": "Log In to Mailbox",

@@ -2,7 +2,7 @@
 import {
   darkTheme,
 } from 'naive-ui'
-import { computed, onMounted, watchEffect } from 'vue'
+import { computed, onMounted, watch, watchEffect } from 'vue'
 import { useHead } from '@unhead/vue'
 import { useI18n } from 'vue-i18n'
 import { useGlobalState } from './store'
@@ -11,7 +11,7 @@ import Header from './views/Header.vue';
 import Footer from './views/Footer.vue';
 import { api } from './api'
 import { getNaiveLocaleConfig } from './i18n/naive-locale'
-import { DEFAULT_LOCALE, isSupportedLocale } from './i18n/utils'
+import { DEFAULT_LOCALE, isSupportedLocale, siteDefaultLocale } from './i18n/utils'
 import { APP_CONFIG } from './config'
 
 const {
@@ -31,6 +31,18 @@ watchEffect(() => {
   if (typeof document === 'undefined') return
   document.documentElement.lang = isSupportedLocale(locale.value) ? locale.value : DEFAULT_LOCALE
 })
+
+// open settings (and with them the admin default language) arrive after the
+// router has resolved the initial locale, so re-apply it once it lands.
+// A route with an explicit /:lang/ prefix or a visitor-chosen language wins.
+watch(siteDefaultLocale, () => {
+  if (!siteDefaultLocale.value) return
+  const pathLocale = window.location.pathname.split('/')[1]
+  if (pathLocale && isSupportedLocale(pathLocale)) return
+  const stored = window.localStorage.getItem('preferredLocale')
+  if (stored && isSupportedLocale(stored)) return
+  locale.value = siteDefaultLocale.value
+}, { immediate: true })
 
 if (showAd.value) {
   useHead({

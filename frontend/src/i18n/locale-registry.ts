@@ -5,12 +5,14 @@ import {
   dateJaJP,
   datePtBR,
   dateZhCN,
+  dateZhTW,
   deDE,
   enUS,
   esAR,
   jaJP,
   ptBR,
   zhCN,
+  zhTW,
 } from 'naive-ui'
 
 import type { NDateLocale, NLocale } from 'naive-ui'
@@ -31,9 +33,17 @@ type LocaleRegistryEntry = {
 export const LOCALE_REGISTRY = [
   {
     locale: 'zh',
-    label: '中文',
+    label: '简体中文',
     browserMatches: ['zh'],
     naive: { locale: zhCN, dateLocale: dateZhCN },
+    turnstileLocale: 'zh-CN',
+  },
+  {
+    locale: 'zh-TW',
+    label: '繁體中文',
+    browserMatches: ['zh-Hant', 'zh-TW', 'zh-HK', 'zh-MO'],
+    naive: { locale: zhTW, dateLocale: dateZhTW },
+    // Cloudflare Turnstile has no Traditional Chinese pack, zh-CN is the closest
     turnstileLocale: 'zh-CN',
   },
   {
