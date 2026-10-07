@@ -474,6 +474,106 @@ export const MESSAGE_REGISTRY = {
     "webhookSettings": {
       "en": "Webhook Settings",
       "zh": "Webhook 设置"
+    },
+    "heroFallbackTitle": {
+      "en": "TempMail",
+      "zh": "TempMail"
+    },
+    "tagline": {
+      "en": "Free, instant, no-signup disposable email",
+      "zh": "免费 · 免注册 · 即开即用的临时邮箱"
+    },
+    "pillNoSignup": {
+      "en": "No signup",
+      "zh": "免注册"
+    },
+    "pillCleanup": {
+      "en": "7-day cleanup",
+      "zh": "7天自动清理"
+    },
+    "pillOpenSource": {
+      "en": "Open source",
+      "zh": "开源免费"
+    },
+    "finePrint": {
+      "en": "Mails are deleted automatically after 7 days · See the guide on the left if you get stuck",
+      "zh": "邮件 7 天自动清理 · 遇到问题请看左侧操作指南与常见问题"
+    },
+    "feature1Title": {
+      "en": "No signup needed",
+      "zh": "免注册生成"
+    },
+    "feature1Desc": {
+      "en": "Open the page and generate an address — no phone number, no account",
+      "zh": "打开页面即可生成邮箱，无需手机号、无需账号"
+    },
+    "feature2Title": {
+      "en": "Real-time inbox",
+      "zh": "实时收信"
+    },
+    "feature2Desc": {
+      "en": "New mails arrive in seconds, with full body and code detection",
+      "zh": "新邮件秒级到达，支持正文查看与验证码提取"
+    },
+    "feature3Title": {
+      "en": "Privacy first",
+      "zh": "隐私保护"
+    },
+    "feature3Desc": {
+      "en": "Automatic cleanup after 7 days — no tracking, no resale of your mails",
+      "zh": "邮件 7 天自动清理，不追踪、不出售任何数据"
+    },
+    "feature4Title": {
+      "en": "Custom addresses",
+      "zh": "自定义地址"
+    },
+    "feature4Desc": {
+      "en": "Pick your own prefix and domain (subdomains where enabled)",
+      "zh": "支持自定义邮箱名与域名，开启时可用子域名"
+    },
+    "feature5Title": {
+      "en": "Multi-language UI",
+      "zh": "多语言界面"
+    },
+    "feature5Desc": {
+      "en": "简体中文, 繁體中文, English, 日本語, Deutsch and more",
+      "zh": "简体中文、繁體中文、English、日本語、Deutsch 等多语言"
+    },
+    "feature6Title": {
+      "en": "Public statistics",
+      "zh": "公开运行统计"
+    },
+    "feature6Desc": {
+      "en": "Live mail counters and server health, fully transparent",
+      "zh": "收信数据与服务器状态完全公开、实时可查"
+    },
+    "terminalTitle": {
+      "en": "How it works",
+      "zh": "运行演示"
+    },
+    "guideTitle": {
+      "en": "Guide & FAQ",
+      "zh": "操作指南与常见问题"
+    },
+    "termCmdNew": {
+      "en": "tempemail new --random",
+      "zh": "tempemail new --random"
+    },
+    "termOutNew": {
+      "en": "✔ created {address}",
+      "zh": "✔ 已生成 {address}"
+    },
+    "termCmdWatch": {
+      "en": "tempemail watch --inbox",
+      "zh": "tempemail watch --inbox"
+    },
+    "termOutMail": {
+      "en": "✔ new mail · subject: verification code 823194",
+      "zh": "✔ 收到新邮件 · 主题「验证码」正文 823194"
+    },
+    "termOutMeta": {
+      "en": "→ latency 112ms · database online",
+      "zh": "→ 延迟 112ms · 数据库在线"
     }
   },
   "views.Footer": {
@@ -600,6 +700,18 @@ export const MESSAGE_REGISTRY = {
     "userCenter": {
       "en": "User Center",
       "zh": "用户中心"
+    },
+    "adminEntryFailed": {
+      "en": "Could not open the admin console, please try again",
+      "zh": "打开后台失败，请重试"
+    },
+    "adminEntryRateLimited": {
+      "en": "Too many attempts, please wait a minute",
+      "zh": "操作过于频繁，请稍后再试"
+    },
+    "adminEntryStale": {
+      "en": "Homepage verification expired, refresh the page and try again",
+      "zh": "页面校验已过期，请刷新首页后重试"
     }
   },
   "views.user.BindAddress": {

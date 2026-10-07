@@ -5,6 +5,7 @@ import axios from 'axios'
 import i18n from '../i18n'
 import { getFingerprint } from '../utils/fingerprint'
 import { safeBearerHeader, safeHeaderValue } from '../utils/headers'
+import { getGateSession } from '../utils/gate'
 import { sanitizeHtml } from '../utils/sanitize-html'
 import { APP_CONFIG } from '../config'
 import { createUserAccessTokenInterceptor } from './user-access-token-interceptor'
@@ -60,6 +61,13 @@ const apiFetch = async (path, options = {}) => {
         if (adminJwtHeader) headers['Authorization'] = adminJwtHeader;
         const authorizationHeader = safeBearerHeader(jwt.value);
         if (authorizationHeader) headers['Authorization'] = authorizationHeader;
+        // P0-B4 rework: per-tab admin gate session — every /admin/* call and
+        // the heartbeat must carry the S token minted from the homepage entry
+        const gateHeader = safeHeaderValue(getGateSession());
+        if (gateHeader && (path.startsWith('/admin')
+            || path === '/open_api/admin_gate_ping')) {
+            headers['x-gate-tab'] = gateHeader;
+        }
 
         const initialResponse = await instance.request(path, {
             method: options.method || 'GET',

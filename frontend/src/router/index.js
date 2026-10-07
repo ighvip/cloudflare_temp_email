@@ -5,6 +5,7 @@ import UserOauth2Callback from '../views/user/UserOauth2Callback.vue'
 import i18n from '../i18n'
 import { useGlobalState } from '../store'
 import { getAdminPath } from '../utils'
+import { setGateSession } from '../utils/gate'
 import {
     DEFAULT_LOCALE,
     replaceLocaleInFullPath,
@@ -74,6 +75,25 @@ router.beforeEach((to, from, next) => {
         }
         const query = { ...to.query }
         delete query.jwt
+        next({
+            path: to.path,
+            query,
+            hash: to.hash,
+            replace: true,
+        })
+        return
+    }
+
+    // P0-B4 rework: `?gt=<S>` — the session token delivered when the
+    // homepage-minted `?k=` token was redeemed. Store it per-tab and strip
+    // it from the URL immediately so it never lingers in history.
+    if (Object.prototype.hasOwnProperty.call(to.query, 'gt')) {
+        const gtQuery = Array.isArray(to.query.gt) ? to.query.gt[0] : to.query.gt
+        if (typeof gtQuery === 'string' && gtQuery) {
+            setGateSession(gtQuery)
+        }
+        const query = { ...to.query }
+        delete query.gt
         next({
             path: to.path,
             query,

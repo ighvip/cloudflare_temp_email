@@ -14,6 +14,7 @@ import { Envelope, Language, User } from '@vicons/fa'
 import { useGlobalState } from '../store'
 import { api } from '../api'
 import { getRouterPathWithLang, hashPassword, getAdminPath } from '../utils'
+import { openAdminGate } from '../utils/gate'
 import { DEFAULT_LOCALE, isSupportedLocale, replaceLocaleInFullPath } from '../i18n/utils'
 import { getLocaleLabel, SUPPORTED_LOCALES } from '../i18n/locale-registry'
 import Turnstile from '../components/Turnstile.vue'
@@ -37,6 +38,37 @@ const menuValue = computed(() => {
     if (route.path.includes("admin")) return "admin";
     return "home";
 });
+
+// P0-B4 rework: admin entry only exists on the homepage — the one-time
+// token can only be minted from a click there
+const isHomeRoute = computed(() => {
+    const path = route.path;
+    if (path === '/') return true;
+    // locale-prefixed home: /zh-TW, /zh-TW/ (longer segments like /user,
+    // /redeem, /admin never match the 2-letter locale shape)
+    return /^\/[a-zA-Z]{2}(-[a-zA-Z]{2,4})?\/?$/.test(path);
+});
+
+const adminEntryBusy = ref(false);
+const onAdminEntry = async () => {
+    if (adminEntryBusy.value) return;
+    adminEntryBusy.value = true;
+    showMobileMenu.value = false;
+    try {
+        // mint a 60s one-time token and open the admin page in a new window
+        await openAdminGate();
+    } catch (error) {
+        if (error?.status === 429) {
+            message.warning(t('adminEntryRateLimited'));
+        } else if (error?.status === 400) {
+            message.error(t('adminEntryStale'));
+        } else {
+            message.error(t('adminEntryFailed'));
+        }
+    } finally {
+        adminEntryBusy.value = false;
+    }
+};
 
 const cfToken = ref('')
 const turnstileRef = ref(null)
@@ -151,19 +183,14 @@ const menuOptions = computed(() => [
                 size: "small",
                 type: menuValue.value == "admin" ? "primary" : "default",
                 style: "width: 100%",
-                onClick: async () => {
-                    loading.value = true;
-                    await router.push(getRouterPathWithLang(getAdminPath(), locale.value));
-                    loading.value = false;
-                    showMobileMenu.value = false;
-                }
+                onClick: onAdminEntry
             },
             {
                 default: () => t('admin'),
                 icon: () => h(NIcon, { component: AdminPanelSettingsFilled }),
             }
         ),
-        show: showAdminPage.value,
+        show: showAdminPage.value && isHomeRoute.value,
         key: "admin"
     },
     {
@@ -224,10 +251,8 @@ const logoClick = async () => {
     }
     if (logoClickCount.value >= 5) {
         logoClickCount.value = 0;
-        message.info("Change to admin Page");
-        loading.value = true;
-        await router.push(getRouterPathWithLang(getAdminPath(), locale.value));
-        loading.value = false;
+        // P0-B4 rework: same one-time-token flow as the homepage dot
+        await onAdminEntry();
     } else {
         logoClickCount.value++;
     }
@@ -288,9 +313,11 @@ onUnmounted(() => {
                 <div class="header-title-row">
                     <h3 v-if="openSettings.fetched">{{ openSettings.title || t('title') }}</h3>
                     <h3 v-else>&nbsp;</h3>
-                    <!-- P0-B4: inconspicuous 4px dot — new-window admin entry -->
-                    <a class="header-admin-dot" :href="adminPath" target="_blank" rel="noopener noreferrer"
-                        title="Admin" aria-label="Admin"></a>
+                    <!-- P0-B4 rework: inconspicuous 4px dot — homepage-only
+                         new-window admin entry (mints a 60s one-time token) -->
+                    <a v-if="isHomeRoute" class="header-admin-dot" :href="adminPath"
+                        role="button" title="Admin" aria-label="Admin"
+                        @click.prevent="onAdminEntry"></a>
                     <div class="header-clock">
                         <div class="header-clock-date">{{ clockDate }}</div>
                         <div class="header-clock-time">{{ clockTime }}</div>
