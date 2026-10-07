@@ -7,7 +7,7 @@ import { useIsMobile } from '../utils/composables'
 import {
     DarkModeFilled, LightModeFilled, MenuFilled,
     AdminPanelSettingsFilled, MonitorHeartFilled,
-    KeyboardArrowDownOutlined
+    HelpOutlineOutlined, KeyboardArrowDownOutlined
 } from '@vicons/material'
 import { Envelope, Language, User } from '@vicons/fa'
 
@@ -36,6 +36,7 @@ const showMobileMenu = ref(false)
 const menuValue = computed(() => {
     if (route.path.includes("user")) return "user";
     if (route.path.includes("admin")) return "admin";
+    if (route.path.includes("help")) return "help";
     return "home";
 });
 
@@ -181,6 +182,27 @@ const menuOptions = computed(() => [
             {
                 text: true,
                 size: "small",
+                type: menuValue.value == "help" ? "primary" : "default",
+                style: "width: 100%",
+                onClick: async () => {
+                    await router.push(getRouterPathWithLang("/help", locale.value));
+                    showMobileMenu.value = false;
+                }
+            },
+            {
+                default: () => t('help'),
+                icon: () => h(NIcon, { component: HelpOutlineOutlined }),
+            }
+        ),
+        key: "help",
+        show: !isTelegram.value
+    },
+    {
+        label: () => h(
+            NButton,
+            {
+                text: true,
+                size: "small",
                 type: menuValue.value == "admin" ? "primary" : "default",
                 style: "width: 100%",
                 onClick: onAdminEntry
@@ -311,8 +333,13 @@ onUnmounted(() => {
         <n-page-header>
             <template #title>
                 <div class="header-title-row">
-                    <h3 v-if="openSettings.fetched">{{ openSettings.title || t('title') }}</h3>
-                    <h3 v-else>&nbsp;</h3>
+                    <!-- logo + brand name + tagline (the only place the brand
+                         name appears at full size on the homepage) -->
+                    <div class="header-brand">
+                        <h3 v-if="openSettings.fetched">{{ openSettings.title || t('title') }}</h3>
+                        <h3 v-else>&nbsp;</h3>
+                        <div class="header-tagline">{{ t('tagline') }}</div>
+                    </div>
                     <!-- P0-B4 rework: inconspicuous 4px dot — homepage-only
                          new-window admin entry (mints a 60s one-time token) -->
                     <a v-if="isHomeRoute" class="header-admin-dot" :href="adminPath"
@@ -461,6 +488,33 @@ onUnmounted(() => {
 /* the site name must never be squeezed out by the clock / announcement */
 .header-title-row h3 {
     flex: 0 0 auto;
+}
+
+/* brand name + tagline stack in the top bar (brand appears here only) */
+.header-brand {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.header-brand h3 {
+    margin: 0;
+}
+
+.header-tagline {
+    max-width: 340px;
+    font-size: 11px;
+    line-height: 1.3;
+    opacity: 0.6;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+@media (max-width: 640px) {
+    .header-tagline {
+        display: none;
+    }
 }
 
 /* ---- clock ---- */

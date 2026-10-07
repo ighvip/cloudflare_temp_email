@@ -40,8 +40,7 @@ const router = useRouter()
 
 const {
     jwt, loading, openSettings,
-    showAddressCredential, userSettings, addressPassword,
-    homeGuideEmbedded
+    showAddressCredential, userSettings, addressPassword
 } = useGlobalState()
 
 const tabValue = ref('signin')
@@ -274,7 +273,8 @@ onMounted(async () => {
 
                     <div v-else>
                         <n-form-item-row :label="t('credential')" required>
-                            <n-input v-model:value="credential" type="textarea" :autosize="{ minRows: 3 }" />
+                            <!-- single-line field: paste the credential, press enter -->
+                            <n-input v-model:value="credential" @keyup.enter="login" />
                         </n-form-item-row>
                     </div>
 
@@ -377,10 +377,9 @@ onMounted(async () => {
                     </n-form>
                 </n-spin>
             </n-tab-pane>
-            <!-- P0 redesign: on the redesigned homepage the guide/FAQ lives
-                 as a permanent left-column section (homeGuideEmbedded) —
-                 every other context keeps the help tab -->
-            <n-tab-pane v-if="!homeGuideEmbedded" name="help" :tab="t('guide')">
+            <!-- help tab is always available: on the redesigned homepage the
+                 full tutorial lives on /help, the compact one stays here -->
+            <n-tab-pane name="help" :tab="t('guide')">
                 <GuideFaq />
             </n-tab-pane>
         </n-tabs>

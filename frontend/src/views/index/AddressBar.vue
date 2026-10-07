@@ -1,8 +1,7 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useScopedI18n } from '@/i18n/app'
-import { useRouter } from 'vue-router'
-import { User, ExchangeAlt } from '@vicons/fa'
+import { ExchangeAlt } from '@vicons/fa'
 
 import { useGlobalState } from '../../store'
 import { api } from '../../api'
@@ -14,8 +13,6 @@ import { getRouterPathWithLang } from '../../utils'
 import AddressSelect from '../../components/AddressSelect.vue'
 import AddressCredentialModal from '../../components/AddressCredentialModal.vue'
 
-const router = useRouter()
-
 const {
     jwt, settings, showAddressCredential, userJwt,
     isTelegram, addressPassword
@@ -25,9 +22,7 @@ const { locale, t } = useScopedI18n('views.index.AddressBar')
 
 const showAddressManage = ref(false)
 
-const onUserLogin = async () => {
-    await router.push(getRouterPathWithLang("/user", locale.value))
-}
+const helpPath = computed(() => getRouterPathWithLang('/help', locale.value))
 
 onMounted(async () => {
     await api.getSettings();
@@ -70,13 +65,9 @@ onMounted(async () => {
                     <span>{{ t('fetchAddressError') }}</span>
                 </n-alert>
                 <Login />
-                <n-divider />
-                <n-button @click="onUserLogin" type="primary" block secondary strong>
-                    <template #icon>
-                        <n-icon :component="User" />
-                    </template>
-                    {{ t('userCenter') }}
-                </n-button>
+                <div class="action-help">
+                    <router-link class="action-help-link" :to="helpPath">{{ t('helpLink') }}</router-link>
+                </div>
             </n-card>
         </div>
         <AddressCredentialModal v-model:show="showAddressCredential" :address="settings.address" :jwt="jwt"
@@ -112,6 +103,22 @@ onMounted(async () => {
 .address-manage {
     flex: 0 0 auto;
     white-space: nowrap;
+}
+
+.action-help {
+    margin-top: 12px;
+    text-align: center;
+    font-size: 13px;
+}
+
+.action-help-link {
+    opacity: 0.75;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.action-help-link:hover {
+    opacity: 1;
 }
 
 </style>

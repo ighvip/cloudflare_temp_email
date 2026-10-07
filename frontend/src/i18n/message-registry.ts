@@ -475,13 +475,9 @@ export const MESSAGE_REGISTRY = {
       "en": "Webhook Settings",
       "zh": "Webhook 设置"
     },
-    "heroFallbackTitle": {
-      "en": "TempMail",
-      "zh": "TempMail"
-    },
-    "tagline": {
-      "en": "Free, instant, no-signup disposable email",
-      "zh": "免费 · 免注册 · 即开即用的临时邮箱"
+    "heroTitle": {
+      "en": "Verify signups without handing over your real inbox",
+      "zh": "验证注册，不必交出真实邮箱"
     },
     "pillNoSignup": {
       "en": "No signup",
@@ -496,8 +492,12 @@ export const MESSAGE_REGISTRY = {
       "zh": "开源免费"
     },
     "finePrint": {
-      "en": "Mails are deleted automatically after 7 days · See the guide on the left if you get stuck",
-      "zh": "邮件 7 天自动清理 · 遇到问题请看左侧操作指南与常见问题"
+      "en": "Mails are deleted automatically after 7 days ·",
+      "zh": "邮件 7 天自动清理 ·"
+    },
+    "helpLinkShort": {
+      "en": "Help Center",
+      "zh": "帮助中心"
     },
     "feature1Title": {
       "en": "No signup needed",
@@ -546,34 +546,6 @@ export const MESSAGE_REGISTRY = {
     "feature6Desc": {
       "en": "Live mail counters and server health, fully transparent",
       "zh": "收信数据与服务器状态完全公开、实时可查"
-    },
-    "terminalTitle": {
-      "en": "How it works",
-      "zh": "运行演示"
-    },
-    "guideTitle": {
-      "en": "Guide & FAQ",
-      "zh": "操作指南与常见问题"
-    },
-    "termCmdNew": {
-      "en": "tempemail new --random",
-      "zh": "tempemail new --random"
-    },
-    "termOutNew": {
-      "en": "✔ created {address}",
-      "zh": "✔ 已生成 {address}"
-    },
-    "termCmdWatch": {
-      "en": "tempemail watch --inbox",
-      "zh": "tempemail watch --inbox"
-    },
-    "termOutMail": {
-      "en": "✔ new mail · subject: verification code 823194",
-      "zh": "✔ 收到新邮件 · 主题「验证码」正文 823194"
-    },
-    "termOutMeta": {
-      "en": "→ latency 112ms · database online",
-      "zh": "→ 延迟 112ms · 数据库在线"
     }
   },
   "views.Footer": {
@@ -712,6 +684,14 @@ export const MESSAGE_REGISTRY = {
     "adminEntryStale": {
       "en": "Homepage verification expired, refresh the page and try again",
       "zh": "页面校验已过期，请刷新首页后重试"
+    },
+    "tagline": {
+      "en": "No signup · Ready-to-use disposable email",
+      "zh": "免注册 · 即开即用的临时邮箱"
+    },
+    "help": {
+      "en": "Help",
+      "zh": "帮助"
     }
   },
   "views.user.BindAddress": {
@@ -1585,13 +1565,9 @@ export const MESSAGE_REGISTRY = {
     }
   },
   "views.index.HomeInfo": {
-    "introTitle": {
-      "en": "About This Site",
-      "zh": "站点简介"
-    },
     "defaultIntro": {
-      "en": "TempMail is a free temporary email service built on Cloudflare. Generate an address in one click to receive signup codes and verification emails, keeping your real inbox clean.",
-      "zh": "TempMail 是基于 Cloudflare 构建的免费临时邮箱服务，无需注册即可快速生成临时邮件地址，用于接收注册验证码、验证邮件等，保护你的私人邮箱不被滥用。"
+      "en": "A free disposable mailbox built on Cloudflare: generate an address without signing up, receive signup codes and verification mails, and keep your real inbox private.",
+      "zh": "基于 Cloudflare 构建的免费临时邮箱服务：无需注册即可快速生成临时邮件地址，用于接收注册验证码、验证邮件等，保护你的私人邮箱不被滥用。"
     },
     "statsTitle": {
       "en": "Live Stats",
@@ -1600,6 +1576,10 @@ export const MESSAGE_REGISTRY = {
     "statsBadge": {
       "en": "public",
       "zh": "公开数据"
+    },
+    "statsBadgeManual": {
+      "en": "manual",
+      "zh": "手动维护"
     },
     "statToday": {
       "en": "Received today",
@@ -1620,58 +1600,6 @@ export const MESSAGE_REGISTRY = {
     "statsUnavailable": {
       "en": "Stats are temporarily unavailable",
       "zh": "统计数据暂时不可用"
-    },
-    "statusTitle": {
-      "en": "Server Status",
-      "zh": "服务器状态"
-    },
-    "refresh": {
-      "en": "Refresh",
-      "zh": "刷新"
-    },
-    "statusChecking": {
-      "en": "Checking...",
-      "zh": "检测中…"
-    },
-    "statusOk": {
-      "en": "All systems normal",
-      "zh": "服务正常"
-    },
-    "statusError": {
-      "en": "Service degraded",
-      "zh": "服务异常"
-    },
-    "statusDbDown": {
-      "en": "Database unavailable",
-      "zh": "数据库不可用"
-    },
-    "latency": {
-      "en": "Latency {ms}ms",
-      "zh": "响应延迟 {ms}ms"
-    },
-    "database": {
-      "en": "Database",
-      "zh": "数据库"
-    },
-    "online": {
-      "en": "online",
-      "zh": "在线"
-    },
-    "offline": {
-      "en": "offline",
-      "zh": "离线"
-    },
-    "version": {
-      "en": "Version",
-      "zh": "版本"
-    },
-    "statusUnavailable": {
-      "en": "Unable to fetch status",
-      "zh": "无法获取状态"
-    },
-    "statusCheckedAt": {
-      "en": "Checked at {time} (auto refresh every 30s)",
-      "zh": "检测于 {time}（每 30 秒自动刷新）"
     }
   },
   "views.index.AddressBar": {
@@ -1707,9 +1635,9 @@ export const MESSAGE_REGISTRY = {
       "en": "OK",
       "zh": "确定"
     },
-    "userCenter": {
-      "en": "User Center",
-      "zh": "用户中心"
+    "helpLink": {
+      "en": "First time here? Visit the help center",
+      "zh": "首次使用？查看帮助中心"
     }
   },
   "views.admin.SendBox": {
@@ -3434,6 +3362,242 @@ export const MESSAGE_REGISTRY = {
     "adminContact": {
       "en": "If you need help, please contact the administrator ({msg})",
       "zh": "如果你需要帮助，请联系管理员 ({msg})"
+    }
+  },
+  "views.Uptime": {
+    "title": {
+      "en": "Service Status",
+      "zh": "服务状态"
+    },
+    "badgeUp": {
+      "en": "All services up",
+      "zh": "全部服务正常"
+    },
+    "badgeDown": {
+      "en": "Service degradation",
+      "zh": "部分服务异常"
+    },
+    "badgeUnknown": {
+      "en": "Collecting data",
+      "zh": "监控采集中"
+    },
+    "monitorWebsite": {
+      "en": "Website",
+      "zh": "网站主站"
+    },
+    "monitorApi": {
+      "en": "API",
+      "zh": "接口服务"
+    },
+    "monitorDb": {
+      "en": "Database",
+      "zh": "数据库"
+    },
+    "checkedAt": {
+      "en": "Updated at {time} · probed every minute",
+      "zh": "更新于 {time} · 每分钟探测"
+    },
+    "error": {
+      "en": "Failed to load status",
+      "zh": "状态获取失败"
+    },
+    "refresh": {
+      "en": "Refresh",
+      "zh": "刷新"
+    },
+    "uptimeTip": {
+      "en": "Uptime over the last 24 hours · hover a bar for details",
+      "zh": "最近 24 小时可用率 · 悬停柱条查看详情"
+    },
+    "tipUp": {
+      "en": "{time} · up · avg {ms}ms · {uptime}%",
+      "zh": "{time} · 正常 · 平均 {ms}ms · 可用率 {uptime}%"
+    },
+    "tipDown": {
+      "en": "{time} · down · uptime {uptime}%",
+      "zh": "{time} · 异常 · 可用率 {uptime}%"
+    },
+    "tipNone": {
+      "en": "{time} · no data",
+      "zh": "{time} · 暂无数据"
+    }
+  },
+  "views.Help": {
+    "pageTitle": {
+      "en": "Help Center",
+      "zh": "帮助中心"
+    },
+    "pageDesc": {
+      "en": "A step-by-step tutorial, FAQ and troubleshooting guide — easy even on your first visit.",
+      "zh": "分步教程、常见问题与故障排查，第一次用也能轻松上手。"
+    },
+    "backHome": {
+      "en": "Back to home",
+      "zh": "返回首页"
+    },
+    "navTutorial": {
+      "en": "Tutorial",
+      "zh": "使用教程"
+    },
+    "navFaq": {
+      "en": "FAQ",
+      "zh": "常见问题"
+    },
+    "navTrouble": {
+      "en": "Troubleshooting",
+      "zh": "故障排查"
+    },
+    "symptomTag": {
+      "en": "Problem",
+      "zh": "问题"
+    },
+    "causeTag": {
+      "en": "Cause",
+      "zh": "原因"
+    },
+    "fixTag": {
+      "en": "Fix",
+      "zh": "解决"
+    },
+    "stepTip1": {
+      "en": "Leave the name empty for auto-generation and pick a domain from the dropdown; when random subdomains are enabled you can also pick a random or custom subdomain.",
+      "zh": "名称留空会自动生成，域名在下拉框中选择；站点开启随机子域名时，还可选择随机或自定义子域名。"
+    },
+    "stepTip2": {
+      "en": "The credential is the only key back to your mailbox — save it in your notes. Anyone holding it controls the mailbox.",
+      "zh": "凭证是找回邮箱的唯一钥匙，建议复制到备忘录保存；泄露给他人等于交出邮箱控制权。"
+    },
+    "stepTip3": {
+      "en": "Most signup forms require accepting the terms or passing a captcha before they send the code.",
+      "zh": "多数站点的注册页需要先同意条款或完成人机验证，才会发送验证码邮件。"
+    },
+    "stepTip4": {
+      "en": "The inbox polls about every 30 seconds — keep this tab open. Mails are kept for 7 days only.",
+      "zh": "收件箱约每 30 秒自动拉取，请保持页面打开；邮件只保留 7 天。"
+    },
+    "stepTip5": {
+      "en": "Codes usually appear at the top of the body. If inline images are blocked, click 'Load remote images'.",
+      "zh": "验证码通常在正文最上方；若内嵌图片被拦截，点「加载远程图片」即可正常显示。"
+    },
+    "stepTip6": {
+      "en": "With a password bound you can log back in with address + password even if you lose the credential.",
+      "zh": "绑定密码后，即使丢了凭证也能用「密码登录」通过地址 + 密码找回。"
+    },
+    "faqExtraQ1": {
+      "en": "Can other people read my mails?",
+      "zh": "邮件内容别人能看到吗？"
+    },
+    "faqExtraA1": {
+      "en": "Mails are stored on this server only to display them to whoever holds the address or credential. The site does not analyze message content and deletes everything after 7 days. Never use a temporary mailbox for accounts that matter (banking, identity).",
+      "zh": "邮件仅存储在本站用于向持有地址 / 凭证的人展示，不做内容分析，7 天后自动清理。请勿用临时邮箱注册涉及财产、身份等重要账号。"
+    },
+    "faqExtraQ2": {
+      "en": "Can I send mail from a temporary address?",
+      "zh": "可以用这个地址给别人发信吗？"
+    },
+    "faqExtraA2": {
+      "en": "Only if the site has sending enabled. When it is off the mailbox is receive-only; when it is on you will find a 'Send Mail' tab next to the inbox.",
+      "zh": "取决于站点是否开启发信功能。未开启时只能收信；开启后收件箱旁会出现「发送邮件」标签。"
+    },
+    "faqExtraQ3": {
+      "en": "What exactly is the mailbox credential?",
+      "zh": "「邮箱地址凭证」到底是什么？"
+    },
+    "faqExtraA3": {
+      "en": "A long string generated when the mailbox is created — it acts as address and password together. Paste it into the 'Log In' tab to return to the same mailbox, and keep it safe.",
+      "zh": "创建邮箱时生成的一长串字符串，相当于地址与密码的组合：在「登录邮箱」标签粘贴它即可回到同一个邮箱，请务必自行保存。"
+    },
+    "faqExtraQ4": {
+      "en": "Can I manage several addresses at once?",
+      "zh": "能同时管理多个地址吗？"
+    },
+    "faqExtraA4": {
+      "en": "Yes. After creating an address a 'Mailbox Management' button appears on the action card; logged-in users can also manage all their addresses under User Center → Address Management.",
+      "zh": "可以。创建过地址后操作卡会出现「邮箱管理」按钮；登录用户还可在「用户中心 → 地址管理」统一管理多个地址。"
+    },
+    "trouble1Q": {
+      "en": "Not receiving the verification mail",
+      "zh": "收不到验证邮件"
+    },
+    "trouble1C": {
+      "en": "Wrong spelling or suffix; the sender blocks temporary-mail domains; delivery delayed over a minute.",
+      "zh": "地址拼写或后缀不对；对方网站屏蔽了临时邮箱域名；发送方延迟超过 1 分钟。"
+    },
+    "trouble1F": {
+      "en": "Wait about a minute and double-check the address; retry with another domain suffix; contact the admin below if it still fails.",
+      "zh": "等待约 1 分钟并核对地址拼写；换一个域名后缀重新注册；仍收不到时在本页底部联系管理员。"
+    },
+    "trouble2Q": {
+      "en": "Images in the mail body do not show",
+      "zh": "邮件正文图片不显示"
+    },
+    "trouble2C": {
+      "en": "Remote images are blocked by default to stop tracking pixels.",
+      "zh": "站点默认拦截远程图片，用于防止跟踪像素。"
+    },
+    "trouble2F": {
+      "en": "Click 'Load remote images' at the top of the message — verification codes are plain text and unaffected.",
+      "zh": "点击邮件顶部的「加载远程图片」即可，验证码为纯文本不受影响。"
+    },
+    "trouble3Q": {
+      "en": "Credential login says the credential is invalid",
+      "zh": "凭证登录提示凭证无效"
+    },
+    "trouble3C": {
+      "en": "The credential was copied incompletely, or the mailbox was cleaned up after 7 days of inactivity.",
+      "zh": "凭证复制不完整，或邮箱超过 7 天未使用已被自动清理。"
+    },
+    "trouble3F": {
+      "en": "Copy the full credential again; if you bound a password use password login; otherwise create a new address and save the credential this time.",
+      "zh": "重新完整复制凭证；若绑定过密码可用「密码登录」；都不行就重新创建地址并保存好凭证。"
+    },
+    "trouble4Q": {
+      "en": "Creating an address fails / rate limited",
+      "zh": "创建地址失败 / 提示过于频繁"
+    },
+    "trouble4C": {
+      "en": "Too many creations in a short time, a name that breaks the rules, or a required captcha.",
+      "zh": "短时间内创建次数触发限流、邮箱名不符合规则，或未完成人机验证。"
+    },
+    "trouble4F": {
+      "en": "Wait a minute and retry; use letters and digits only for the name; complete the captcha shown on the page.",
+      "zh": "等待 1 分钟后重试；邮箱名只用字母和数字；完成页面上显示的人机验证。"
+    },
+    "trouble5Q": {
+      "en": "The inbox does not refresh by itself",
+      "zh": "收件箱不自动刷新"
+    },
+    "trouble5C": {
+      "en": "The page has been open a long time and the connection dropped, or the browser throttles background tabs.",
+      "zh": "页面长时间挂着导致连接中断，或浏览器对后台标签页进行了节流。"
+    },
+    "trouble5F": {
+      "en": "Click 'Refresh' in the inbox or reload the page; opening a fresh tab also works.",
+      "zh": "点击收件箱「刷新」或刷新整个页面；换一个新标签页打开也可以。"
+    },
+    "trouble6Q": {
+      "en": "Attachments will not download",
+      "zh": "附件无法下载"
+    },
+    "trouble6C": {
+      "en": "The file exceeds the size limit or its type is filtered by security policy.",
+      "zh": "文件超过大小限制，或类型被安全策略过滤。"
+    },
+    "trouble6F": {
+      "en": "Use the original link inside the mail; if it still fails, contact the admin below.",
+      "zh": "改用邮件内的原始链接下载；仍失败请联系本页底部的管理员。"
+    },
+    "trouble7Q": {
+      "en": "Forgot the address and cannot get in",
+      "zh": "忘记了地址，进不去邮箱"
+    },
+    "trouble7C": {
+      "en": "The credential is lost and no password or user account was bound.",
+      "zh": "凭证丢失，且没有绑定密码或用户账号。"
+    },
+    "trouble7F": {
+      "en": "If it was bound to a user account, recover it under User Center → Address Management; otherwise the address cannot be restored — create a new one and save the credential promptly.",
+      "zh": "若绑定过用户账号，可在「用户中心 → 地址管理」找回；否则该地址无法恢复，请重新创建并及时保存凭证。"
     }
   }
 } as const

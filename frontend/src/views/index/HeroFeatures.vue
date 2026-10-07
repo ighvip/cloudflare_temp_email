@@ -37,10 +37,18 @@ const features = computed(() => [
 </template>
 
 <style scoped>
+/* icon + text read as one left-aligned group, 3 columns × 2 rows */
 .feature-grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 12px;
+    text-align: left;
+}
+
+@media (max-width: 1280px) {
+    .feature-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 }
 
 @media (max-width: 640px) {
@@ -73,13 +81,16 @@ const features = computed(() => [
     justify-content: center;
     width: 34px;
     height: 34px;
+    margin-top: 1px;
     border-radius: 10px;
     color: #2080f0;
     background: rgba(32, 128, 240, 0.12);
 }
 
 .feature-body {
+    flex: 1 1 auto;
     min-width: 0;
+    text-align: left;
 }
 
 .feature-title {

@@ -34,6 +34,11 @@ const router = createRouter({
             component: () => import('../views/Redeem.vue')
         },
         {
+            path: '/help',
+            alias: '/:lang/help',
+            component: () => import('../views/Help.vue')
+        },
+        {
             path: '/user/oauth2/callback',
             alias: '/:lang/user/oauth2/callback',
             component: UserOauth2Callback

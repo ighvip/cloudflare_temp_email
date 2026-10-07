@@ -1,15 +1,15 @@
 <script setup>
-import { defineAsyncComponent, onMounted, onUnmounted, watch, computed } from 'vue'
+import { defineAsyncComponent, onMounted, watch, computed } from 'vue'
 import { useScopedI18n } from '@/i18n/app'
 import { useRoute } from 'vue-router'
 
 import { useGlobalState } from '../store'
 import { api } from '../api'
 import { useIsMobile } from '../utils/composables'
+import { getRouterPathWithLang } from '../utils'
 import { FullscreenExitOutlined } from '@vicons/material'
 
 import AddressBar from './index/AddressBar.vue';
-import HomeInfo from './index/HomeInfo.vue';
 import MailBox from '../components/MailBox.vue';
 import SendBox from '../components/SendBox.vue';
 import AutoReply from './index/AutoReply.vue';
@@ -20,15 +20,12 @@ import Attachment from './index/Attachment.vue';
 import About from './common/About.vue';
 import SimpleIndex from './index/SimpleIndex.vue';
 // P0 redesign: left/right split homepage
-import SiteLogo from '../components/SiteLogo.vue';
 import HeroFeatures from './index/HeroFeatures.vue';
-import TerminalDemo from './index/TerminalDemo.vue';
-import ActionStatus from './index/ActionStatus.vue';
-import GuideFaq from './index/GuideFaq.vue';
+import StatsCard from './index/StatsCard.vue';
+import UptimeCard from './index/UptimeCard.vue';
 
 const {
   loading, settings, openSettings, indexTab, globalTabplacement, useSimpleIndex,
-  homeGuideEmbedded
 } = useGlobalState()
 const message = useMessage()
 const route = useRoute()
@@ -40,13 +37,16 @@ const SendMail = defineAsyncComponent(() => {
     .finally(() => loading.value = false);
 });
 
-const { t } = useScopedI18n('views.Index')
+const { t, locale } = useScopedI18n('views.Index')
 // the intro copy lives in the HomeInfo namespace — it moves from the info
 // card to the hero subtitle on the redesigned homepage (same source text)
 const { t: tHomeInfo } = useScopedI18n('views.index.HomeInfo')
 
 const introText = computed(() =>
   (openSettings.value.siteIntro || '').trim() || tHomeInfo('defaultIntro'))
+
+// the full tutorial / FAQ / troubleshooting lives on its own page now
+const helpPath = computed(() => getRouterPathWithLang('/help', locale.value))
 
 const fetchMailData = async (limit, offset) => {
   if (mailIdQuery.value > 0) {
@@ -113,25 +113,12 @@ watch(route, () => {
   }
 })
 
-// the guide/FAQ is embedded as a permanent section only while the split
-// layout is on screen — SimpleIndex keeps the login card's help tab
-const syncGuideEmbedded = () => {
-  homeGuideEmbedded.value = !useSimpleIndex.value
-}
-
 onMounted(() => {
-  syncGuideEmbedded()
   if (route.query.mail_id) {
     showMailIdQuery.value = true;
     mailIdQuery.value = route.query.mail_id;
     queryMail();
   }
-})
-
-watch(useSimpleIndex, syncGuideEmbedded)
-
-onUnmounted(() => {
-  homeGuideEmbedded.value = false
 })
 </script>
 
@@ -141,41 +128,24 @@ onUnmounted(() => {
       <SimpleIndex />
     </div>
     <div v-else class="home-layout">
-      <!-- left/right split hero: brand + proof on the left, action card right -->
+      <!-- left/right split hero: value headline + proof on the left,
+           action card right (bottoms aligned via the right column's flex) -->
       <div class="hero">
         <section class="hero-left">
           <div class="hero-head">
-            <h1 class="hero-title">{{ openSettings.title || t('heroFallbackTitle') }}</h1>
+            <h1 class="hero-title">{{ t('heroTitle') }}</h1>
             <p class="hero-sub">{{ introText }}</p>
           </div>
 
           <HeroFeatures />
 
-          <HomeInfo :hide-intro="true" />
-
-          <div class="hero-block">
-            <div class="hero-block-title">{{ t('terminalTitle') }}</div>
-            <TerminalDemo />
-          </div>
-
-          <div class="hero-block">
-            <div class="hero-block-title">{{ t('guideTitle') }}</div>
-            <div class="hero-block-card">
-              <GuideFaq />
-            </div>
+          <div class="hero-cards">
+            <StatsCard />
+            <UptimeCard />
           </div>
         </section>
 
         <aside class="hero-right">
-          <div class="right-brand">
-            <!-- logo component reused untouched (same SVG as the header) -->
-            <SiteLogo />
-            <div class="right-brand-text">
-              <div class="right-title">{{ openSettings.title || t('heroFallbackTitle') }}</div>
-              <div class="right-tagline">{{ t('tagline') }}</div>
-            </div>
-          </div>
-
           <div class="right-pills">
             <span class="right-pill pill-blue">{{ t('pillNoSignup') }}</span>
             <span class="right-pill pill-green">{{ t('pillCleanup') }}</span>
@@ -184,10 +154,12 @@ onUnmounted(() => {
 
           <n-card class="action-card" :bordered="false" embedded>
             <AddressBar />
-            <ActionStatus />
           </n-card>
 
-          <div class="right-fine">{{ t('finePrint') }}</div>
+          <div class="right-fine">
+            {{ t('finePrint') }}
+            <router-link class="right-fine-link" :to="helpPath">{{ t('helpLinkShort') }}</router-link>
+          </div>
         </aside>
       </div>
 
@@ -282,10 +254,11 @@ onUnmounted(() => {
     min-width: 0;
 }
 
+/* right column stretches with the row so both columns end flush at the
+   bottom — the fine print is pushed down by margin-top: auto */
 .hero-right {
-    position: sticky;
-    top: 12px;
-    align-self: start;
+    display: flex;
+    flex-direction: column;
 }
 
 /* ---- left column ---- */
@@ -309,66 +282,27 @@ onUnmounted(() => {
     text-align: justify;
 }
 
-.hero-block {
+/* stats + uptime cards sit side by side under the feature grid */
+.hero-cards {
+    display: grid;
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    gap: 16px;
     margin-top: 18px;
+    align-items: stretch;
 }
 
-.hero-block-title {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 10px;
-    font-weight: 600;
-    font-size: 15px;
-}
-
-.hero-block-title::before {
-    content: '';
-    width: 4px;
-    height: 14px;
-    border-radius: 2px;
-    background: #2080f0;
-}
-
-.hero-block-card {
-    padding: 16px;
-    border: 1px solid rgba(128, 128, 128, 0.16);
-    border-radius: 12px;
-    background: rgba(128, 128, 128, 0.04);
+@media (max-width: 992px) {
+    .hero-cards {
+        grid-template-columns: 1fr;
+    }
 }
 
 /* ---- right column ---- */
-.right-brand {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 4px 2px;
-}
-
-.right-brand-text {
-    min-width: 0;
-}
-
-.right-title {
-    font-weight: 700;
-    font-size: 18px;
-    line-height: 1.3;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.right-tagline {
-    font-size: 12px;
-    opacity: 0.65;
-    line-height: 1.5;
-}
-
 .right-pills {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-    margin: 12px 0;
+    margin: 4px 0 12px;
 }
 
 .right-pill {
@@ -417,12 +351,23 @@ onUnmounted(() => {
 }
 
 .right-fine {
-    margin-top: 10px;
-    padding: 0 4px;
+    margin-top: auto;
+    padding: 14px 4px 0;
     font-size: 12px;
     line-height: 1.7;
     opacity: 0.55;
     text-align: center;
+}
+
+.right-fine-link {
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    white-space: nowrap;
+}
+
+.right-fine-link:hover {
+    opacity: 1;
 }
 
 /* ---- responsive: action card first, everything else below ---- */
@@ -433,12 +378,15 @@ onUnmounted(() => {
     }
 
     .hero-right {
-        position: static;
         order: -1;
     }
 
     .hero-sub {
         text-align: left;
+    }
+
+    .right-fine {
+        margin-top: 10px;
     }
 }
 </style>
