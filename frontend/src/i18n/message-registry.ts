@@ -578,8 +578,8 @@ export const MESSAGE_REGISTRY = {
       "zh": "状态"
     },
     "title": {
-      "en": "Cloudflare Temp Email",
-      "zh": "Cloudflare 临时邮件"
+      "en": "TempMail",
+      "zh": "TempMail"
     },
     "userCenter": {
       "en": "User Center",
@@ -1476,6 +1476,10 @@ export const MESSAGE_REGISTRY = {
     "fetchAddressError": {
       "en": "Mail address credential is invalid or account not exist, it may be network connection issue, please try again later.",
       "zh": "邮箱地址凭证无效或邮箱地址不存在，也可能是网络连接异常，请稍后再尝试。"
+    },
+    "addressCredentialExpired": {
+      "en": "Your saved mailbox credential has expired and has been cleared. Please create or log in to a mailbox below.",
+      "zh": "保存的邮箱凭证已失效并已清除，请在下方重新创建或登录邮箱。"
     },
     "linkWithAddressCredential": {
       "en": "Open to auto login email link",

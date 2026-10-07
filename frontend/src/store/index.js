@@ -64,6 +64,7 @@ export const useGlobalState = createGlobalState(
             fetched: false,
             send_balance: 0,
             address: '',
+            addressCredentialInvalid: false,
             auto_reply: {
                 subject: '',
                 message: '',

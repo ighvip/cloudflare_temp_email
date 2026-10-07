@@ -71,13 +71,21 @@ const apiFetch = async (path, options = {}) => {
             showAuth.value = true;
         }
         if (response.status >= 300) {
-            throw new Error(`[${response.status}]: ${response.data?.message || response.data}`);
+            const err = new Error(`[${response.status}]: ${response.data?.message || response.data}`);
+            err.status = response.status;
+            err.code = typeof response.data === 'object' && response.data !== null
+                ? response.data.code : undefined;
+            throw err;
         }
         const data = response.data;
         return data;
     } catch (error) {
         if (error.response) {
-            throw new Error(`Code ${error.response.status}: ${error.response.data?.message || error.response.data}`);
+            const err = new Error(`Code ${error.response.status}: ${error.response.data?.message || error.response.data}`);
+            err.status = error.response.status;
+            err.code = typeof error.response.data === 'object' && error.response.data !== null
+                ? error.response.data.code : undefined;
+            throw err;
         }
         throw error;
     } finally {
@@ -164,6 +172,28 @@ const getSettings = async () => {
             auto_reply: res["auto_reply"],
             send_balance: res["send_balance"],
         };
+        settings.value.addressCredentialInvalid = false;
+    } catch (error) {
+        // 401 from the address JWT guard means the stored credential is stale
+        // (address deleted / secret rotated). Drop it so the UI falls back to
+        // the "create an address" form instead of showing a dead-end warning.
+        // Site-password / user-access-token 401s are handled elsewhere and
+        // must NOT clear the address credential.
+        const isAddressCredentialError = error?.status === 401
+            && error?.code !== ErrorCode.AUTH_SITE_PASSWORD_INVALID
+            && error?.code !== ErrorCode.AUTH_USER_ACCESS_TOKEN_EXPIRED;
+        if (isAddressCredentialError) {
+            jwt.value = '';
+            settings.value = {
+                fetched: true,
+                send_balance: 0,
+                address: '',
+                auto_reply: settings.value.auto_reply,
+                addressCredentialInvalid: true,
+            };
+            return "";
+        }
+        throw error;
     } finally {
         settings.value.fetched = true;
     }

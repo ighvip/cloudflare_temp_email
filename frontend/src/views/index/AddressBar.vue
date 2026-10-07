@@ -62,7 +62,11 @@ onMounted(async () => {
         </div>
         <div v-else class="center">
             <n-card :bordered="false" embedded style="max-width: 600px;">
-                <n-alert v-if="jwt" type="warning" :show-icon="false" :bordered="false" closable>
+                <n-alert v-if="settings.addressCredentialInvalid" type="info" :show-icon="false"
+                    :bordered="false" closable>
+                    <span>{{ t('addressCredentialExpired') }}</span>
+                </n-alert>
+                <n-alert v-else-if="jwt" type="warning" :show-icon="false" :bordered="false" closable>
                     <span>{{ t('fetchAddressError') }}</span>
                 </n-alert>
                 <Login />

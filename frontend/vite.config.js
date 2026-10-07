@@ -46,9 +46,9 @@ export default defineConfig({
         cleanupOutdatedCaches: true,
       },
       manifest: {
-        name: 'Temp Email',
-        short_name: 'Temp Email',
-        description: 'Temp Email - Temporary Email',
+        name: 'Temp-Mail',
+        short_name: 'Temp-Mail',
+        description: 'Temp-Mail - Temporary Email',
         theme_color: '#ffffff',
         icons: [
           {

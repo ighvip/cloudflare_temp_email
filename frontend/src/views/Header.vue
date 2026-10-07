@@ -205,7 +205,11 @@ const menuOptions = computed(() => [
 ]);
 
 useHead({
-    title: () => openSettings.value.title || t('title'),
+    // only resolve once open settings arrive, otherwise keep the static
+    // <title> from index.html instead of flashing a fallback string
+    title: () => openSettings.value.fetched
+        ? (openSettings.value.title || t('title'))
+        : undefined,
     meta: [
         { name: "description", content: openSettings.value.description || t('title') },
     ]
@@ -242,7 +246,8 @@ onMounted(async () => {
     <div>
         <n-page-header>
             <template #title>
-                <h3>{{ openSettings.title || t('title') }}</h3>
+                <h3 v-if="openSettings.fetched">{{ openSettings.title || t('title') }}</h3>
+                <h3 v-else>&nbsp;</h3>
             </template>
             <template #avatar>
                 <div @click="logoClick">
