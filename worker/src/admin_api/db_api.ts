@@ -162,6 +162,18 @@ CREATE TABLE IF NOT EXISTS admin_gate_tokens (
     expires_at INTEGER NOT NULL,
     used_at INTEGER
 );
+
+CREATE INDEX IF NOT EXISTS idx_admin_gate_tokens_expires ON admin_gate_tokens(expires_at);
+
+CREATE TABLE IF NOT EXISTS admin_gate_sessions (
+    token TEXT PRIMARY KEY,
+    created_at INTEGER NOT NULL,
+    expires_at INTEGER NOT NULL,
+    last_seen INTEGER NOT NULL DEFAULT 0,
+    revoked_at INTEGER
+);
+
+CREATE INDEX IF NOT EXISTS idx_admin_gate_sessions_expires ON admin_gate_sessions(expires_at);
 `
 
 export default {

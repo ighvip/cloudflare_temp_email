@@ -5,6 +5,7 @@ import { addressJwtAuth } from './address_auth';
 
 import { api as commonApi } from './commom_api';
 import { api as openAuthApi } from './open_api/auth';
+import { api as gateApi } from './open_api/gate';
 import { api as mailsApi } from './mails_api'
 import { api as userApi } from './user_api';
 import { api as adminApi } from './admin_api';
@@ -20,7 +21,8 @@ import { getPasswords, getBooleanValue, getDomains, checkIsAdmin, getEnvStringLi
 import { checkAccessControl } from './ip_blacklist';
 import {
 	getAdminPath, hasValidGate, injectAdminPath, isAdminPagePath,
-	notFoundPage, redeemGateKey, issueGateCookie,
+	notFoundPage, redeemGateToken, issueGateCookie, checkAdminApiGate,
+	computeGateNonce, isHomePath,
 } from './admin_gate';
 
 const API_PATHS = [
@@ -88,6 +90,8 @@ app.use('/*', cors({
 		'Content-Type', 'Authorization', 'Accept-Language',
 		'x-lang', 'x-fingerprint', 'x-custom-auth',
 		'x-admin-auth', 'x-user-token', 'x-user-access-token',
+		// P0-B4 rework: admin gate (homepage nonce + per-tab session token)
+		'x-gate-src', 'x-gate-tab',
 	],
 	maxAge: 600,
 }))
@@ -109,22 +113,33 @@ app.onError((err, c) => {
 	const message = toPublicErrorMessage(err) ?? i18n.getMessagesbyContext(c).OperationFailedMsg
 	return c.json({ code: ErrorCode.INTERNAL_SERVER_ERROR, message }, 500)
 })
-// P0-B4 G1/G2: admin gate — registered before the global middleware so an
-// ungated request never reaches the credential checks and cannot leak them.
+// P0-B4 G1/G2 (homepage-minted rework): admin gate — registered before the
+// global middleware so an ungated request never reaches the credential
+// checks and cannot leak them.
+//   * HTML requests are gated in the ASSETS branch below (it also handles
+//     the `?k=<T>` → session redemption redirect).
+//   * everything else (JSON APIs) needs cookie + `x-gate-tab` + a heartbeat
+//     no older than 120s — closing the admin window stops the heartbeat and
+//     the session dies server-side.
 app.use('/admin/*', async (c, next) => {
-	const gateKey = new URL(c.req.url).searchParams.get("k");
-	let gateOk = await hasValidGate(c);
-	if (!gateOk && gateKey && await redeemGateKey(c, gateKey)) {
-		c.header("Set-Cookie", await issueGateCookie(c));
-		gateOk = true;
+	const accept = c.req.raw.headers.get("Accept") || "";
+	if (accept.includes("text/html")) {
+		if (c.env.ASSETS) {
+			// page gating (and ?k= redemption) happens in the ASSETS branch
+			await next();
+			return;
+		}
+		// API-only deployments have no SPA shell to gate — still require the
+		// session cookie before serving anything admin-ish
+		if (!(await hasValidGate(c))) {
+			c.header("Cache-Control", "no-store");
+			return notFoundPage(c.env.COPYRIGHT || "Not Found");
+		}
+		await next();
+		return;
 	}
-	if (!gateOk) {
-		// browser navigations get the branded 404, API calls the plain one
-		c.header("Cache-Control", "no-store");
-		const accept = c.req.raw.headers.get("Accept") || "";
-		if (accept.includes("text/html")) return notFoundPage(c.env.COPYRIGHT || "Not Found");
-		return c.notFound();
-	}
+	const denied = await checkAdminApiGate(c);
+	if (denied) return denied;
 	await next();
 });
 
@@ -138,11 +153,16 @@ app.use('/*', async (c, next) => {
 
 		// page routes: SPA shell, but the admin page is gated (P0-B4 G2)
 		if (!url.pathname.includes('.')) {
-			// P0-B4 G1: `?k=` redemption on page routes
+			// P0-B4 G1: `?k=<T>` redemption on page routes — the one-time
+			// token is exchanged for a session (S) delivered both as an
+			// HttpOnly cookie (page gate) and as `?gt=<S>` (SPA stores it
+			// in sessionStorage and strips it from the URL again)
 			const gateKey = url.searchParams.get("k");
 			if (gateKey) {
-				if (await redeemGateKey(c, gateKey)) {
+				const session = await redeemGateToken(c, gateKey);
+				if (session) {
 					url.searchParams.delete("k");
+					url.searchParams.set("gt", session);
 					let target = url.pathname;
 					if (target === "/" || isAdminPagePath(target, adminPath) || isAdminPagePath(target, "/admin")) {
 						target = adminPath;
@@ -152,12 +172,12 @@ app.use('/*', async (c, next) => {
 						status: 302,
 						headers: {
 							"Location": target + (query ? `?${query}` : ""),
-							"Set-Cookie": await issueGateCookie(c),
+							"Set-Cookie": issueGateCookie(session),
 							"Cache-Control": "no-store",
 						},
 					});
 				}
-				// unknown / spent key: behave like a missing page
+				// unknown / spent / expired key: behave like a missing page
 				return notFoundPage(c.env.COPYRIGHT || "Not Found");
 			}
 
@@ -175,7 +195,10 @@ app.use('/*', async (c, next) => {
 			indexUrl.pathname = "";
 			indexUrl.search = "";
 			const res = await c.env.ASSETS.fetch(indexUrl);
-			const html = injectAdminPath(await res.text(), adminPath);
+			// the mint nonce is injected on the homepage only — one-time admin
+			// tokens can be generated from there and nowhere else
+			const gateNonce = isHomePath(url.pathname) ? await computeGateNonce(c) : "";
+			const html = injectAdminPath(await res.text(), adminPath, gateNonce);
 			const headers = new Headers(res.headers);
 			headers.delete("ETag");
 			headers.set("Content-Type", "text/html; charset=utf-8");
@@ -217,6 +240,8 @@ app.use('/*', async (c, next) => {
 		|| c.req.path.startsWith("/open_api/admin_login")
 		|| c.req.path.startsWith("/open_api/credential_login")
 		|| c.req.path.startsWith("/user_api/login")
+		// P0-B4 rework: burst cap on admin gate token minting
+		|| c.req.path.startsWith("/open_api/admin_gate_mint")
 	) {
 		const reqIp = c.req.raw.headers.get("cf-connecting-ip")
 		if (reqIp && c.env.RATE_LIMITER) {
@@ -428,6 +453,7 @@ app.use('/admin/*', async (c, next) => {
 
 app.route('/', commonApi)
 app.route('/', openAuthApi)
+app.route('/', gateApi)
 app.route('/', mailsApi)
 app.route('/', userApi)
 app.route('/', adminApi)

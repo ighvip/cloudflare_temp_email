@@ -18,7 +18,7 @@ import db_api from './db_api'
 import ip_blacklist_settings from './ip_blacklist_settings'
 import ai_extract_settings from './ai_extract_settings'
 import config_api from './config_api'
-import gate_tokens from './gate_tokens'
+import gate_sessions from './gate_sessions'
 import redeem_code_api from '../redeem_api/admin_redeem_code_api'
 
 export const api = new Hono<HonoCustomType>()
@@ -102,10 +102,10 @@ api.post('admin/db_migration', db_api.migrate)
 api.get('/admin/config/:key', config_api.get)
 api.post('/admin/config', config_api.save)
 
-// P0-B4: one-time admin gate tokens (?k=)
-api.get('/admin/gate_tokens', gate_tokens.list)
-api.post('/admin/gate_tokens', gate_tokens.create)
-api.post('/admin/gate_tokens/revoke', gate_tokens.revoke)
+// P0-B4 rework: live admin gate sessions (tokens are only minted from the
+// homepage admin link — the panel can list/revoke sessions, not create tokens)
+api.get('/admin/gate_sessions', gate_sessions.list)
+api.post('/admin/gate_sessions/revoke', gate_sessions.revoke)
 
 // redemption codes
 api.use('/admin/redeem_codes', redeem_code_api.requireRedeemCodeEnabled)
