@@ -1,21 +1,13 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useScopedI18n } from '@/i18n/app'
 import { useGlobalState } from '../../store'
 import { api } from '../../api'
 
 const { openSettings } = useGlobalState()
+const { t } = useScopedI18n('views.index.HomeInfo')
 
-const DEFAULT_INTRO = 'TempMail 是基于 Cloudflare 构建的免费临时邮箱服务，无需注册即可快速生成临时邮件地址，用于接收注册验证码、验证邮件等，保护你的私人邮箱不被滥用。'
-
-const DEFAULT_GUIDE = [
-    '点击「创建邮箱」生成一个临时邮件地址',
-    '将地址复制到需要注册 / 登录的网站填写',
-    '回到本页收件箱，实时查看验证码与验证邮件',
-    '（可选）在邮箱设置中为地址绑定密码，方便日后找回',
-].map((text, index) => `${index + 1}. ${text}`).join('\n')
-
-const introText = computed(() => (openSettings.value.siteIntro || '').trim() || DEFAULT_INTRO)
-const guideText = computed(() => (openSettings.value.siteGuide || '').trim() || DEFAULT_GUIDE)
+const introText = computed(() => (openSettings.value.siteIntro || '').trim() || t('defaultIntro'))
 
 const status = ref(null)
 const statusError = ref(false)
@@ -42,18 +34,59 @@ const statusType = computed(() => {
 })
 
 const statusText = computed(() => {
-    if (statusError.value) return '服务异常';
-    if (!status.value) return '检测中…';
-    return status.value.db ? '服务正常' : '数据库不可用';
+    if (statusError.value) return t('statusError');
+    if (!status.value) return t('statusChecking');
+    return status.value.db ? t('statusOk') : t('statusDbDown');
 })
+
+// ---- public stats ----
+const stats = ref({ today: 0, week: 0, month: 0 })
+const statsError = ref(false)
+const statsUpdatedAt = ref('')
+let statsTimer = null
+
+const fetchStats = async (showLoading) => {
+    try {
+        const res = await api.fetch('/open_api/stats', { showLoading: !!showLoading });
+        stats.value = {
+            today: Number(res?.today) || 0,
+            week: Number(res?.week) || 0,
+            month: Number(res?.month) || 0,
+        };
+        statsError.value = false;
+        statsUpdatedAt.value = res?.updatedAt
+            ? new Date(res.updatedAt).toLocaleTimeString()
+            : new Date().toLocaleTimeString();
+    } catch (error) {
+        statsError.value = true;
+        statsUpdatedAt.value = new Date().toLocaleTimeString();
+    }
+}
+
+const statItems = computed(() => [
+    { key: 'today', label: t('statToday'), value: stats.value.today, tone: 'blue' },
+    { key: 'week', label: t('statWeek'), value: stats.value.week, tone: 'violet' },
+    { key: 'month', label: t('statMonth'), value: stats.value.month, tone: 'amber' },
+])
+
+const formatCount = (value) => {
+    // locale-neutral numerals so the same format works for every language
+    if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`
+    if (value >= 10000) return `${(value / 1000).toFixed(1)}k`
+    if (value >= 1000) return `${(value / 1000).toFixed(1)}k`
+    return String(value)
+}
 
 onMounted(() => {
     fetchStatus(false);
+    fetchStats(false);
     timer = setInterval(() => fetchStatus(false), 30000);
+    statsTimer = setInterval(() => fetchStats(false), 60000);
 })
 
 onUnmounted(() => {
     if (timer) clearInterval(timer)
+    if (statsTimer) clearInterval(statsTimer)
 })
 </script>
 
@@ -61,31 +94,47 @@ onUnmounted(() => {
     <n-card class="home-info" :bordered="false" embedded>
         <div class="home-info-grid">
             <div class="home-info-section">
-                <div class="home-info-title">站点简介</div>
+                <div class="home-info-title">{{ t('introTitle') }}</div>
                 <p class="home-info-intro">{{ introText }}</p>
             </div>
-            <div class="home-info-section">
-                <div class="home-info-title">使用指南</div>
-                <pre class="home-info-guide">{{ guideText }}</pre>
+
+            <div class="home-info-section home-info-stats">
+                <div class="home-info-title">
+                    {{ t('statsTitle') }}
+                    <span class="home-info-stats-badge">{{ t('statsBadge') }}</span>
+                </div>
+                <div class="stat-grid">
+                    <div v-for="item in statItems" :key="item.key" class="stat-item" :class="`stat-${item.tone}`">
+                        <div class="stat-value">{{ formatCount(item.value) }}</div>
+                        <div class="stat-label">{{ item.label }}</div>
+                    </div>
+                </div>
+                <div class="home-info-status-meta" v-if="!statsError && statsUpdatedAt">
+                    <span>{{ t('statsUpdatedAt', { time: statsUpdatedAt }) }}</span>
+                </div>
+                <div class="home-info-status-meta" v-else-if="statsError">
+                    <span>{{ t('statsUnavailable') }}</span>
+                </div>
             </div>
+
             <div class="home-info-section home-info-status">
-                <div class="home-info-title">服务器状态</div>
+                <div class="home-info-title">{{ t('statusTitle') }}</div>
                 <n-space align="center" :size="[8, 8]">
                     <n-tag :type="statusType" size="medium" round>
                         {{ statusText }}
                     </n-tag>
-                    <n-button size="tiny" tertiary @click="fetchStatus(true)">刷新</n-button>
+                    <n-button size="tiny" tertiary @click="fetchStatus(true)">{{ t('refresh') }}</n-button>
                 </n-space>
                 <div class="home-info-status-meta" v-if="status && !statusError">
-                    <span>响应延迟 {{ status.latencyMs }}ms</span>
-                    <span>· 数据库 {{ status.db ? '在线' : '离线' }}</span>
-                    <span>· 版本 {{ status.version }}</span>
+                    <span>{{ t('latency', { ms: status.latencyMs }) }}</span>
+                    <span>· {{ t('database') }} {{ status.db ? t('online') : t('offline') }}</span>
+                    <span>· {{ t('version') }} {{ status.version }}</span>
                 </div>
                 <div class="home-info-status-meta" v-else-if="statusError">
-                    <span>无法获取状态</span>
+                    <span>{{ t('statusUnavailable') }}</span>
                 </div>
                 <div class="home-info-status-meta" v-if="checkedAt">
-                    <span>检测于 {{ checkedAt }}（每 30 秒自动刷新）</span>
+                    <span>{{ t('statusCheckedAt', { time: checkedAt }) }}</span>
                 </div>
             </div>
         </div>
@@ -99,7 +148,7 @@ onUnmounted(() => {
 
 .home-info-grid {
     display: grid;
-    grid-template-columns: 1.4fr 1.2fr 1fr;
+    grid-template-columns: 1.3fr 1.3fr 1fr;
     gap: 20px;
 }
 
@@ -110,8 +159,11 @@ onUnmounted(() => {
 }
 
 .home-info-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     font-weight: 600;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
 }
 
 .home-info-intro {
@@ -120,13 +172,64 @@ onUnmounted(() => {
     text-align: justify;
 }
 
-.home-info-guide {
-    margin: 0;
-    font-family: inherit;
-    font-size: 14px;
-    line-height: 1.9;
-    white-space: pre-wrap;
-    word-break: break-word;
+.home-info-stats-badge {
+    padding: 1px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--n-text-color-2);
+    background: var(--n-color-target);
+    opacity: 0.75;
+}
+
+.stat-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.stat-item {
+    position: relative;
+    overflow: hidden;
+    padding: 12px 10px;
+    border-radius: 10px;
+    text-align: center;
+    border: 1px solid rgba(128, 128, 128, 0.16);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stat-item::before {
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 3px;
+    content: '';
+}
+
+.stat-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.10);
+}
+
+.stat-blue::before { background: linear-gradient(90deg, #2080f0, #51a2ff); }
+.stat-violet::before { background: linear-gradient(90deg, #722ed1, #b37feb); }
+.stat-amber::before { background: linear-gradient(90deg, #f0a020, #ffc53d); }
+
+.stat-value {
+    font-size: 26px;
+    font-weight: 700;
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.5px;
+}
+
+.stat-blue .stat-value { color: #2080f0; }
+.stat-violet .stat-value { color: #722ed1; }
+.stat-amber .stat-value { color: #d48806; }
+
+.stat-label {
+    margin-top: 4px;
+    font-size: 12px;
+    opacity: 0.7;
 }
 
 .home-info-status-meta {

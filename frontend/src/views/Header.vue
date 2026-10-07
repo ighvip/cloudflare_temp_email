@@ -1,5 +1,5 @@
 <script setup>
-import { ref, h, computed, onMounted } from 'vue'
+import { ref, h, computed, onMounted, onUnmounted } from 'vue'
 import { useScopedI18n } from '@/i18n/app'
 import { useHead } from '@unhead/vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
@@ -17,6 +17,7 @@ import { getRouterPathWithLang, hashPassword } from '../utils'
 import { DEFAULT_LOCALE, isSupportedLocale, replaceLocaleInFullPath } from '../i18n/utils'
 import { getLocaleLabel, SUPPORTED_LOCALES } from '../i18n/locale-registry'
 import Turnstile from '../components/Turnstile.vue'
+import SiteLogo from '../components/SiteLogo.vue'
 import { NButton, NIcon } from 'naive-ui'
 
 const message = useMessage()
@@ -235,10 +236,46 @@ const logoClick = async () => {
     }
 }
 
+// ---- header clock ----
+const now = ref(new Date());
+const pad2 = (n) => String(n).padStart(2, '0');
+// Intl keeps the weekday name correct for every supported locale
+const clockDate = computed(() => new Intl.DateTimeFormat(locale.value === 'zh-TW' ? 'zh-TW'
+    : locale.value === 'zh' ? 'zh-CN' : locale.value, {
+    year: 'numeric', month: 'long', day: 'numeric', weekday: 'long',
+}).format(now.value));
+const clockTime = computed(() =>
+    `${pad2(now.value.getHours())}:${pad2(now.value.getMinutes())}:${pad2(now.value.getSeconds())}`
+);
+let clockTimer = null;
+
+// ---- header announcement ----
+const announcementIndex = ref(0);
+const announcementList = computed(() => (openSettings.value.announcements || []).filter(Boolean));
+const currentAnnouncement = computed(() => {
+    const list = announcementList.value;
+    if (!list.length) return '';
+    return list[announcementIndex.value % list.length];
+});
+const showAllAnnouncements = ref(false);
+let announcementTimer = null;
+
 onMounted(async () => {
+    clockTimer = setInterval(() => { now.value = new Date(); }, 1000);
+    // rotate the announcement ticker every 10s when there is more than one
+    announcementTimer = setInterval(() => {
+        if (announcementList.value.length > 1) {
+            announcementIndex.value = (announcementIndex.value + 1) % announcementList.value.length;
+        }
+    }, 10000);
     await api.getOpenSettings(message, notification);
     // make sure user_id is fetched
     if (!userSettings.value.user_id) await api.getUserSettings(message);
+});
+
+onUnmounted(() => {
+    if (clockTimer) clearInterval(clockTimer);
+    if (announcementTimer) clearInterval(announcementTimer);
 });
 </script>
 
@@ -246,12 +283,26 @@ onMounted(async () => {
     <div>
         <n-page-header>
             <template #title>
-                <h3 v-if="openSettings.fetched">{{ openSettings.title || t('title') }}</h3>
-                <h3 v-else>&nbsp;</h3>
+                <div class="header-title-row">
+                    <h3 v-if="openSettings.fetched">{{ openSettings.title || t('title') }}</h3>
+                    <h3 v-else>&nbsp;</h3>
+                    <div class="header-clock">
+                        <div class="header-clock-date">{{ clockDate }}</div>
+                        <div class="header-clock-time">{{ clockTime }}</div>
+                    </div>
+                    <div v-if="currentAnnouncement" class="header-announcement"
+                        @click="showAllAnnouncements = true" :title="currentAnnouncement">
+                        <span class="header-announcement-tag">{{ t('announcementTag') }}</span>
+                        <span class="header-announcement-text">{{ currentAnnouncement }}</span>
+                        <span v-if="announcementList.length > 1" class="header-announcement-more">
+                            {{ t('announcementMore', { count: announcementList.length }) }}
+                        </span>
+                    </div>
+                </div>
             </template>
             <template #avatar>
-                <div @click="logoClick">
-                    <n-avatar style="margin-left: 10px;" src="/logo.png" />
+                <div class="header-logo" @click="logoClick">
+                    <SiteLogo style="margin-left: 10px;" />
                 </div>
             </template>
             <template #extra>
@@ -289,6 +340,15 @@ onMounted(async () => {
                 </div>
             </n-drawer-content>
         </n-drawer>
+        <n-modal v-model:show="showAllAnnouncements" preset="card" :title="t('announcementTitle')"
+            style="max-width: 560px;">
+            <n-list v-if="announcementList.length" :show-divider="false">
+                <n-list-item v-for="(item, idx) in announcementList" :key="idx">
+                    <span class="announcement-modal-item">{{ item }}</span>
+                </n-list-item>
+            </n-list>
+            <n-empty v-else :description="t('announcementEmpty')" />
+        </n-modal>
         <n-modal v-model:show="showAuth" :closable="false" :closeOnEsc="false" :maskClosable="false" preset="dialog"
             :title="t('accessHeader')">
             <p>{{ t('accessTip') }}</p>
@@ -334,6 +394,112 @@ onMounted(async () => {
     display: flex;
     align-items: center;
     justify-content: space-between;
+}
+
+.header-logo {
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+.header-title-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 0;
+}
+
+/* the site name must never be squeezed out by the clock / announcement */
+.header-title-row h3 {
+    flex: 0 0 auto;
+}
+
+/* ---- clock ---- */
+.header-clock {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+    padding: 2px 12px;
+    border-left: 1px solid rgba(128, 128, 128, 0.28);
+    border-right: 1px solid rgba(128, 128, 128, 0.28);
+}
+
+.header-clock-date {
+    font-size: 11px;
+    opacity: 0.65;
+    white-space: nowrap;
+}
+
+.header-clock-time {
+    font-size: 19px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+}
+
+/* ---- announcement ---- */
+.header-announcement {
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    max-width: 460px;
+    padding: 5px 10px;
+    border: 1px solid rgba(240, 160, 32, 0.5);
+    border-radius: 8px;
+    background: rgba(240, 160, 32, 0.10);
+    font-size: 12px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.header-announcement:hover {
+    background: rgba(240, 160, 32, 0.18);
+}
+
+.header-announcement-tag {
+    flex: 0 0 auto;
+    padding: 0 6px;
+    border-radius: 4px;
+    background: #f0a020;
+    color: #fff;
+    font-size: 11px;
+    line-height: 18px;
+    font-weight: 600;
+}
+
+.header-announcement-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.header-announcement-more {
+    flex: 0 0 auto;
+    opacity: 0.7;
+    font-size: 11px;
+}
+
+.announcement-modal-item {
+    line-height: 1.7;
+    word-break: break-word;
+}
+
+@media (max-width: 1100px) {
+    .header-announcement {
+        display: none;
+    }
+}
+
+@media (max-width: 640px) {
+    .header-clock {
+        display: none;
+    }
 }
 
 .header-extra {
