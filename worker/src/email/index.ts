@@ -1,6 +1,7 @@
 import { Context } from "hono";
 
 import { getJsonSetting, normalizeAddressDomain } from "../utils";
+import { isReceiveMailEnabled } from "../mail_domains";
 import { sendMailToTelegram } from "../telegram_api";
 import { auto_reply } from "./auto_reply";
 import { isBlocked } from "./black_list";
@@ -19,6 +20,14 @@ async function email(message: ForwardableEmailMessage, env: Bindings, ctx: Execu
     if (await isBlocked(message, env)) {
         message.setReject("Reject from address");
         console.log(`Reject message from ${message.from} to ${toAddress}`);
+        return;
+    }
+    // 问题6 批次1: per-domain 收信 switch stored in D1 — a domain explicitly
+    // turned off here is rejected; every other domain behaves exactly as before
+    const toDomain = toAddress.substring(toAddress.lastIndexOf("@") + 1);
+    if (!(await isReceiveMailEnabled({ env: env } as Context<HonoCustomType>, toDomain))) {
+        message.setReject("Domain receive disabled");
+        console.log(`Reject message to disabled domain: ${toAddress}`);
         return;
     }
     const rawEmail = await new Response(message.raw).text();

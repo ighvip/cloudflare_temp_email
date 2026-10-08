@@ -4,15 +4,17 @@ import { useScopedI18n } from '@/i18n/app'
 import { useIsMobile } from '../../utils/composables'
 import { useGlobalState } from '../../store'
 const props = defineProps({
+    // 问题13: the admin appearance page must show the 简洁首页 switch too
     showUseSimpleIndex: {
         type: Boolean,
-        default: false
+        default: true
     }
 })
 
 const {
     mailboxSplitSize, mailListView, mailListPreviewLineClamp, useIframeShowMail, preferShowTextMail, configAutoRefreshInterval,
-    globalTabplacement, useSideMargin, useUTCDate, useSimpleIndex, autoLoadRemoteImages
+    globalTabplacement, useSideMargin, useUTCDate, useSimpleIndex, autoLoadRemoteImages,
+    colorMode, setColorMode
 } = useGlobalState()
 const isMobile = useIsMobile()
 
@@ -22,6 +24,15 @@ const { t } = useScopedI18n('views.common.Appearance')
 <template>
     <div class="center">
         <n-card :bordered="false" embedded>
+            <!-- 问题13: the dark/light toggle moved here from the header menu
+                 as a three-way mode: light / follow system / dark -->
+            <n-form-item-row :label="t('themeMode')">
+                <n-radio-group :value="colorMode" @update:value="setColorMode">
+                    <n-radio-button value="light" :label="t('themeLight')" />
+                    <n-radio-button value="auto" :label="t('themeAuto')" />
+                    <n-radio-button value="dark" :label="t('themeDark')" />
+                </n-radio-group>
+            </n-form-item-row>
             <n-form-item-row v-if="!isMobile" :label="t('mailboxSplitSize')">
                 <n-slider v-model:value="mailboxSplitSize" :min="0" :max="0.75" :step="0.01" :marks="{
                     0: '0',

@@ -46,6 +46,22 @@ export type CustomSqlCleanup = {
     enabled: boolean;     // Whether to enable auto cleanup
 }
 
+export type MailDomainSetting = {
+    name: string;             // normalized (lowercase) domain name, unique
+    enabled: boolean;         // 收信 switch — false rejects incoming mail
+    sendEnabled: boolean;     // 发信 switch — overrides the env behaviour
+    isDefault?: boolean;      // reserved: default domain for the batch-2 wizard
+    createdAt?: string;       // ISO timestamp of when it was added here
+    // reserved placeholders for the batch-2 Email Routing wizard
+    // (routeEnabled / catchAll / dnsVerified ...) — unknown fields are
+    // preserved verbatim on read+write so batch 2 can add them safely
+    [key: string]: unknown;
+}
+
+export type MailDomainSettings = {
+    domains: MailDomainSetting[];
+}
+
 export type CleanupSettings = {
 
     enableMailsAutoCleanup: boolean | undefined;

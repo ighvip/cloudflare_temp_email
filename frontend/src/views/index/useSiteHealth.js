@@ -14,13 +14,17 @@ import { api } from '../../api'
  * triggering the app-wide n-spin overlay.
  */
 
-const stats = ref({ today: 0, week: 0, month: 0, mode: 'real' })
+const stats = ref({
+    today: 0, week: 0, month: 0, year: 0, mode: 'real',
+    sendEnabled: false, sendToday: 0, sendWeek: 0, sendMonth: 0, sendYear: 0,
+    timezone: '+08:00',
+})
 const statsError = ref(false)
 const statsUpdatedAt = ref('')
 const uptime = ref(null)
 const uptimeError = ref(false)
 const uptimeUpdatedAt = ref('')
-const activity = ref({ mode: 'real', minutes: [], today: { created: 0, sent: 0 } })
+const activity = ref({ mode: 'real', minutes: [], today: { created: 0, sent: 0 }, recent: [] })
 const activityError = ref(false)
 const activityUpdatedAt = ref('')
 
@@ -36,7 +40,15 @@ const fetchStats = async (showLoading) => {
             today: Number(res?.today) || 0,
             week: Number(res?.week) || 0,
             month: Number(res?.month) || 0,
+            year: Number(res?.year) || 0,
             mode: res?.mode === 'manual' ? 'manual' : 'real',
+            // 问题18-①b: sending disabled => backend reports false, UI shows 0
+            sendEnabled: res?.sendEnabled !== false,
+            sendToday: Number(res?.sendToday) || 0,
+            sendWeek: Number(res?.sendWeek) || 0,
+            sendMonth: Number(res?.sendMonth) || 0,
+            sendYear: Number(res?.sendYear) || 0,
+            timezone: typeof res?.timezone === 'string' ? res.timezone : '+08:00',
         }
         statsError.value = false
         statsUpdatedAt.value = res?.updatedAt
@@ -73,13 +85,15 @@ const fetchActivity = async (showLoading) => {
                 created: Number(res?.today?.created) || 0,
                 sent: Number(res?.today?.sent) || 0,
             },
+            // 问题19: the 3 most recent events (type + UTC time)
+            recent: Array.isArray(res?.recent) ? res.recent.slice(0, 3) : [],
         }
         activityError.value = false
         activityUpdatedAt.value = res?.updatedAt
             ? new Date(res.updatedAt).toLocaleTimeString()
             : new Date().toLocaleTimeString()
     } catch (error) {
-        activity.value = { mode: 'real', minutes: [], today: { created: 0, sent: 0 } }
+        activity.value = { mode: 'real', minutes: [], today: { created: 0, sent: 0 }, recent: [] }
         activityError.value = true
         activityUpdatedAt.value = new Date().toLocaleTimeString()
     }

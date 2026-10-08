@@ -8,6 +8,32 @@ export const useGlobalState = createGlobalState(
     () => {
         const isDark = useDark()
         const toggleDark = useToggle(isDark)
+        // 问题13: theme mode moved into the appearance page —
+        // 'light' | 'dark' | 'auto' (follow system). Users who explicitly
+        // picked a side via the old header toggle keep their choice.
+        const _legacyScheme = (() => {
+            try { return localStorage.getItem('vueuse-color-scheme') } catch (e) { return null }
+        })()
+        const colorMode = useStorage(
+            'colorMode',
+            _legacyScheme === 'dark' || _legacyScheme === 'light' ? _legacyScheme : 'auto'
+        )
+        const _systemDark = window.matchMedia('(prefers-color-scheme: dark)')
+        const applyColorMode = () => {
+            isDark.value = colorMode.value === 'auto'
+                ? _systemDark.matches
+                : colorMode.value === 'dark'
+        }
+        // resolve immediately during store setup — before first render, so
+        // there is no flash of the wrong theme
+        applyColorMode()
+        _systemDark.addEventListener('change', () => {
+            if (colorMode.value === 'auto') applyColorMode()
+        })
+        const setColorMode = (mode) => {
+            colorMode.value = mode
+            applyColorMode()
+        }
         const loading = ref(false);
         const announcement = useLocalStorage('announcement', '');
         const useSimpleIndex = useLocalStorage('useSimpleIndex', false);
@@ -158,6 +184,8 @@ export const useGlobalState = createGlobalState(
         return {
             isDark,
             toggleDark,
+            colorMode,
+            setColorMode,
             loading,
             settings,
             sendMailModel,

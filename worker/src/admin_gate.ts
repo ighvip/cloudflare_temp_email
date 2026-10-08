@@ -8,7 +8,7 @@ import { Context } from "hono";
  *     → T: one-time 64-hex token, 60s TTL, only its SHA-256 hash is stored
  *   new window opens `<adminPath>?k=T`
  *     → T is consumed atomically → S: session token (64 hex, 7 days, hashed)
- *     → 302 to `<adminPath>?gt=<S>` + HttpOnly session cookie (no Max-Age)
+ *     → 302 to `<adminPath>#gt=<S>` + HttpOnly session cookie (no Max-Age)
  *   the SPA keeps S in sessionStorage and sends it as `x-gate-tab` on every
  *   /admin/* request; a heartbeat refreshes `last_seen` every 30s.
  *

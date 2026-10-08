@@ -3,34 +3,12 @@ import { computed } from 'vue';
 import { useScopedI18n } from '@/i18n/app';
 import { ContentCopyOutlined, LinkRound, CodeRound } from '@vicons/material';
 import { useMessage } from 'naive-ui';
-import { useGlobalState } from '../store';
 
 const message = useMessage();
-const { isDark } = useGlobalState();
 
-// Dark mode: use Gmail's softer blue (#A8C7FA) for better readability
-const alertThemeOverrides = computed(() => {
-  if (isDark.value) {
-    return {
-      colorSuccess: 'rgba(168, 199, 250, 0.15)',
-      borderSuccess: '1px solid rgba(168, 199, 250, 0.3)',
-      iconColorSuccess: '#A8C7FA',
-      titleTextColorSuccess: '#A8C7FA',
-    }
-  }
-  return {}
-});
-
-const tagThemeOverrides = computed(() => {
-  if (isDark.value) {
-    return {
-      colorSuccess: 'rgba(168, 199, 250, 0.15)',
-      borderSuccess: '1px solid rgba(168, 199, 250, 0.3)',
-      textColorSuccess: '#A8C7FA',
-    }
-  }
-  return {}
-});
+// 问题15: the AI-extract success alert/tag follows the site-wide
+// monochrome system now — the local Gmail-blue dark override is gone,
+// so the global theme overrides apply untouched
 
 const { t } = useScopedI18n('components.AiExtractInfo')
 
@@ -111,7 +89,7 @@ const openLink = () => {
 
 <template>
   <div v-if="aiExtract && aiExtract.result" class="ai-extract-info">
-    <n-alert v-if="!compact" type="success" closable :theme-overrides="alertThemeOverrides">
+    <n-alert v-if="!compact" type="success" closable>
       <template #icon>
         <n-icon :component="typeIcon" />
       </template>
@@ -135,7 +113,7 @@ const openLink = () => {
         </n-button>
       </n-space>
     </n-alert>
-    <n-tag v-else type="success" @click="copyToClipboard" style="cursor: pointer;" size="small" :theme-overrides="tagThemeOverrides">
+    <n-tag v-else type="success" @click="copyToClipboard" style="cursor: pointer;" size="small">
       <template #icon>
         <n-icon :component="typeIcon" />
       </template>

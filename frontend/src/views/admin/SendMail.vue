@@ -4,7 +4,7 @@ import { Editor, Toolbar } from '@wangeditor/editor-for-vue'
 import { useScopedI18n } from '@/i18n/app'
 import { computed, onBeforeUnmount, ref, shallowRef } from 'vue'
 import { useSessionStorage } from '@vueuse/core'
-import { SendRound } from '@vicons/material'
+import { SendOutlined } from '@vicons/material'
 import { api } from '../../api'
 import ShadowHtmlComponent from '../../components/ShadowHtmlComponent.vue'
 import { useGlobalState } from '../../store'
@@ -15,7 +15,11 @@ const message = useMessage()
 const isPreview = ref(false)
 const editorRef = shallowRef()
 const sending = ref(false)
-const { autoLoadRemoteImages, isDark } = useGlobalState()
+const { autoLoadRemoteImages, isDark, openSettings } = useGlobalState()
+
+// 问题10: send disabled → the whole composer is replaced by a quiet
+// "not enabled" panel (no toast, no 400 attempt)
+const sendDisabled = computed(() => !openSettings.value?.enableSendMail)
 
 const sendMailModel = useSessionStorage('sendMailByAdminModel', {
     fromName: "",
@@ -160,15 +164,23 @@ const handleCreated = (editor) => {
 </script>
 
 <template>
-    <div class="composer-page">
-        <n-card class="composer-card" :bordered="false" embedded>
-            <template #header>
-                <div class="composer-title">
-                    <h2>{{ t('composeMail') }}</h2>
-                    <n-text depth="3">{{ t('adminComposeTip') }}</n-text>
-                </div>
-            </template>
+    <div class="admin-page">
+        <div class="page-head">
+            <div class="page-head-row">
+                <span class="page-sq" aria-hidden="true"></span>
+                <h2>发送邮件</h2>
+                <span class="page-badge">ADMIN</span>
+            </div>
+            <p class="page-desc">以管理员身份直接投递邮件，支持纯文本、HTML 与富文本格式。</p>
+        </div>
 
+        <!-- 问题10: send channel not configured anywhere → quiet panel -->
+        <section v-if="sendDisabled" class="feature-disabled">
+            <div class="feature-disabled-title">{{ t('notEnabled') }}</div>
+            <div class="feature-disabled-hint">{{ t('notEnabledHint') }}</div>
+        </section>
+
+        <section v-else class="page-card">
             <n-form class="composer-form" :model="sendMailModel" label-placement="top">
                 <n-grid cols="1 m:2" responsive="screen" :x-gap="16">
                     <n-grid-item>
@@ -241,42 +253,107 @@ const handleCreated = (editor) => {
                 <div class="composer-actions">
                     <n-text depth="3" class="draft-status">{{ t('draftSaved') }}</n-text>
                     <n-button type="primary" :loading="sending" :disabled="sending" @click="send">
-                        <template #icon><n-icon :component="SendRound" /></template>
+                        <template #icon><n-icon :component="SendOutlined" /></template>
                         {{ t('send') }}
                     </n-button>
                 </div>
             </n-form>
-        </n-card>
+        </section>
     </div>
 </template>
 
 <style scoped>
-.composer-page {
-    width: 100%;
-    padding: 14px 0 24px;
+/* ---- 问题10: quiet "not enabled" state (no toast, no failed request) ---- */
+.feature-disabled {
+    padding: 40px 20px;
+    text-align: center;
+    border: 1px dashed rgba(128, 128, 128, 0.45);
+    border-radius: 12px;
+    background: rgba(128, 128, 128, 0.04);
+}
+
+.feature-disabled-title {
+    font-size: 15px;
+    font-weight: 700;
+    opacity: 0.8;
+}
+
+.feature-disabled-hint {
+    margin-top: 8px;
+    font-size: 13px;
+    line-height: 1.7;
+    opacity: 0.55;
+    max-width: 560px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* ---- 问题9: homepage monochrome page chrome ---- */
+.admin-page {
+    width: min(960px, 100%);
+    margin: 0 auto;
+    padding: 14px 4px 24px;
     text-align: left;
 }
 
-.composer-card {
-    width: min(900px, 100%);
-    margin: 0 auto;
-}
-
-.composer-title {
+.page-head {
     display: flex;
-    align-items: baseline;
-    flex-wrap: wrap;
-    gap: 8px 12px;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 14px;
 }
 
-.composer-title > h2 {
+.page-head-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.page-sq {
+    width: 11px;
+    height: 11px;
+    flex: 0 0 auto;
+    background: currentColor;
+}
+
+.page-head h2 {
     margin: 0;
-    font-size: 18px;
-    font-weight: 600;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.2px;
+    line-height: 1.3;
 }
 
-.composer-title .n-text {
+.page-badge {
+    margin-left: auto;
+    padding: 1px 8px;
+    border: 1px solid rgba(128, 128, 128, 0.45);
+    border-radius: 999px;
+    background: rgba(128, 128, 128, 0.10);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 10px;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.page-desc {
+    margin: 0;
     font-size: 13px;
+    line-height: 1.6;
+    color: #666666;
+}
+
+:global(html.dark .page-desc) {
+    color: #9a9a9a;
+}
+
+/* the same 12px hairline card container as the other admin mail pages */
+.page-card {
+    padding: 16px;
+    border: 1px solid rgba(128, 128, 128, 0.16);
+    border-radius: 12px;
+    background: rgba(128, 128, 128, 0.04);
 }
 
 .editor-panel {
@@ -302,7 +379,7 @@ const handleCreated = (editor) => {
 }
 
 .required-mark {
-    color: #d03050;
+    color: #e5484d;
 }
 
 .format-options {
@@ -357,7 +434,7 @@ const handleCreated = (editor) => {
 }
 
 @media (max-width: 640px) {
-    .composer-page {
+    .admin-page {
         padding-top: 8px;
     }
 

@@ -163,18 +163,33 @@ const handlePresetSelect = (key: number) => {
 
 const webhookSettings = ref<WebhookSettings>(new WebhookSettings())
 const enableWebhook = ref(false)
+// 问题10: feature disabled (403) renders a quiet "not enabled" panel
+// instead of an error toast + raw [403] text
+const notEnabled = ref(false)
+const loadFailed = ref('')
 const showTestModal = ref(false)
 const testMode = ref('random')
 const testMailId = ref<number | null>(null)
 const testing = ref(false)
 
+const isFeatureDisabledError = (error: unknown) => {
+    const err = error as { status?: number, message?: string }
+    return err?.status === 403 || /not enabled|not allowed|未启用|未开启|未允许/i.test(err?.message || '')
+}
+
 const fetchData = async () => {
+    notEnabled.value = false
+    loadFailed.value = ''
     try {
         const res = await props.fetchData()
         Object.assign(webhookSettings.value, res)
         enableWebhook.value = true
     } catch (error) {
-        message.error((error as Error).message || "error");
+        if (isFeatureDisabledError(error)) {
+            notEnabled.value = true
+            return
+        }
+        loadFailed.value = (error as Error).message || "error";
     }
 }
 
@@ -257,7 +272,11 @@ onMounted(async () => {
                 </n-form-item-row>
             </div>
         </n-card>
-        <n-result v-else status="404" :title="t('notEnabled')" />
+        <div v-else-if="notEnabled" class="feature-disabled">
+            <div class="feature-disabled-title">{{ t('notEnabled') }}</div>
+            <div class="feature-disabled-hint">{{ t('notEnabledHint') }}</div>
+        </div>
+        <n-result v-else status="info" :title="loadFailed" />
         <n-modal v-model:show="showTestModal" preset="card" :title="t('test')"
             style="width: min(420px, calc(100vw - 32px))" :mask-closable="!testing"
             :close-on-esc="!testing" :closable="!testing">
@@ -288,6 +307,29 @@ onMounted(async () => {
     text-align: left;
     place-items: center;
     justify-content: center;
+}
+
+/* 问题10: quiet grey "feature disabled" panel — no error styling */
+.feature-disabled {
+    max-width: 480px;
+    margin: 48px auto;
+    padding: 24px 28px;
+    border: 1px dashed var(--n-border-color, #d9d9d9);
+    border-radius: 12px;
+    text-align: center;
+    color: var(--n-text-color-3, #999);
+}
+
+.feature-disabled-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--n-text-color-2, #666);
+    margin-bottom: 8px;
+}
+
+.feature-disabled-hint {
+    font-size: 13px;
+    line-height: 1.7;
 }
 
 .n-button {

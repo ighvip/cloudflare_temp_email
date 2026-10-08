@@ -350,15 +350,43 @@ export const getAdminPasswordHash = async (
     }
 }
 
+// Panel switch: disable the legacy env ADMIN_PASSWORDS login once a stored
+// (panel-changed) password exists. Stored in D1 settings so it survives
+// deploys and can be toggled from the admin panel.
+export const ADMIN_DISABLE_ENV_PASSWORD_KEY = "ADMIN_DISABLE_ENV_PASSWORD";
+
+export const isEnvAdminPasswordDisabled = async (
+    c: Context<HonoCustomType>,
+    storedHash?: string
+): Promise<boolean> => {
+    try {
+        const stored = storedHash !== undefined
+            ? storedHash
+            : await getAdminPasswordHash(c);
+        // without a stored password there would be nothing left to log in
+        // with, so the flag only ever applies alongside a stored hash
+        if (!stored) return false;
+        return getBooleanValue(
+            await getSetting(c, ADMIN_DISABLE_ENV_PASSWORD_KEY)
+        );
+    } catch (e) {
+        console.error("Failed to read ADMIN_DISABLE_ENV_PASSWORD", e);
+        return false;
+    }
+}
+
 export const checkIsAdmin = async (c: Context<HonoCustomType>): Promise<boolean> => {
     const adminAuth = c.req.raw.headers.get("x-admin-auth");
     if (!adminAuth) return false;
-    const adminPasswords = getAdminPasswords(c);
-    if (adminPasswords.includes(adminAuth)) return true;
-    // password changed from the panel: the env list no longer matches —
-    // hash the plaintext header and compare against the stored digest
     try {
         const stored = await getAdminPasswordHash(c);
+        // the env ADMIN_PASSWORDS list stays a recovery path — unless the
+        // panel disabled it after setting a stored password
+        const envAllowed = !(stored
+            && await isEnvAdminPasswordDisabled(c, stored));
+        if (envAllowed && getAdminPasswords(c).includes(adminAuth)) return true;
+        // password changed from the panel: hash the plaintext header and
+        // compare against the stored digest
         if (stored && (await hashPassword(adminAuth)) === stored) return true;
     } catch (e) {
         console.error("checkIsAdmin stored-hash lookup failed", e);

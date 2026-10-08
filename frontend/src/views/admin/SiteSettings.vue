@@ -16,16 +16,41 @@ const localeOptions = [
     ...LOCALE_REGISTRY.map(({ locale, label }) => ({ label, value: locale })),
 ]
 
+// 问题18-①: day-boundary timezone for public stats, default Beijing time
+const timezoneOptions = [
+    { label: 'UTC+8 北京（推荐）', value: '+08:00' },
+    { label: 'UTC+9 东京/首尔', value: '+09:00' },
+    { label: 'UTC+7 曼谷/雅加达', value: '+07:00' },
+    { label: 'UTC+6 达卡', value: '+06:00' },
+    { label: 'UTC+5:30 新德里', value: '+05:30' },
+    { label: 'UTC+4 迪拜', value: '+04:00' },
+    { label: 'UTC+3 莫斯科', value: '+03:00' },
+    { label: 'UTC+2 开罗', value: '+02:00' },
+    { label: 'UTC+1 柏林/巴黎', value: '+01:00' },
+    { label: 'UTC+0 伦敦', value: '+00:00' },
+    { label: 'UTC-5 纽约', value: '-05:00' },
+    { label: 'UTC-8 洛杉矶', value: '-08:00' },
+    { label: 'UTC-3 圣保罗', value: '-03:00' },
+]
+
 const form = ref({
     title: '',
     copyright: '',
     intro: '',
     guide: '',
+    // 问题5: site-wide address prefix, empty = fall back to env PREFIX
+    prefix: '',
     defaultLocale: '',
     statsMode: 'real',
+    statsTimezone: '+08:00',
     statsToday: 0,
     statsWeek: 0,
     statsMonth: 0,
+    statsYear: 0,
+    statsSendToday: 0,
+    statsSendWeek: 0,
+    statsSendMonth: 0,
+    statsSendYear: 0,
 })
 
 const announcements = ref([])
@@ -44,11 +69,18 @@ const load = async () => {
                 copyright: parsed.copyright || '',
                 intro: parsed.intro || '',
                 guide: parsed.guide || '',
+                prefix: parsed.prefix || '',
                 defaultLocale: parsed.defaultLocale || '',
                 statsMode: parsed.statsMode === 'manual' ? 'manual' : 'real',
+                statsTimezone: parsed.statsTimezone || '+08:00',
                 statsToday: parsed.statsManual?.today ?? 0,
                 statsWeek: parsed.statsManual?.week ?? 0,
                 statsMonth: parsed.statsManual?.month ?? 0,
+                statsYear: parsed.statsManual?.year ?? 0,
+                statsSendToday: parsed.statsManual?.sendToday ?? 0,
+                statsSendWeek: parsed.statsManual?.sendWeek ?? 0,
+                statsSendMonth: parsed.statsManual?.sendMonth ?? 0,
+                statsSendYear: parsed.statsManual?.sendYear ?? 0,
             })
         }
     } catch (error) {
@@ -80,12 +112,19 @@ const saveSettings = async () => {
                     copyright: form.value.copyright.trim(),
                     intro: form.value.intro.trim(),
                     guide: form.value.guide.trim(),
+                    prefix: form.value.prefix.trim(),
                     defaultLocale: form.value.defaultLocale,
                     statsMode: form.value.statsMode,
+                    statsTimezone: form.value.statsTimezone,
                     statsManual: {
                         today: Number(form.value.statsToday) || 0,
                         week: Number(form.value.statsWeek) || 0,
                         month: Number(form.value.statsMonth) || 0,
+                        year: Number(form.value.statsYear) || 0,
+                        sendToday: Number(form.value.statsSendToday) || 0,
+                        sendWeek: Number(form.value.statsSendWeek) || 0,
+                        sendMonth: Number(form.value.statsSendMonth) || 0,
+                        sendYear: Number(form.value.statsSendYear) || 0,
                     },
                 }),
             },
@@ -178,8 +217,13 @@ onMounted(load)
 </script>
 
 <template>
-    <div>
-        <n-card :bordered="false" embedded title="站点设置" style="margin-bottom: 12px;">
+    <div class="site-settings">
+        <div class="page-head">
+            <h2>站点设置</h2>
+            <p>站点文案、界面语言与公开统计的统一配置。数据库中的值优先于 wrangler.toml 环境变量。</p>
+        </div>
+
+        <n-card :bordered="false" embedded title="基本信息" style="margin-bottom: 12px;">
             <n-spin :show="loading">
                 <n-form label-placement="left" label-width="96px" style="max-width: 760px">
                     <n-form-item label="站点标题">
@@ -196,20 +240,44 @@ onMounted(load)
                     <n-form-item label="默认语言">
                         <n-select v-model:value="form.defaultLocale" :options="localeOptions" />
                         <template #feedback>
-                            <span style="font-size: 12px; opacity: 0.7;">
+                            <span class="form-hint">
                                 未手动选择过语言的访客将看到此语言；用户自己选择过的语言优先。
                             </span>
                         </template>
                     </n-form-item>
-                    <n-form-item label="统计方式">
-                        <n-radio-group v-model:value="form.statsMode">
-                            <n-space>
-                                <n-radio value="real">读取真实数据</n-radio>
-                                <n-radio value="manual">手动填写数字</n-radio>
-                            </n-space>
-                        </n-radio-group>
+                    <n-form-item label="邮箱前缀">
+                        <n-input v-model:value="form.prefix" clearable
+                            placeholder="留空则使用 wrangler.toml 中的 PREFIX" />
+                        <template #feedback>
+                            <span class="form-hint">
+                                创建邮箱时默认附加的前缀（全站生效），可在创建页单独修改或清空。
+                            </span>
+                        </template>
                     </n-form-item>
-                    <n-form-item v-if="form.statsMode === 'manual'" label="统计数字">
+                </n-form>
+            </n-spin>
+        </n-card>
+
+        <n-card :bordered="false" embedded title="公开统计" style="margin-bottom: 12px;">
+            <n-form label-placement="left" label-width="96px" style="max-width: 760px">
+                <n-form-item label="统计方式">
+                    <n-radio-group v-model:value="form.statsMode">
+                        <n-space>
+                            <n-radio value="real">读取真实数据</n-radio>
+                            <n-radio value="manual">手动填写数字</n-radio>
+                        </n-space>
+                    </n-radio-group>
+                </n-form-item>
+                <n-form-item label="日期分界时区">
+                    <n-select v-model:value="form.statsTimezone" :options="timezoneOptions" filterable tag />
+                    <template #feedback>
+                        <span class="form-hint">
+                            「今日 / 本周 / 本月」按此时区计算分界，默认北京时间（UTC+8）。修改后约 1 分钟内随缓存刷新生效。
+                        </span>
+                    </template>
+                </n-form-item>
+                <template v-if="form.statsMode === 'manual'">
+                    <n-form-item label="收信数字">
                         <n-input-group style="width: 100%">
                             <n-input-group-label>今日</n-input-group-label>
                             <n-input v-model:value="form.statsToday" />
@@ -217,16 +285,33 @@ onMounted(load)
                             <n-input v-model:value="form.statsWeek" />
                             <n-input-group-label>本月</n-input-group-label>
                             <n-input v-model:value="form.statsMonth" />
+                            <n-input-group-label>年度</n-input-group-label>
+                            <n-input v-model:value="form.statsYear" />
                         </n-input-group>
                     </n-form-item>
-                    <n-form-item label=" ">
-                        <n-space>
-                            <n-button type="primary" :loading="saving" @click="saveSettings">保存</n-button>
-                            <n-button secondary @click="load">重新加载</n-button>
-                        </n-space>
+                    <n-form-item label="发信数字">
+                        <n-input-group style="width: 100%">
+                            <n-input-group-label>今日</n-input-group-label>
+                            <n-input v-model:value="form.statsSendToday" />
+                            <n-input-group-label>本周</n-input-group-label>
+                            <n-input v-model:value="form.statsSendWeek" />
+                            <n-input-group-label>本月</n-input-group-label>
+                            <n-input v-model:value="form.statsSendMonth" />
+                            <n-input-group-label>本年</n-input-group-label>
+                            <n-input v-model:value="form.statsSendYear" />
+                        </n-input-group>
+                        <template #feedback>
+                            <span class="form-hint">发信功能未启用时，首页一律照实显示 0。</span>
+                        </template>
                     </n-form-item>
-                </n-form>
-            </n-spin>
+                </template>
+                <n-form-item label=" ">
+                    <n-space>
+                        <n-button type="primary" :loading="saving" @click="saveSettings">保存</n-button>
+                        <n-button secondary @click="load">重新加载</n-button>
+                    </n-space>
+                </n-form-item>
+            </n-form>
             <n-alert type="info" :bordered="false" style="margin-top: 8px">
                 保存后数据库中的值优先于 wrangler.toml 环境变量；留空则回退到环境变量。修改需刷新页面后生效。
             </n-alert>
@@ -258,11 +343,11 @@ onMounted(load)
                                 {{ item.content }}
                             </div>
                             <div class="announcement-actions">
-                                <n-tag :type="item.enabled ? 'success' : 'default'" size="small">
+                                <n-tag :bordered="false" size="small">
                                     {{ item.enabled ? '已发布' : '已下线' }}
                                 </n-tag>
                                 <n-button size="tiny" secondary @click="startEditAnnouncement(index)">编辑</n-button>
-                                <n-button size="tiny" secondary :type="item.enabled ? 'warning' : 'success'"
+                                <n-button size="tiny" secondary
                                     @click="toggleAnnouncement(index)">
                                     {{ item.enabled ? '下线' : '发布' }}
                                 </n-button>
@@ -286,6 +371,27 @@ onMounted(load)
 </template>
 
 <style scoped>
+.site-settings .page-head {
+    margin-bottom: 12px;
+}
+
+.site-settings .page-head h2 {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.site-settings .page-head p {
+    font-size: 12.5px;
+    opacity: 0.6;
+    line-height: 1.6;
+}
+
+.form-hint {
+    font-size: 12px;
+    opacity: 0.7;
+}
+
 .announcement-form {
     max-width: 760px;
 }

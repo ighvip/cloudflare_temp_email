@@ -15,6 +15,8 @@ const message = useMessage()
 const { t } = useScopedI18n('views.admin.CreateAccount')
 
 const enablePrefix = ref(true)
+// 问题5: editable/clearable prefix for this creation, prefilled site-wide
+const prefixInput = ref('')
 const subdomainMode = ref("normal")
 const customSubdomain = ref("")
 const emailName = ref("")
@@ -82,6 +84,9 @@ const newEmail = async () => {
             method: 'POST',
             body: JSON.stringify({
                 enablePrefix: enablePrefix.value,
+                // 问题5: admin-editable prefix for this creation — an empty
+                // string means "create without a prefix"
+                addressPrefix: enablePrefix.value ? prefixInput.value : null,
                 enableRandomSubdomain: subdomainMode.value === "random",
                 name: emailName.value,
                 domain,
@@ -100,6 +105,7 @@ const newEmail = async () => {
 onMounted(async () => {
     if (openSettings.prefix) {
         enablePrefix.value = true
+        prefixInput.value = openSettings.prefix
     }
     emailDomain.value = openSettings.value.domains?.[0]?.value || ""
 })
@@ -110,7 +116,7 @@ onMounted(async () => {
         <AddressCredentialModal v-model:show="showReultModal" :address="createdAddress" :jwt="result"
             :address-password="addressPassword" />
         <n-card :bordered="false" embedded style="max-width: 600px;">
-            <n-form-item-row v-if="openSettings.prefix" :label="t('enablePrefix')">
+            <n-form-item-row :label="t('enablePrefix')">
                 <n-switch v-model:value="enablePrefix" :round="false" />
             </n-form-item-row>
             <n-form-item-row :label="t('address')">
@@ -120,9 +126,8 @@ onMounted(async () => {
                             {{ t('generateName') }}
                         </n-button>
                         <n-input-group>
-                            <n-input-group-label v-if="enablePrefix && openSettings.prefix">
-                                {{ openSettings.prefix }}
-                            </n-input-group-label>
+                            <n-input v-if="enablePrefix" v-model:value="prefixInput" clearable
+                                :placeholder="t('prefixPlaceholder')" style="max-width: 180px;" />
                             <n-input v-model:value="emailName" />
                             <n-input-group-label>@</n-input-group-label>
                             <n-select v-model:value="emailDomain" :consistent-menu-width="false"

@@ -280,7 +280,7 @@ onBeforeUnmount(() => {
     height: 7px;
     margin-right: 8px;
     border-radius: 50%;
-    background: #2080f0;
+    background: currentColor;
     content: '';
     vertical-align: middle;
 }

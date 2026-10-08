@@ -1,6 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Index from '../views/Index.vue'
-import User from '../views/User.vue'
 import UserOauth2Callback from '../views/user/UserOauth2Callback.vue'
 import i18n from '../i18n'
 import { useGlobalState } from '../store'
@@ -24,9 +23,10 @@ const router = createRouter({
             component: Index
         },
         {
+            // 问题2: opens inside the homepage's right column
             path: '/user',
             alias: '/:lang/user',
-            component: User
+            component: Index
         },
         {
             path: '/redeem',
@@ -34,9 +34,10 @@ const router = createRouter({
             component: () => import('../views/Redeem.vue')
         },
         {
+            // 问题2: opens inside the homepage's right column
             path: '/help',
             alias: '/:lang/help',
-            component: () => import('../views/Help.vue')
+            component: Index
         },
         {
             path: '/user/oauth2/callback',
@@ -89,10 +90,18 @@ router.beforeEach((to, from, next) => {
         return
     }
 
-    // P0-B4 rework: `?gt=<S>` — the session token delivered when the
-    // homepage-minted `?k=` token was redeemed. Store it per-tab and strip
-    // it from the URL immediately so it never lingers in history.
-    if (Object.prototype.hasOwnProperty.call(to.query, 'gt')) {
+    // P0-B4 rework: `#gt=<S>` — the session token delivered when the
+    // homepage-minted `?k=` token was redeemed. Store it per-tab and KEEP
+    // the fragment in the address bar so the full 64-hex token stays
+    // visible/copyable (fragments are never sent to the server — 问题17).
+    if (typeof to.hash === 'string' && to.hash.startsWith('#gt=')) {
+        const gtHash = to.hash.slice('#gt='.length)
+        if (gtHash) {
+            setGateSession(gtHash)
+        }
+        // fall through: no redirect, the hash stays where it is
+    } else if (Object.prototype.hasOwnProperty.call(to.query, 'gt')) {
+        // legacy `?gt=<S>` links: store it and strip it from the URL
         const gtQuery = Array.isArray(to.query.gt) ? to.query.gt[0] : to.query.gt
         if (typeof gtQuery === 'string' && gtQuery) {
             setGateSession(gtQuery)

@@ -1,12 +1,13 @@
 <script setup>
 import { defineAsyncComponent, onMounted, watch, computed } from 'vue'
 import { useScopedI18n } from '@/i18n/app'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 
 import { useGlobalState } from '../store'
 import { api } from '../api'
 import { useIsMobile } from '../utils/composables'
 import { getRouterPathWithLang } from '../utils'
+import { resolveSupportedLocale } from '../i18n/utils'
 import { FullscreenExitOutlined } from '@vicons/material'
 
 import AddressBar from './index/AddressBar.vue';
@@ -31,7 +32,29 @@ const {
 } = useGlobalState()
 const message = useMessage()
 const route = useRoute()
+const router = useRouter()
 const isMobile = useIsMobile()
+
+// 问题2: /user and /help render the homepage shell — the corresponding
+// panel opens INSIDE the right column (left column stays untouched)
+const UserCenter = defineAsyncComponent(() => import('./User.vue'))
+const HelpPage = defineAsyncComponent(() => import('./Help.vue'))
+
+const stripLocaleSegment = (path) => {
+  const segments = (path || '/').split('/').filter(Boolean)
+  if (segments.length && resolveSupportedLocale(segments[0])) segments.shift()
+  return segments
+}
+
+const panelMode = computed(() => {
+  const segments = stripLocaleSegment(route.path)
+  if (segments[0] === 'user' && segments.length === 1) return 'user'
+  if (segments[0] === 'help' && segments.length === 1) return 'help'
+  // any deeper path (/user/oauth2/callback ...) keeps its own route
+  return 'home'
+})
+
+const goHomePanel = () => router.push(getRouterPathWithLang('/', locale.value))
 
 const SendMail = defineAsyncComponent(() => {
   loading.value = true;
@@ -145,7 +168,7 @@ onMounted(() => {
 
 <template>
   <div>
-    <div v-if="useSimpleIndex">
+    <div v-if="useSimpleIndex && panelMode === 'home'">
       <SimpleIndex />
     </div>
     <div v-else class="home-layout">
@@ -184,6 +207,23 @@ onMounted(() => {
               <span class="panel-pill pill-soft">{{ t('pillOpenSource') }}</span>
             </div>
 
+            <!-- 问题2: 用户中心 / 帮助 open inside the right column -->
+            <div v-if="panelMode !== 'home'" class="panel-embed">
+              <div class="panel-embed-head">
+                <span class="panel-embed-title">
+                  {{ panelMode === 'user' ? t('panelUserCenter') : t('panelHelp') }}
+                </span>
+                <n-button size="tiny" secondary @click="goHomePanel">
+                  ← {{ t('panelBack') }}
+                </n-button>
+              </div>
+              <div class="panel-embed-body">
+                <UserCenter v-if="panelMode === 'user'" />
+                <HelpPage v-else />
+              </div>
+            </div>
+
+            <template v-else>
             <AddressBar />
 
             <!-- all mailbox operations live INSIDE the panel: the right column
@@ -252,6 +292,7 @@ onMounted(() => {
             <div class="panel-fine">
               {{ t('finePrint') }}
             </div>
+            </template>
           </div>
         </aside>
       </div>
@@ -530,6 +571,38 @@ onMounted(() => {
     flex-wrap: wrap;
     gap: 8px;
     margin-bottom: 14px;
+}
+
+/* 问题2: 用户中心 / 帮助 embedded inside the right column */
+.panel-embed {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.panel-embed-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+    border-bottom: 1px solid rgba(128, 128, 128, 0.16);
+}
+
+.panel-embed-title {
+    font-size: 14px;
+    font-weight: 700;
+}
+
+/* the panel itself scrolls (.action-panel), keep deep styles tidy inside */
+.panel-embed-body {
+    min-width: 0;
+}
+
+.panel-embed-body :deep(.user-bar),
+.panel-embed-body :deep(.help-hero) {
+    margin-top: 0;
 }
 
 .panel-pill {

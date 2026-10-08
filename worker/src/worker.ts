@@ -155,23 +155,24 @@ app.use('/*', async (c, next) => {
 		if (!url.pathname.includes('.')) {
 			// P0-B4 G1: `?k=<T>` redemption on page routes — the one-time
 			// token is exchanged for a session (S) delivered both as an
-			// HttpOnly cookie (page gate) and as `?gt=<S>` (SPA stores it
-			// in sessionStorage and strips it from the URL again)
+			// HttpOnly cookie (page gate) and as `#gt=<S>` (the fragment is
+			// never sent to the server; the SPA stores it in sessionStorage
+			// and leaves it visible/copyable in the address bar — 问题17)
 			const gateKey = url.searchParams.get("k");
 			if (gateKey) {
 				const session = await redeemGateToken(c, gateKey);
 				if (session) {
 					url.searchParams.delete("k");
-					url.searchParams.set("gt", session);
 					let target = url.pathname;
 					if (target === "/" || isAdminPagePath(target, adminPath) || isAdminPagePath(target, "/admin")) {
 						target = adminPath;
 					}
 					const query = url.searchParams.toString();
+					const location = target + (query ? `?${query}` : "") + `#gt=${session}`;
 					return new Response(null, {
 						status: 302,
 						headers: {
-							"Location": target + (query ? `?${query}` : ""),
+							"Location": location,
 							"Set-Cookie": issueGateCookie(session),
 							"Cache-Control": "no-store",
 						},

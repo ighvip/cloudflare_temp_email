@@ -1,4 +1,6 @@
-import { getPathWithLocale } from '../i18n/utils'
+import { getPathWithLocale, SUPPORTED_LOCALES } from '../i18n/utils'
+
+import type { SupportedLocale } from '../i18n/utils'
 
 export const hashPassword = async (password: string) => {
     // user crypto to hash password
@@ -17,11 +19,7 @@ export const getAdminPath = (): string => {
 }
 
 export const getRouterPathWithLang = (path: string, lang: string) => {
-    const normalizedLang = lang === 'en'
-        || lang === 'es'
-        || lang === 'pt-BR'
-        || lang === 'ja'
-        || lang === 'de'
+    const normalizedLang = SUPPORTED_LOCALES.includes(lang as SupportedLocale)
         ? lang
         : 'zh';
 

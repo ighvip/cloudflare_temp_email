@@ -15,12 +15,26 @@ const status = ref({
     fetched: false,
 })
 
+// 问题10: no TELEGRAM_BOT_TOKEN → backend 403s quietly, we show a
+// not-enabled panel instead of a red toast
+const notEnabled = ref(false)
+
+const isNotEnabledError = (error: unknown) => {
+    const err = error as { status?: number; message?: string }
+    return err?.status === 403 || /not enabled|not set/i.test(err?.message || '')
+}
+
 const fetchStatus = async () => {
     try {
         const res = await api.fetch(`/admin/telegram/status`)
         Object.assign(status.value, res)
         status.value.fetched = true
+        notEnabled.value = false
     } catch (error) {
+        if (isNotEnabledError(error)) {
+            notEnabled.value = true
+            return
+        }
         message.error((error as Error).message || "error");
     }
 }
@@ -32,6 +46,10 @@ const init = async () => {
         })
         message.success(t('successTip'))
     } catch (error) {
+        if (isNotEnabledError(error)) {
+            notEnabled.value = true
+            return
+        }
         message.error((error as Error).message || "error");
     }
 }
@@ -80,12 +98,19 @@ const saveSettings = async () => {
 
 onMounted(async () => {
     await getSettings();
+    // probe quietly — a missing token surfaces as the not-enabled panel
+    await fetchStatus();
 })
 </script>
 
 <template>
     <div class="center">
         <n-card :bordered="false" embedded style="max-width: 800px; overflow: auto;">
+            <!-- 问题10: quiet not-enabled state (no toast) -->
+            <div v-if="notEnabled" class="feature-disabled">
+                <div class="feature-disabled-title">{{ t('notEnabled') }}</div>
+                <div class="feature-disabled-hint">{{ t('notEnabledHint') }}</div>
+            </div>
             <n-flex justify="end">
                 <n-button @click="fetchStatus" secondary>
                     {{ t('status') }}
@@ -150,5 +175,28 @@ onMounted(async () => {
     text-align: left;
     place-items: center;
     justify-content: center;
+}
+
+/* 问题10: quiet not-enabled state */
+.feature-disabled {
+    margin-bottom: 12px;
+    padding: 24px 16px;
+    text-align: center;
+    border: 1px dashed rgba(128, 128, 128, 0.45);
+    border-radius: 12px;
+    background: rgba(128, 128, 128, 0.04);
+}
+
+.feature-disabled-title {
+    font-size: 15px;
+    font-weight: 700;
+    opacity: 0.8;
+}
+
+.feature-disabled-hint {
+    margin-top: 8px;
+    font-size: 13px;
+    line-height: 1.7;
+    opacity: 0.55;
 }
 </style>

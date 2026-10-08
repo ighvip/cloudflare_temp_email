@@ -1,8 +1,9 @@
 import { Context } from "hono";
-import { isSendMailBindingEnabled } from "../common";
+import { resolveSendMailBindingEnabled } from "../common";
 import i18n from "../i18n";
 import { sendMail } from "../mails_api/send_mail_api";
 import { ensureSendMailLimit, increaseSendMailLimitCount } from "../mails_api/send_mail_limit_utils";
+import { getSendMailOverride } from "../mail_domains";
 import { getMailDomain } from "../utils";
 
 const getAdminSendMailErrorMessage = (
@@ -73,7 +74,12 @@ export const sendMailByBindingAdmin = async (c: Context<HonoCustomType>) => {
     if (!mailDomain) {
         return c.text(msgs.InvalidInputMsg, 400)
     }
-    if (!isSendMailBindingEnabled(c, mailDomain)) {
+    // 问题6 批次1: the stored 发信 switch wins over the env behaviour
+    const sendMailOverride = await getSendMailOverride(c, mailDomain);
+    if (sendMailOverride === false) {
+        return c.text(msgs.SendMailDisabledForDomainMsg, 400)
+    }
+    if (!(await resolveSendMailBindingEnabled(c, mailDomain))) {
         return c.text(msgs.EnableSendMailForDomainMsg, 400)
     }
     try {

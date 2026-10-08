@@ -18,6 +18,10 @@ export const CONSTANTS = {
     ROLE_ADDRESS_CONFIG_KEY: 'role_address_config',
     IP_BLACKLIST_SETTINGS_KEY: 'ip_blacklist_settings',
     AI_EXTRACT_SETTINGS_KEY: 'ai_extract_settings',
+    // 问题6 批次1: per-domain receive/send switches managed in the admin panel
+    MAIL_DOMAIN_SETTINGS_KEY: 'mail_domain_settings',
+    // admin-editable site settings (generic /admin/config JSON blob)
+    SITE_SETTINGS_KEY: 'admin-config:site-settings',
 
     // KV
     TG_KV_PREFIX: "temp-mail-telegram",

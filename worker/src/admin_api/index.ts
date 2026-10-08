@@ -18,8 +18,9 @@ import db_api from './db_api'
 import ip_blacklist_settings from './ip_blacklist_settings'
 import ai_extract_settings from './ai_extract_settings'
 import config_api from './config_api'
+import domain_api from './domain_api'
 import gate_sessions from './gate_sessions'
-import { changeAdminPassword } from './security_api'
+import { changeAdminPassword, getSecuritySettings, saveSecuritySettings } from './security_api'
 import redeem_code_api from '../redeem_api/admin_redeem_code_api'
 
 export const api = new Hono<HonoCustomType>()
@@ -103,9 +104,20 @@ api.post('admin/db_migration', db_api.migrate)
 api.get('/admin/config/:key', config_api.get)
 api.post('/admin/config', config_api.save)
 
+// 问题6 批次1: site domains — per-domain receive/send switch list
+// 问题6 批次2: dns_check — wizard step-2 DNS auto-detect (DoH)
+api.get('/admin/domains/dns_check', domain_api.dnsCheck)
+api.get('/admin/domains', domain_api.list)
+api.post('/admin/domains', domain_api.add)
+api.patch('/admin/domains/:name', domain_api.update)
+api.delete('/admin/domains/:name', domain_api.remove)
+
 // security: change the admin password from the panel (stored as a sha256
-// digest in D1; the env ADMIN_PASSWORDS list remains a recovery path)
+// digest in D1; the env ADMIN_PASSWORDS list remains a recovery path unless
+// it is disabled below) and read/toggle the admin login security state
 api.post('/admin/change_admin_password', changeAdminPassword)
+api.get('/admin/security_settings', getSecuritySettings)
+api.post('/admin/security_settings', saveSecuritySettings)
 
 // P0-B4 rework: live admin gate sessions (tokens are only minted from the
 // homepage admin link — the panel can list/revoke sessions, not create tokens)

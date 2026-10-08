@@ -90,6 +90,7 @@ const messages: LocaleMessages = {
     EnableKVMsg: "请先启用 KV",
     EnableSendMailMsg: "请先启用 SEND_MAIL",
     EnableSendMailForDomainMsg: "请先为此域名启用 SEND_MAIL",
+    SendMailDisabledForDomainMsg: "该域名已在站点域名设置中关闭发信",
     InvalidCleanupConfigMsg: "无效的 cleanType 或 cleanDays",
     InvalidCleanTypeMsg: "无效的 cleanType",
     CleanupFailedMsg: "清理失败，请检查清理配置；禁用地址活跃时间更新时，无法按不活跃时间清理。",

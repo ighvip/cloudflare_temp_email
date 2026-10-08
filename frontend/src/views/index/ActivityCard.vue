@@ -68,6 +68,36 @@ const maxAct = computed(() => Math.max(
     1, ...slots.value.map((slot) => slot.r + slot.c + slot.s),
 ))
 
+// 问题19: exactly 3 recent events — the payload ships them sorted desc;
+// pad with empty rows so the card keeps a stable layout
+const EVENT_TYPES = ['received', 'created', 'sent']
+const eventLabelKey = { received: 'eventReceived', created: 'eventCreated', sent: 'eventSent' }
+
+const parseUtc = (at) => {
+    if (!at) return null
+    const d = new Date(`${at.replace(' ', 'T')}Z`)
+    return Number.isNaN(d.getTime()) ? null : d
+}
+
+const recentEvents = computed(() => {
+    const src = Array.isArray(activity.value?.recent) ? activity.value.recent : []
+    const out = src.slice(0, 3).map((item) => {
+        const d = parseUtc(item.at)
+        return {
+            type: EVENT_TYPES.includes(item.type) ? item.type : 'received',
+            time: d ? `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}` : '--:--:--',
+        }
+    })
+    while (out.length < 3) out.push({ type: '', time: '--:--:--' })
+    return out
+})
+
+const legendItems = [
+    { key: 'received', labelKey: 'eventReceived' },
+    { key: 'created', labelKey: 'eventCreated' },
+    { key: 'sent', labelKey: 'eventSent' },
+]
+
 const isManual = computed(() => activity.value?.mode === 'manual')
 
 const statItems = computed(() => [
@@ -88,17 +118,25 @@ const formatCount = (value) => {
 }
 
 // bar geometry: quiet minutes stay as a visible baseline tick, busy
-// minutes grow to the full strip height (grayscale = intensity)
+// minutes grow to the full strip height. 问题19: each bar is a stack of
+// three segments (收/建/发) in three grey shades.
 const barHeight = (slot) => {
     const total = slot.r + slot.c + slot.s
     if (total === 0) return 3
     return Math.round(4 + (total / maxAct.value) * 42)
 }
 
-const barAlpha = (slot) => {
+// segment heights inside the bar (percent of the bar itself); the 1px
+// separators come from the flex gap, so tiny segments never disappear
+const barSegments = (slot) => {
     const total = slot.r + slot.c + slot.s
-    if (total === 0) return 0.16
-    return 0.30 + (total / maxAct.value) * 0.62
+    if (total === 0) return []
+    return [
+        { key: 'r', value: slot.r },
+        { key: 'c', value: slot.c },
+        { key: 's', value: slot.s },
+    ].filter((seg) => seg.value > 0)
+        .map((seg) => ({ ...seg, grow: seg.value }))
 }
 
 const barTitle = (slot) => t('barTip', {
@@ -124,9 +162,32 @@ const barTitle = (slot) => t('barTip', {
 
         <div class="activity-strip" :aria-label="t('stripLabel')" role="img">
             <span v-for="(slot, slotIndex) in slots" :key="slotIndex" class="activity-bar"
-                :class="{ 'activity-bar-live': slotIndex === slots.length - 1 }"
-                :style="{ height: `${barHeight(slot)}px`, background: `rgba(128,128,128,${barAlpha(slot)})` }"
-                :title="barTitle(slot)" />
+                :class="{ 'activity-bar-live': slotIndex === slots.length - 1, 'activity-bar-empty': !(slot.r || slot.c || slot.s) }"
+                :style="{ height: `${barHeight(slot)}px` }"
+                :title="barTitle(slot)">
+                <span v-for="seg in barSegments(slot)" :key="seg.key" class="activity-seg"
+                    :class="`activity-seg-${seg.key}`" :style="{ flexGrow: seg.grow }" />
+            </span>
+        </div>
+
+        <!-- 问题19: three grey swatches — 收 / 建 / 发 -->
+        <div class="activity-legend">
+            <span v-for="item in legendItems" :key="item.key" class="activity-legend-item">
+                <span class="activity-legend-swatch" :class="`activity-seg-${item.key}`" />
+                {{ t(item.labelKey) }}
+            </span>
+        </div>
+
+        <!-- 问题19: the 3 most recent events, stable layout even when empty -->
+        <div class="activity-stream">
+            <div v-for="(event, eventIndex) in recentEvents" :key="eventIndex" class="activity-event"
+                :class="{ 'is-empty': !event.type }">
+                <span class="activity-event-dot" :class="event.type ? `activity-seg-${event.type}` : 'activity-seg-empty'" />
+                <span class="activity-event-type">
+                    {{ event.type ? t(eventLabelKey[event.type]) : t('eventEmpty') }}
+                </span>
+                <span class="activity-event-time">{{ event.time }}</span>
+            </div>
         </div>
 
         <div class="activity-foot">
@@ -263,8 +324,126 @@ const barTitle = (slot) => t('barTip', {
 .activity-bar {
     flex: 1 1 0;
     min-width: 3px;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    overflow: hidden;
     border-radius: 2px 2px 0 0;
-    transition: height 0.3s ease, background 0.3s ease;
+    transition: height 0.3s ease;
+}
+
+/* 问题19: stacked segment shades — solid / mid / light grey (inverted in
+   dark mode); also used by the legend swatches and the event dots */
+.activity-seg-r,
+.activity-seg-received {
+    background: #1a1a1a;
+}
+
+.activity-seg-c,
+.activity-seg-created {
+    background: #8a8a8a;
+}
+
+.activity-seg-s,
+.activity-seg-sent {
+    background: #d0d0d0;
+}
+
+.activity-seg-empty,
+.activity-bar-empty {
+    background: rgba(128, 128, 128, 0.16);
+}
+
+:global(html.dark .activity-seg-r),
+:global(html.dark .activity-seg-received) {
+    background: #eeeeee;
+}
+
+:global(html.dark .activity-seg-c),
+:global(html.dark .activity-seg-created) {
+    background: #8a8a8a;
+}
+
+:global(html.dark .activity-seg-s),
+:global(html.dark .activity-seg-sent) {
+    background: #3d3d3d;
+}
+
+.activity-seg {
+    min-height: 1px;
+}
+
+/* 问题19: legend row under the strip */
+.activity-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding-top: 8px;
+    font-size: 11px;
+    opacity: 0.7;
+}
+
+.activity-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.activity-legend-swatch {
+    width: 9px;
+    height: 9px;
+    flex: 0 0 auto;
+    border: 1px solid rgba(128, 128, 128, 0.35);
+    border-radius: 2px;
+}
+
+/* 问题19: event stream — exactly 3 rows, hairline separators, mono time */
+.activity-stream {
+    margin-top: 8px;
+    padding-top: 4px;
+    border-top: 1px solid rgba(128, 128, 128, 0.14);
+}
+
+.activity-event {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 0;
+    font-size: 12px;
+    border-bottom: 1px solid rgba(128, 128, 128, 0.10);
+}
+
+.activity-event:last-child {
+    border-bottom: none;
+}
+
+.activity-event.is-empty {
+    opacity: 0.4;
+}
+
+.activity-event-dot {
+    width: 7px;
+    height: 7px;
+    flex: 0 0 auto;
+    border-radius: 2px;
+    border: 1px solid rgba(128, 128, 128, 0.3);
+}
+
+.activity-event-type {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.activity-event-time {
+    flex: 0 0 auto;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.5px;
+    font-variant-numeric: tabular-nums;
+    opacity: 0.7;
 }
 
 .activity-bar-live {

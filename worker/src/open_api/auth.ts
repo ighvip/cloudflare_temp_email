@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { verifyAddressToken } from '../address_auth';
 import { Jwt } from 'hono/utils/jwt';
 
-import utils, { checkCfTurnstile, getPasswords, getAdminPasswords, getAdminPasswordHash, hashPassword } from '../utils';
+import utils, { checkCfTurnstile, getPasswords, getAdminPasswords, getAdminPasswordHash, isEnvAdminPasswordDisabled, hashPassword } from '../utils';
 import i18n from '../i18n';
 import { ErrorCode } from '../error_codes';
 import { checkLoginRateLimit, recordLoginFailure, clearLoginFailures } from '../login_rate_limit';
@@ -49,8 +49,11 @@ api.post('/open_api/admin_login', async (c) => {
     const hashedPasswords = await Promise.all(adminPasswords.map(p => hashPassword(p)));
     // panel-changed password (stored digest) OR the env ADMIN_PASSWORDS list
     const storedHash = await getAdminPasswordHash(c);
+    // the env list is only a recovery path until the panel disables it
+    const envLoginAllowed = !(await isEnvAdminPasswordDisabled(c, storedHash));
     const passwordValid = !!password
-        && (hashedPasswords.includes(password) || (!!storedHash && password === storedHash));
+        && ((envLoginAllowed && hashedPasswords.includes(password))
+            || (!!storedHash && password === storedHash));
     if (!passwordValid) {
         await recordLoginFailure(c, 'admin_login');
         return c.json({ code: ErrorCode.AUTH_ADMIN_CREDENTIAL_INVALID, message: msgs.NeedAdminPasswordMsg }, 401)

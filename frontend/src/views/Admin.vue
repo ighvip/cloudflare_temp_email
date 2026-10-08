@@ -22,6 +22,7 @@ import RoleAddressConfig from './admin/RoleAddressConfig.vue';
 import Mails from './admin/Mails.vue';
 import MailsUnknow from './admin/MailsUnknow.vue';
 import About from './common/About.vue';
+import AboutManual from './admin/AboutManual.vue';
 import Maintenance from './admin/Maintenance.vue';
 import DatabaseManager from './admin/DatabaseManager.vue';
 import Appearance from './common/Appearance.vue';
@@ -30,6 +31,7 @@ import Webhook from './admin/Webhook.vue';
 import MailWebhook from './admin/MailWebhook.vue';
 import WorkerConfig from './admin/WorkerConfig.vue';
 import SiteSettings from './admin/SiteSettings.vue';
+import DomainSettings from './admin/DomainSettings.vue';
 import IpBlacklistSettings from './admin/IpBlacklistSettings.vue';
 import AiExtractSettings from './admin/AiExtractSettings.vue';
 import RedeemCodes from './admin/RedeemCodes.vue';
@@ -128,6 +130,16 @@ const { t, locale } = useScopedI18n('views.Admin')
 
 const showAdminPasswordModal = computed(() => !showAdminPage.value || showAdminAuth.value)
 const tmpAdminAuth = ref('')
+
+// 问题14: Quick Setup 的子标签页，管理员设置挂在最后
+const quickSetupTab = ref('database')
+// the old top-level 管理员 tab was folded into Quick Setup's admin_settings
+// sub-tab — migrate a persisted selection so a stale sessionStorage value
+// cannot land on a top-level tab that no longer exists
+if (adminTab.value === 'adminAccount') {
+  adminTab.value = 'qucickSetup'
+  quickSetupTab.value = 'admin_settings'
+}
 // 判断是否通过 admin password 登录（而非用户管理员权限）
 const isAdminPasswordLogin = computed(() => !!adminAuth.value)
 
@@ -236,12 +248,16 @@ onUnmounted(() => {
         </n-button>
       </template>
       <n-tab-pane name="qucickSetup" :tab="t('qucickSetup')">
-        <n-tabs key="quick-setup-tabs" type="bar" justify-content="center" animated>
+        <n-tabs key="quick-setup-tabs" v-model:value="quickSetupTab" type="bar" justify-content="center"
+          animated>
           <n-tab-pane name="database" :tab="t('database')">
             <DatabaseManager />
           </n-tab-pane>
           <n-tab-pane name="site_settings" tab="站点设置">
             <SiteSettings />
+          </n-tab-pane>
+          <n-tab-pane name="domains" tab="站点域名">
+            <DomainSettings />
           </n-tab-pane>
           <n-tab-pane name="account_settings" :tab="t('mailbox_settings')">
             <AccountSettings />
@@ -252,8 +268,80 @@ onUnmounted(() => {
           <n-tab-pane name="workerconfig" :tab="t('workerconfig')">
             <WorkerConfig />
           </n-tab-pane>
-          <n-tab-pane name="security" :tab="t('securitySettings')">
-            <SecuritySettings />
+          <n-tab-pane name="admin_settings" tab="管理员设置">
+            <div style="display: flex; justify-content: center; padding: 20px 20px 0;">
+              <n-card style="width: 600px; max-width: 100%;">
+                <n-space vertical>
+                  <n-text strong>{{ t('loginMethod') }}</n-text>
+                  <n-text>{{ currentLoginMethod }}</n-text>
+                  <n-divider v-if="isAdminPasswordLogin" />
+                  <n-button v-if="isAdminPasswordLogin" type="warning" @click="showLogoutModal = true" block>
+                    {{ t('logout') }}
+                  </n-button>
+                </n-space>
+              </n-card>
+            </div>
+            <div style="padding: 20px 20px 0;">
+              <SecuritySettings />
+            </div>
+            <div style="display: flex; justify-content: center; padding: 20px;">
+              <n-card style="width: 640px; max-width: 100%;">
+                <n-space vertical>
+                  <n-text strong>后台会话管理</n-text>
+                  <n-text depth="3">
+                    直接输入后台地址会返回 404。只有在首页点击后台入口（logo 旁的小圆点），
+                    才会生成一个 60 秒有效的一次性令牌（64 位）打开后台；令牌兑换出的会话
+                    保存在该标签页的 sessionStorage 中，关闭窗口后心跳停止，约 2 分钟后
+                    服务端自动失效。令牌只能从首页生成，这里只能查看和吊销。
+                  </n-text>
+                  <n-space align="center" justify="space-between">
+                    <n-button size="small" :loading="loading" @click="loadGateSessions">
+                      刷新
+                    </n-button>
+                    <n-button size="small" type="error" secondary @click="revokeOtherGateSessions"
+                      :disabled="!gateSessions.some(s => s.active && !s.current)">
+                      吊销其它所有会话
+                    </n-button>
+                  </n-space>
+                  <n-divider style="margin: 8px 0;" />
+                  <n-text strong>活跃会话</n-text>
+                  <n-empty v-if="!gateSessions.length" size="small" description="暂无会话记录" />
+                  <n-table v-else size="small" :bordered="false">
+                    <thead>
+                      <tr>
+                        <th>会话</th>
+                        <th>创建时间</th>
+                        <th>最后心跳</th>
+                        <th>状态</th>
+                        <th style="width: 80px;">操作</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="session in gateSessions" :key="session.token_hash">
+                        <td>
+                          <n-text code>{{ session.prefix }}</n-text>
+                          <n-tag v-if="session.current" type="success" size="tiny"
+                            style="margin-left: 6px;">当前</n-tag>
+                        </td>
+                        <td>{{ formatGateTime(session.created_at) }}</td>
+                        <td>{{ gateLastSeen(session.last_seen) }}</td>
+                        <td>
+                          <n-tag v-if="session.revoked_at" type="error" size="tiny">已吊销</n-tag>
+                          <n-tag v-else-if="!session.active" size="tiny">已过期</n-tag>
+                          <n-tag v-else type="success" size="tiny">活跃</n-tag>
+                        </td>
+                        <td>
+                          <n-button v-if="!session.revoked_at" size="tiny" tertiary type="error"
+                            @click="revokeGateSession(session.token_hash)">
+                            吊销
+                          </n-button>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </n-table>
+                </n-space>
+              </n-card>
+            </div>
           </n-tab-pane>
         </n-tabs>
       </n-tab-pane>
@@ -342,79 +430,9 @@ onUnmounted(() => {
       <n-tab-pane name="appearance" :tab="t('appearance')">
         <Appearance />
       </n-tab-pane>
-      <n-tab-pane name="adminAccount" :tab="t('adminAccount')">
-        <div style="display: flex; justify-content: center; padding: 20px;">
-          <n-card style="width: 600px;">
-            <n-space vertical>
-              <n-text strong>{{ t('loginMethod') }}</n-text>
-              <n-text>{{ currentLoginMethod }}</n-text>
-              <n-divider v-if="isAdminPasswordLogin" />
-              <n-button v-if="isAdminPasswordLogin" type="warning" @click="showLogoutModal = true" block>
-                {{ t('logout') }}
-              </n-button>
-            </n-space>
-          </n-card>
-        </div>
-        <div style="display: flex; justify-content: center; padding: 0 20px 20px;">
-          <n-card style="width: 640px;">
-            <n-space vertical>
-              <n-text strong>后台会话管理</n-text>
-              <n-text depth="3">
-                直接输入后台地址会返回 404。只有在首页点击后台入口（logo 旁的小圆点），
-                才会生成一个 60 秒有效的一次性令牌（64 位）打开后台；令牌兑换出的会话
-                保存在该标签页的 sessionStorage 中，关闭窗口后心跳停止，约 2 分钟后
-                服务端自动失效。令牌只能从首页生成，这里只能查看和吊销。
-              </n-text>
-              <n-space align="center" justify="space-between">
-                <n-button size="small" :loading="loading" @click="loadGateSessions">
-                  刷新
-                </n-button>
-                <n-button size="small" type="error" secondary @click="revokeOtherGateSessions"
-                  :disabled="!gateSessions.some(s => s.active && !s.current)">
-                  吊销其它所有会话
-                </n-button>
-              </n-space>
-              <n-divider style="margin: 8px 0;" />
-              <n-text strong>活跃会话</n-text>
-              <n-empty v-if="!gateSessions.length" size="small" description="暂无会话记录" />
-              <n-table v-else size="small" :bordered="false">
-                <thead>
-                  <tr>
-                    <th>会话</th>
-                    <th>创建时间</th>
-                    <th>最后心跳</th>
-                    <th>状态</th>
-                    <th style="width: 80px;">操作</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="session in gateSessions" :key="session.token_hash">
-                    <td>
-                      <n-text code>{{ session.prefix }}</n-text>
-                      <n-tag v-if="session.current" type="success" size="tiny"
-                        style="margin-left: 6px;">当前</n-tag>
-                    </td>
-                    <td>{{ formatGateTime(session.created_at) }}</td>
-                    <td>{{ gateLastSeen(session.last_seen) }}</td>
-                    <td>
-                      <n-tag v-if="session.revoked_at" type="error" size="tiny">已吊销</n-tag>
-                      <n-tag v-else-if="!session.active" size="tiny">已过期</n-tag>
-                      <n-tag v-else type="success" size="tiny">活跃</n-tag>
-                    </td>
-                    <td>
-                      <n-button v-if="!session.revoked_at" size="tiny" tertiary type="error"
-                        @click="revokeGateSession(session.token_hash)">
-                        吊销
-                      </n-button>
-                    </td>
-                  </tr>
-                </tbody>
-              </n-table>
-            </n-space>
-          </n-card>
-        </div>
-      </n-tab-pane>
       <n-tab-pane name="about" :tab="t('about')">
+        <!-- 关于页改为详细系统说明书；原公告视图保留在下方 -->
+        <AboutManual />
         <About />
       </n-tab-pane>
     </n-tabs>

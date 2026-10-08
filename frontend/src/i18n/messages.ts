@@ -2,10 +2,8 @@ import { MESSAGE_REGISTRY, getMessageSource } from './message-registry'
 
 import type { MessageKey, MessageNamespace } from './message-registry'
 
-import { deMessages } from './locales/source/de'
-import { esMessages } from './locales/source/es'
 import { jaMessages } from './locales/source/ja'
-import { ptBRMessages } from './locales/source/ptBR'
+import { koMessages } from './locales/source/ko'
 // generated from the zh source by scripts/gen-zhtw.mjs
 import { zhTWMessages } from './locales/source/zhTW'
 
@@ -16,10 +14,8 @@ type SourceLocale = Extract<SupportedLocale, 'en' | 'zh'>
 type AdditionalLocale = Exclude<SupportedLocale, SourceLocale>
 
 const additionalLocaleSources: Record<AdditionalLocale, Record<string, string>> = {
-  es: esMessages,
-  'pt-BR': ptBRMessages,
   ja: jaMessages,
-  de: deMessages,
+  ko: koMessages,
   'zh-TW': zhTWMessages,
 }
 
@@ -72,10 +68,8 @@ export const I18N_MESSAGES: Record<SupportedLocale, LocaleTree> = {
   // Traditional Chinese is pre-generated from the zh source (OpenCC),
   // keys it does not cover still fall back to `zh`.
   'zh-TW': buildAdditionalLocaleMessages('zh-TW'),
-  es: buildAdditionalLocaleMessages('es'),
-  'pt-BR': buildAdditionalLocaleMessages('pt-BR'),
   ja: buildAdditionalLocaleMessages('ja'),
-  de: buildAdditionalLocaleMessages('de'),
+  ko: buildAdditionalLocaleMessages('ko'),
 }
 
 export const getLocalizedMessage = (

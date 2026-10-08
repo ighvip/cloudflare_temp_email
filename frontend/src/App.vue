@@ -21,6 +21,68 @@ const adClient = APP_CONFIG.GOOGLE_AD_CLIENT;
 const adSlot = APP_CONFIG.GOOGLE_AD_SLOT;
 const { locale } = useI18n({ useScope: 'global' });
 const theme = computed(() => isDark.value ? darkTheme : null)
+
+// ---- 问题15: one monochrome design system for every page ----
+// naive's green/blue/orange defaults are replaced once, here: black
+// primary (inverted white in dark theme), gray secondary accents and
+// #e5484d as the site's only alert color. Cards and dialogs also get
+// the homepage's 12px corner radius (form controls keep naive's 3px,
+// exactly like the homepage's own buttons and inputs).
+const lightThemeOverrides = {
+    common: {
+        primaryColor: '#1a1a1a',
+        primaryColorHover: '#333333',
+        primaryColorPressed: '#000000',
+        primaryColorSuppl: '#333333',
+        infoColor: '#666666',
+        infoColorHover: '#777777',
+        infoColorPressed: '#555555',
+        infoColorSuppl: '#777777',
+        warningColor: '#666666',
+        warningColorHover: '#777777',
+        warningColorPressed: '#555555',
+        warningColorSuppl: '#777777',
+        successColor: '#1a1a1a',
+        successColorHover: '#333333',
+        successColorPressed: '#000000',
+        successColorSuppl: '#333333',
+        errorColor: '#e5484d',
+        errorColorHover: '#f06469',
+        errorColorPressed: '#c93a40',
+        errorColorSuppl: '#f06469',
+    },
+    Card: { borderRadius: '12px' },
+    Dialog: { borderRadius: '12px' },
+}
+
+const darkThemeOverrides = {
+    common: {
+        primaryColor: '#eeeeee',
+        primaryColorHover: '#dddddd',
+        primaryColorPressed: '#cccccc',
+        primaryColorSuppl: '#dddddd',
+        infoColor: '#9a9a9a',
+        infoColorHover: '#aaaaaa',
+        infoColorPressed: '#888888',
+        infoColorSuppl: '#aaaaaa',
+        warningColor: '#9a9a9a',
+        warningColorHover: '#aaaaaa',
+        warningColorPressed: '#888888',
+        warningColorSuppl: '#aaaaaa',
+        successColor: '#eeeeee',
+        successColorHover: '#dddddd',
+        successColorPressed: '#cccccc',
+        successColorSuppl: '#dddddd',
+        errorColor: '#e5484d',
+        errorColorHover: '#f06469',
+        errorColorPressed: '#c93a40',
+        errorColorSuppl: '#f06469',
+    },
+    Card: { borderRadius: '12px' },
+    Dialog: { borderRadius: '12px' },
+}
+
+const themeOverrides = computed(() => isDark.value ? darkThemeOverrides : lightThemeOverrides)
 const localeConfig = computed(() => getNaiveLocaleConfig(isSupportedLocale(locale.value) ? locale.value : DEFAULT_LOCALE))
 const isMobile = useIsMobile()
 const showSideMargin = computed(() => !isMobile.value && useSideMargin.value);
@@ -100,7 +162,8 @@ onMounted(async () => {
 </script>
 
 <template>
-  <n-config-provider :locale="localeConfig.locale" :date-locale="localeConfig.dateLocale" :theme="theme">
+  <n-config-provider :locale="localeConfig.locale" :date-locale="localeConfig.dateLocale" :theme="theme"
+    :theme-overrides="themeOverrides">
     <n-global-style />
     <n-spin description="loading..." :show="loading">
       <n-notification-provider container-style="margin-top: 60px;">
@@ -142,6 +205,45 @@ onMounted(async () => {
 .n-switch {
   margin-left: 10px;
   margin-right: 10px;
+}
+
+/* ---- 问题15: the homepage's monochrome card tabs, now site-wide ----
+   naive only flips the active label color (its own background is
+   transparent); the panel's solid black/white segment look needs
+   explicit rules. The #app prefix keeps these above naive's deep
+   BEM chains. Values mirror views/Index.vue exactly. */
+#app .n-tabs.n-tabs--card-type .n-tabs-tab {
+  color: inherit;
+  background-color: rgba(128, 128, 128, 0.07);
+  border-color: rgba(128, 128, 128, 0.20);
+}
+
+#app .n-tabs.n-tabs--card-type .n-tabs-tab:not(.n-tabs-tab--active):hover {
+  background-color: rgba(128, 128, 128, 0.14);
+}
+
+#app .n-tabs.n-tabs--card-type .n-tabs-tab.n-tabs-tab--active,
+#app .n-tabs.n-tabs--card-type .n-tabs-tab.n-tabs-tab--active:hover {
+  color: #fff;
+  background-color: #1a1a1a;
+  border-color: #1a1a1a;
+}
+
+html.dark #app .n-tabs.n-tabs--card-type .n-tabs-tab.n-tabs-tab--active,
+html.dark #app .n-tabs.n-tabs--card-type .n-tabs-tab.n-tabs-tab--active:hover {
+  color: #111;
+  background-color: #eee;
+  border-color: #eee;
+}
+
+/* the alert bar / active label follow the same monochrome accent
+   (line and bar types already inherit primaryColor from the theme) */
+#app .n-tabs .n-tabs-nav .n-tabs-bar {
+  background-color: #111;
+}
+
+html.dark #app .n-tabs .n-tabs-nav .n-tabs-bar {
+  background-color: #eee;
 }
 
 @media (hover: none) and (pointer: coarse) and (max-width: 1024px) {

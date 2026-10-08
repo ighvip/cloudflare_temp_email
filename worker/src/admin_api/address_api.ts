@@ -46,7 +46,7 @@ const listAddresses = async (c: Context<HonoCustomType>) => {
 };
 
 const createNewAddress = async (c: Context<HonoCustomType>) => {
-    const { name, domain, enablePrefix, enableRandomSubdomain } = await c.req.json();
+    const { name, domain, enablePrefix, enableRandomSubdomain, addressPrefix } = await c.req.json();
     const msgs = i18n.getMessagesbyContext(c);
     if (!name) {
         return c.text(msgs.RequiredFieldMsg, 400)
@@ -56,7 +56,8 @@ const createNewAddress = async (c: Context<HonoCustomType>) => {
             name, domain, enablePrefix,
             enableRandomSubdomain: getBooleanValue(enableRandomSubdomain),
             checkLengthByConfig: false,
-            addressPrefix: null,
+            // 问题5: the admin create page sends an explicit prefix ("" = no prefix)
+            addressPrefix: typeof addressPrefix === "string" ? addressPrefix : null,
             checkAllowDomains: false,
             enableCheckNameRegex: false,
             sourceMeta: 'admin'

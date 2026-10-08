@@ -179,38 +179,29 @@ const fmtLatency = (value) =>
     50% { opacity: 0.4; }
 }
 
+/* 18-②: identical pill to the stats card's "公开数据" badge — mono 10px
+   hairline capsule; only the alert red marks an outage */
 .uptime-badge {
     margin-left: auto;
-    padding: 2px 10px;
-    border: 1px solid rgba(128, 128, 128, 0.4);
+    padding: 1px 8px;
+    border: 1px solid rgba(128, 128, 128, 0.45);
     border-radius: 999px;
     background: rgba(128, 128, 128, 0.10);
-    font-size: 11px;
-    font-weight: 600;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 10px;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
     white-space: nowrap;
 }
 
-/* up = solid black (white in dark theme), down = the site's only alert red */
-.uptime-badge.up {
-    color: #fff;
-    border-color: #1a1a1a;
-    background: #1a1a1a;
-}
-
 .uptime-badge.down {
-    color: #fff;
-    border-color: #e5484d;
-    background: #e5484d;
+    color: #e5484d;
+    border-color: rgba(229, 72, 77, 0.6);
+    background: rgba(229, 72, 77, 0.10);
 }
 
 .uptime-badge.unknown {
     opacity: 0.75;
-}
-
-:global(html.dark .uptime-badge.up) {
-    color: #111;
-    border-color: #eee;
-    background: #eee;
 }
 
 .uptime-rows {

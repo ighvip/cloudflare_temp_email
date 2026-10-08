@@ -4,14 +4,14 @@ import { Context } from 'hono'
 import utils, { getJsonSetting, saveSetting } from './utils';
 import { CONSTANTS } from './constants';
 import { isS3Enabled } from './mails_api/s3_attachment';
-import { isAnySendMailEnabled } from './common';
+import { isAnySendMailEnabled, getSitePrefix } from './common';
 import { getWebhookAttachment } from './open_api/webhook_attachment';
 import { getUptimePayload } from './uptime';
 
 const api = new Hono<HonoCustomType>
 
 // admin editable site settings, saved via generic /admin/config API
-const SITE_SETTINGS_KEY = 'admin-config:site-settings';
+const SITE_SETTINGS_KEY = CONSTANTS.SITE_SETTINGS_KEY;
 // announcement list, saved via generic /admin/config API as a JSON array
 const ANNOUNCEMENTS_KEY = 'admin-config:announcements';
 // public stats cache, refreshed at most once per interval
@@ -25,22 +25,54 @@ type SiteSettings = {
     copyright?: string;
     intro?: string;
     guide?: string;
+    // 问题5: address prefix, editable in the admin site settings,
+    // falls back to env PREFIX when unset/empty
+    prefix?: string;
     statsMode?: string;
-    statsManual?: { today?: number; week?: number; month?: number };
+    statsManual?: {
+        today?: number; week?: number; month?: number; year?: number;
+        sendToday?: number; sendWeek?: number; sendMonth?: number; sendYear?: number;
+    };
+    // day-boundary timezone for the public stats, "+08:00" style
+    statsTimezone?: string;
 };
 
 const pad = (value: number) => String(value).padStart(2, '0');
 
-// UTC boundaries, created_at is stored as `datetime('now')` (UTC)
-const getUtcBoundaries = () => {
-    const now = new Date();
-    const dayStart = `${now.getUTCFullYear()}-${pad(now.getUTCMonth() + 1)}-${pad(now.getUTCDate())} 00:00:00`;
-    const weekStartDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+// parse "+08:00" / "-0530" into minutes east of UTC; default Beijing (+08:00).
+// exported so admin_api/statistics_api shares the same day-boundary parsing
+// (问题11) as the public stats below
+export const parseTimezoneOffsetMinutes = (value: unknown): number => {
+    if (typeof value !== 'string') return 480;
+    const match = value.trim().match(/^([+-])(\d{1,2})(?::?(\d{2}))?$/);
+    if (!match) return 480;
+    const sign = match[1] === '-' ? -1 : 1;
+    const hours = Number(match[2]);
+    const minutes = Number(match[3] || 0);
+    if (hours > 14 || minutes > 59) return 480;
+    return sign * (hours * 60 + minutes);
+};
+
+// day / week (Monday) / month / year boundaries expressed as UTC strings,
+// computed against the admin-selected timezone so "today" means the
+// visitor's local day (default: Beijing time); exported for reuse by the
+// admin statistics daily aggregations (问题11)
+export const getStatsBoundaries = (offsetMinutes: number) => {
+    const shifted = new Date(Date.now() + offsetMinutes * 60000);
+    const dayLocal = Date.UTC(shifted.getUTCFullYear(), shifted.getUTCMonth(), shifted.getUTCDate());
+    const dayDate = new Date(dayLocal);
     // JS: 0 = Sunday ... 6 = Saturday, shift so the week starts on Monday
-    weekStartDay.setUTCDate(weekStartDay.getUTCDate() - ((weekStartDay.getUTCDay() + 6) % 7));
-    const weekStart = `${weekStartDay.getUTCFullYear()}-${pad(weekStartDay.getUTCMonth() + 1)}-${pad(weekStartDay.getUTCDate())} 00:00:00`;
-    const monthStart = `${now.getUTCFullYear()}-${pad(now.getUTCMonth() + 1)}-01 00:00:00`;
-    return { dayStart, weekStart, monthStart };
+    const weekLocal = dayLocal - ((dayDate.getUTCDay() + 6) % 7) * 86400000;
+    const monthLocal = Date.UTC(shifted.getUTCFullYear(), shifted.getUTCMonth(), 1);
+    const yearLocal = Date.UTC(shifted.getUTCFullYear(), 0, 1);
+    const toUtcString = (localMs: number) => new Date(localMs - offsetMinutes * 60000)
+        .toISOString().replace('T', ' ').slice(0, 19);
+    return {
+        dayStart: toUtcString(dayLocal),
+        weekStart: toUtcString(weekLocal),
+        monthStart: toUtcString(monthLocal),
+        yearStart: toUtcString(yearLocal),
+    };
 };
 
 const readCachedPublicStats = async (c: Context<HonoCustomType>) => {
@@ -52,20 +84,46 @@ const readCachedPublicStats = async (c: Context<HonoCustomType>) => {
 };
 
 const buildRealPublicStats = async (c: Context<HonoCustomType>) => {
-    const { dayStart, weekStart, monthStart } = getUtcBoundaries();
+    const siteSettings = await getJsonSetting<SiteSettings>(c, SITE_SETTINGS_KEY) || {};
+    const offset = parseTimezoneOffsetMinutes(siteSettings.statsTimezone);
+    const { dayStart, weekStart, monthStart, yearStart } = getStatsBoundaries(offset);
+    // receive counts (raw_mails) + send counts (sendbox) across four ranges
     const row = await c.env.DB.prepare(
         `SELECT
             SUM(CASE WHEN created_at >= ? THEN 1 ELSE 0 END) as today,
             SUM(CASE WHEN created_at >= ? THEN 1 ELSE 0 END) as week,
-            SUM(CASE WHEN created_at >= ? THEN 1 ELSE 0 END) as month
+            SUM(CASE WHEN created_at >= ? THEN 1 ELSE 0 END) as month,
+            SUM(CASE WHEN created_at >= ? THEN 1 ELSE 0 END) as year
          FROM raw_mails`
-    ).bind(dayStart, weekStart, monthStart)
-        .first<{ today: number | null; week: number | null; month: number | null }>();
+    ).bind(dayStart, weekStart, monthStart, yearStart)
+        .first<{ today: number | null; week: number | null; month: number | null; year: number | null }>();
+    // send feature off => show 0 honestly (问题18-①b, 照实显示 0)
+    const sendEnabled = isAnySendMailEnabled(c);
+    let sendRow = { today: 0, week: 0, month: 0, year: 0 };
+    if (sendEnabled) {
+        sendRow = await c.env.DB.prepare(
+            `SELECT
+                SUM(CASE WHEN created_at >= ? THEN 1 ELSE 0 END) as today,
+                SUM(CASE WHEN created_at >= ? THEN 1 ELSE 0 END) as week,
+                SUM(CASE WHEN created_at >= ? THEN 1 ELSE 0 END) as month,
+                SUM(CASE WHEN created_at >= ? THEN 1 ELSE 0 END) as year
+             FROM sendbox`
+        ).bind(dayStart, weekStart, monthStart, yearStart)
+            .first<{ today: number | null; week: number | null; month: number | null; year: number | null }>()
+            || sendRow;
+    }
     const payload = {
         mode: 'real' as const,
         today: row?.today || 0,
         week: row?.week || 0,
         month: row?.month || 0,
+        year: row?.year || 0,
+        sendEnabled,
+        sendToday: sendRow.today || 0,
+        sendWeek: sendRow.week || 0,
+        sendMonth: sendRow.month || 0,
+        sendYear: sendRow.year || 0,
+        timezone: siteSettings.statsTimezone || '+08:00',
         updatedAt: new Date().toISOString(),
         expiresAt: Date.now() + PUBLIC_STATS_CACHE_TTL_SECONDS * 1000,
     };
@@ -90,7 +148,9 @@ const readCachedPublicActivity = async (c: Context<HonoCustomType>) => {
 // created_at is stored as `datetime('now')` (UTC) — substr(.., 1, 16) gives
 // a 'YYYY-MM-DD HH:MM' bucket string that groups cleanly with COUNT.
 const buildRealPublicActivity = async (c: Context<HonoCustomType>) => {
-    const { dayStart } = getUtcBoundaries();
+    const siteSettings = await getJsonSetting<SiteSettings>(c, SITE_SETTINGS_KEY) || {};
+    const offset = parseTimezoneOffsetMinutes(siteSettings.statsTimezone);
+    const { dayStart } = getStatsBoundaries(offset);
     const now = new Date();
     const from = new Date(now.getTime() - 60 * 60 * 1000);
     const fromStr = `${from.getUTCFullYear()}-${pad(from.getUTCMonth() + 1)}-${pad(from.getUTCDate())} `
@@ -112,6 +172,31 @@ const buildRealPublicActivity = async (c: Context<HonoCustomType>) => {
     ).bind(dayStart, dayStart)
         .first<{ created: number | null; sent: number | null }>();
 
+    // 问题19: the 3 most recent events (type + time only — the public
+    // payload never exposes addresses). Three bounded LIMIT 3 queries,
+    // merged and trimmed in JS.
+    const [recentReceive, recentCreate, recentSend] = await Promise.all([
+        c.env.DB.prepare(
+            `SELECT created_at AS at FROM raw_mails WHERE created_at IS NOT NULL
+             ORDER BY created_at DESC LIMIT 3`
+        ).all<{ at: string }>(),
+        c.env.DB.prepare(
+            `SELECT created_at AS at FROM address WHERE created_at IS NOT NULL
+             ORDER BY created_at DESC LIMIT 3`
+        ).all<{ at: string }>(),
+        c.env.DB.prepare(
+            `SELECT created_at AS at FROM sendbox WHERE created_at IS NOT NULL
+             ORDER BY created_at DESC LIMIT 3`
+        ).all<{ at: string }>(),
+    ]);
+    const recent = [
+        ...(recentReceive.results || []).map((row) => ({ type: 'received', at: row.at })),
+        ...(recentCreate.results || []).map((row) => ({ type: 'created', at: row.at })),
+        ...(recentSend.results || []).map((row) => ({ type: 'sent', at: row.at })),
+    ]
+        .sort((a, b) => (a.at || '').localeCompare(b.at || ''))
+        .slice(0, 3);
+
     const byBucket: Record<string, { r: number; c: number; s: number }> = {};
     for (const row of bucketRows.results || []) {
         const slot = byBucket[row.bucket] || { r: 0, c: 0, s: 0 };
@@ -127,6 +212,7 @@ const buildRealPublicActivity = async (c: Context<HonoCustomType>) => {
             .map(([t, v]) => ({ t, r: v.r, c: v.c, s: v.s }))
             .sort((a, b) => a.t.localeCompare(b.t)),
         today: { created: todayRow?.created || 0, sent: todayRow?.sent || 0 },
+        recent,
         updatedAt: new Date().toISOString(),
         expiresAt: Date.now() + PUBLIC_STATS_CACHE_TTL_SECONDS * 1000,
     };
@@ -177,7 +263,7 @@ api.get('/open_api/settings', async (c) => {
         // admin-selected default UI language, empty means "follow the browser"
         "defaultLocale": typeof siteSettings.defaultLocale === 'string' ? siteSettings.defaultLocale : "",
         "alwaysShowAnnouncement": utils.getBooleanValue(c.env.ALWAYS_SHOW_ANNOUNCEMENT),
-        "prefix": utils.trimLower(c.env.PREFIX),
+        "prefix": await getSitePrefix(c),
         "addressRegex": utils.getStringValue(c.env.ADDRESS_REGEX),
         "minAddressLen": utils.getIntValue(c.env.MIN_ADDRESS_LEN, 1),
         "maxAddressLen": utils.getIntValue(c.env.MAX_ADDRESS_LEN, 30),
@@ -232,11 +318,20 @@ api.get('/open_api/stats', async (c) => {
     // manual mode: admin typed the numbers in the site settings form
     if (siteSettings.statsMode === 'manual') {
         const manual = siteSettings.statsManual || {};
+        const sendEnabled = isAnySendMailEnabled(c);
         return c.json({
             mode: 'manual',
             today: Number(manual.today) || 0,
             week: Number(manual.week) || 0,
             month: Number(manual.month) || 0,
+            year: Number(manual.year) || 0,
+            sendEnabled,
+            // send feature off => honest 0 even in manual mode (问题18-①b)
+            sendToday: sendEnabled ? Number(manual.sendToday) || 0 : 0,
+            sendWeek: sendEnabled ? Number(manual.sendWeek) || 0 : 0,
+            sendMonth: sendEnabled ? Number(manual.sendMonth) || 0 : 0,
+            sendYear: sendEnabled ? Number(manual.sendYear) || 0 : 0,
+            timezone: siteSettings.statsTimezone || '+08:00',
             updatedAt: new Date().toISOString(),
         });
     }
@@ -253,6 +348,13 @@ api.get('/open_api/stats', async (c) => {
             today: 0,
             week: 0,
             month: 0,
+            year: 0,
+            sendEnabled: false,
+            sendToday: 0,
+            sendWeek: 0,
+            sendMonth: 0,
+            sendYear: 0,
+            timezone: siteSettings.statsTimezone || '+08:00',
             updatedAt: new Date().toISOString(),
             error: true,
         });
@@ -269,6 +371,7 @@ api.get('/open_api/activity', async (c) => {
             mode: 'manual',
             minutes: [],
             today: { created: 0, sent: 0 },
+            recent: [],
             updatedAt: new Date().toISOString(),
         });
     }
@@ -284,6 +387,7 @@ api.get('/open_api/activity', async (c) => {
             mode: 'real',
             minutes: [],
             today: { created: 0, sent: 0 },
+            recent: [],
             updatedAt: new Date().toISOString(),
             error: true,
         });

@@ -3,6 +3,7 @@ import { Jwt } from 'hono/utils/jwt'
 import { WorkerMailerOptions } from 'worker-mailer';
 
 import { getBooleanValue, getDomains, getStringArray, getStringValue, getIntValue, getUserRoles, getDefaultDomains, getJsonSetting, getAnotherWorkerList, hashPassword, getJsonObjectValue, getRandomSubdomainDomains, getDomainMapValue, isDomainOrSubdomain, normalizeDomains, trimLower } from './utils';
+import { getSendMailOverride } from './mail_domains';
 import { unbindTelegramByAddress } from './telegram_api/common';
 import { CONSTANTS } from './constants';
 import { AddressCreationSettings, AdminWebhookSettings, ExtractResult, WebhookMail, WebhookSettings } from './models';
@@ -25,6 +26,25 @@ const isValidDomainLabel = (label: string): boolean => {
 
 const areValidDomainLabels = (labels: string[]): boolean => {
     return labels.length > 0 && labels.every((label) => isValidDomainLabel(label));
+}
+
+/**
+ * 问题5: site-wide address prefix — the admin-editable value in the site
+ * settings (D1) wins, the wrangler env PREFIX stays as the fallback.
+ */
+export const getSitePrefix = async (c: Context<HonoCustomType>): Promise<string> => {
+    try {
+        const siteSettings = await getJsonSetting<{ prefix?: unknown }>(
+            c, CONSTANTS.SITE_SETTINGS_KEY
+        );
+        // empty string means "not configured" — same convention as title/copyright
+        if (typeof siteSettings?.prefix === "string" && siteSettings.prefix.trim()) {
+            return trimLower(siteSettings.prefix);
+        }
+    } catch (error) {
+        console.error("getSitePrefix failed", error);
+    }
+    return trimLower(c.env.PREFIX);
 }
 
 /**
@@ -70,6 +90,42 @@ export const isSendMailBindingEnabled = (
 export const isAnySendMailEnabled = (c: Context<HonoCustomType>): boolean => {
     const domains = getDomains(c);
     return domains.some(domain => isSendMailEnabled(c, domain));
+}
+
+/**
+ * 问题6 批次1: the per-domain 发信 switch stored in D1 wins over the env
+ * behaviour; a domain that is not in the stored list falls back to the
+ * env-based isSendMailEnabled — env-only sites behave exactly as before.
+ * The send workflow below applies the same rule in tri-state form
+ * (getSendMailOverride) so the legacy verified-address-list exemption of
+ * env-only domains stays byte-identical; this boolean form is the public
+ * "can this domain send" answer for callers like the open settings flag.
+ */
+export const resolveSendMailEnabled = async (
+    c: Context<HonoCustomType>,
+    mailDomain: string
+): Promise<boolean> => {
+    const override = await getSendMailOverride(c, mailDomain);
+    if (override !== null) {
+        return override;
+    }
+    return isSendMailEnabled(c, mailDomain);
+}
+
+/**
+ * Same rule for the SEND_MAIL binding path: stored switch first, env stays
+ * the fallback (a stored `true` allows the binding for that domain even when
+ * SEND_MAIL_DOMAINS would exclude it — the binding itself must exist).
+ */
+export const resolveSendMailBindingEnabled = async (
+    c: Context<HonoCustomType>,
+    mailDomain: string
+): Promise<boolean> => {
+    const override = await getSendMailOverride(c, mailDomain);
+    if (override === null) {
+        return isSendMailBindingEnabled(c, mailDomain);
+    }
+    return override && !!c.env.SEND_MAIL;
 }
 
 export const generateRandomName = (c: Context<HonoCustomType>): string => {
@@ -399,7 +455,7 @@ export const newAddress = async (
     if (typeof addressPrefix === "string") {
         name = trimLower(addressPrefix) + name;
     } else if (enablePrefix) {
-        name = trimLower(c.env.PREFIX) + name;
+        name = await getSitePrefix(c) + name;
     }
     // check domain
     const allowDomains = checkAllowDomains ? await getAllowDomains(c) : getDomains(c);
@@ -814,13 +870,13 @@ export const commonGetUserRole = async (
 export const getAddressPrefix = async (c: Context<HonoCustomType>): Promise<string | undefined> => {
     const user = c.get("userPayload");
     if (!user) {
-        return trimLower(c.env.PREFIX);
+        return getSitePrefix(c);
     }
     const user_role = await commonGetUserRole(c, user.user_id);
     if (typeof user_role?.prefix === "string") {
         return trimLower(user_role.prefix);
     }
-    return trimLower(c.env.PREFIX);
+    return getSitePrefix(c);
 }
 
 export const getAllowDomains = async (c: Context<HonoCustomType>): Promise<string[]> => {

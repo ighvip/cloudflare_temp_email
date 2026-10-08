@@ -48,8 +48,13 @@ api.post("/telegram/webhook", async (c) => {
 });
 
 api.post("/admin/telegram/init", async (c) => {
-    const domain = new URL(c.req.url).host;
     const token = c.env.TELEGRAM_BOT_TOKEN;
+    // 问题10: no bot token configured → quiet 403 instead of a thrown
+    // Telegraf request (the admin page renders a not-enabled panel)
+    if (!token) {
+        return c.text("Telegram is not enabled (TELEGRAM_BOT_TOKEN not set)", 403);
+    }
+    const domain = new URL(c.req.url).host;
     const webhookUrl = `https://${domain}/telegram/webhook`;
     console.log(`setting webhook to ${webhookUrl}`);
     const bot = newTelegramBot(c, token);
@@ -62,6 +67,9 @@ api.post("/admin/telegram/init", async (c) => {
 
 api.get("/admin/telegram/status", async (c) => {
     const token = c.env.TELEGRAM_BOT_TOKEN;
+    if (!token) {
+        return c.text("Telegram is not enabled (TELEGRAM_BOT_TOKEN not set)", 403);
+    }
     const bot = newTelegramBot(c, token);
     const info = await bot.telegram.getWebhookInfo()
     const commands = await bot.telegram.getMyCommands()

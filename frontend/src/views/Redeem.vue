@@ -29,6 +29,7 @@ const {
 } = useGlobalState()
 
 const code = ref('')
+const redeemDisabled = ref(false)
 const codeInfo = ref(null)
 const redeemStarted = ref(false)
 const completed = ref(null)
@@ -126,7 +127,9 @@ const loadContext = async () => {
         await api.getOpenSettings(message, notification)
     }
     if (!openSettings.value.enableRedeemCode) {
-        await router.replace(getRouterPathWithLang('/', locale.value))
+        // 问题10: stay on the page and show a quiet disabled panel
+        // instead of bouncing the visitor back to the homepage
+        redeemDisabled.value = true
         return
     }
     if (jwt.value && !settings.value.address) {
@@ -449,6 +452,15 @@ onMounted(loadContext)
             </n-card>
         </section>
     </main>
+    <main v-else class="redeem-page">
+        <section class="redeem-shell">
+            <div class="feature-disabled">
+                <div class="feature-disabled-title">{{ t('notEnabled') }}</div>
+                <div class="feature-disabled-hint">{{ t('notEnabledHint') }}</div>
+                <n-button secondary @click="goBack">{{ t('back') }}</n-button>
+            </div>
+        </section>
+    </main>
 </template>
 
 <style scoped>
@@ -483,9 +495,10 @@ onMounted(loadContext)
     width: 42px;
     height: 42px;
     place-items: center;
-    color: #18a058;
+    /* 问题15: site accent instead of naive's green (theme-aware) */
+    color: currentColor;
     font-size: 24px;
-    background: rgba(24, 160, 88, 0.12);
+    background: rgba(128, 128, 128, 0.12);
     border-radius: 8px;
 }
 
@@ -522,7 +535,7 @@ onMounted(loadContext)
 
 .type-card .n-icon {
     flex: 0 0 auto;
-    color: #18a058;
+    color: currentColor;
     font-size: 20px;
 }
 
@@ -531,9 +544,14 @@ onMounted(loadContext)
 }
 
 .type-card.active {
-    color: #18a058;
-    border-color: rgba(24, 160, 88, 0.55);
-    background: rgba(24, 160, 88, 0.08);
+    color: #1a1a1a;
+    border-color: rgba(26, 26, 26, 0.7);
+    background: rgba(128, 128, 128, 0.08);
+}
+
+:global(html.dark .type-card.active) {
+    color: #eee;
+    border-color: rgba(238, 238, 238, 0.7);
 }
 
 .redeem-card > :deep(.n-card__content) > .n-divider {
@@ -567,7 +585,7 @@ onMounted(loadContext)
 
 .detail-heading > .n-icon {
     flex: 0 0 auto;
-    color: #18a058;
+    color: currentColor;
     font-size: 28px;
 }
 
@@ -599,7 +617,7 @@ onMounted(loadContext)
 }
 
 .success-state > .n-icon {
-    color: #18a058;
+    color: currentColor;
     font-size: 50px;
 }
 
@@ -623,5 +641,32 @@ onMounted(loadContext)
         padding: 10px 5px;
         text-align: center;
     }
+}
+
+/* 问题10: quiet grey "feature disabled" panel */
+.feature-disabled {
+    max-width: 480px;
+    margin: 64px auto;
+    padding: 32px 28px;
+    border: 1px dashed #d9d9d9;
+    border-radius: 12px;
+    text-align: center;
+    color: #999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.feature-disabled-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #666;
+}
+
+.feature-disabled-hint {
+    font-size: 13px;
+    line-height: 1.7;
+    margin-bottom: 6px;
 }
 </style>

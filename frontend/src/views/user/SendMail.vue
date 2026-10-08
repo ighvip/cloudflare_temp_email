@@ -381,7 +381,7 @@ onMounted(async () => {
 }
 
 .required-mark {
-    color: #d03050;
+    color: #e5484d;
 }
 
 .format-options {

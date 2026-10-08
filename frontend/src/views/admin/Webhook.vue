@@ -23,7 +23,14 @@ class WebhookSettings {
 
 const webhookSettings = ref(new WebhookSettings(false, []))
 const webhookEnabled = ref(false)
+// 问题10: disabled feature = quiet panel, not an error result
+const notEnabled = ref(false)
 const errorInfo = ref('')
+
+const isFeatureDisabledError = (error: unknown) => {
+    const err = error as { status?: number, message?: string }
+    return err?.status === 403 || /not enabled|not allowed|未启用|未开启|未允许/i.test(err?.message || '')
+}
 
 const getSettings = async () => {
     try {
@@ -31,6 +38,10 @@ const getSettings = async () => {
         Object.assign(webhookSettings.value, res)
         webhookEnabled.value = true
     } catch (error) {
+        if (isFeatureDisabledError(error)) {
+            notEnabled.value = true
+            return
+        }
         errorInfo.value = (error as Error).message || "error";
     }
 }
@@ -74,7 +85,11 @@ onMounted(async () => {
                 </n-select>
             </n-form-item-row>
         </n-card>
-        <n-result v-else status="404" :title="t('notEnabled')" :description="errorInfo" />
+        <div v-else-if="notEnabled" class="feature-disabled">
+            <div class="feature-disabled-title">{{ t('notEnabled') }}</div>
+            <div class="feature-disabled-hint">{{ t('notEnabledHint') }}</div>
+        </div>
+        <n-result v-else status="info" :title="t('loadFailed')" :description="errorInfo" />
     </div>
 </template>
 
@@ -84,5 +99,28 @@ onMounted(async () => {
     text-align: left;
     place-items: center;
     justify-content: center;
+}
+
+/* 问题10: quiet grey "feature disabled" panel */
+.feature-disabled {
+    max-width: 480px;
+    margin: 48px auto;
+    padding: 24px 28px;
+    border: 1px dashed #d9d9d9;
+    border-radius: 12px;
+    text-align: center;
+    color: #999;
+}
+
+.feature-disabled-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #666;
+    margin-bottom: 8px;
+}
+
+.feature-disabled-hint {
+    font-size: 13px;
+    line-height: 1.7;
 }
 </style>

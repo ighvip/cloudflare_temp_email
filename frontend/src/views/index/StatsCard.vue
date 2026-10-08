@@ -33,6 +33,15 @@ const statItems = computed(() => [
     { key: 'today', label: t('statToday'), value: stats.value.today },
     { key: 'week', label: t('statWeek'), value: stats.value.week },
     { key: 'month', label: t('statMonth'), value: stats.value.month },
+    { key: 'year', label: t('statYear'), value: stats.value.year },
+])
+
+// 问题18-①: second row = sent counts; disabled feature reports 0 as-is
+const sendItems = computed(() => [
+    { key: 'sendToday', label: t('statSendToday'), value: stats.value.sendToday },
+    { key: 'sendWeek', label: t('statSendWeek'), value: stats.value.sendWeek },
+    { key: 'sendMonth', label: t('statSendMonth'), value: stats.value.sendMonth },
+    { key: 'sendYear', label: t('statSendYear'), value: stats.value.sendYear },
 ])
 
 const modeBadge = computed(() =>
@@ -55,10 +64,24 @@ const formatCount = (value) => {
             <span class="stats-badge">{{ modeBadge }}</span>
         </div>
 
-        <div class="stats-row">
-            <div v-for="item in statItems" :key="item.key" class="stats-cell">
-                <div class="stats-value">{{ formatCount(item.value) }}</div>
-                <div class="stats-label">{{ item.label }}</div>
+        <div class="stats-grid">
+            <div class="stats-line">
+                <span class="stats-line-tag">{{ t('statsRowReceive') }}</span>
+                <div class="stats-row">
+                    <div v-for="item in statItems" :key="item.key" class="stats-cell">
+                        <div class="stats-value">{{ formatCount(item.value) }}</div>
+                        <div class="stats-label">{{ item.label }}</div>
+                    </div>
+                </div>
+            </div>
+            <div class="stats-line">
+                <span class="stats-line-tag">{{ t('statsRowSend') }}</span>
+                <div class="stats-row">
+                    <div v-for="item in sendItems" :key="item.key" class="stats-cell">
+                        <div class="stats-value">{{ formatCount(item.value) }}</div>
+                        <div class="stats-label">{{ item.label }}</div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -130,17 +153,50 @@ const formatCount = (value) => {
     white-space: nowrap;
 }
 
+/* 问题18-①: two stacked lines (receive / send), four cells each */
+.stats-grid {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+}
+
+.stats-line {
+    display: flex;
+    align-items: stretch;
+    border-bottom: 1px solid rgba(128, 128, 128, 0.14);
+}
+
+.stats-line:last-child {
+    border-bottom: none;
+}
+
+.stats-line-tag {
+    display: flex;
+    align-items: center;
+    flex: 0 0 auto;
+    padding: 0 8px 0 0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 10px;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    opacity: 0.55;
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    justify-content: flex-start;
+    border-right: 1px solid rgba(128, 128, 128, 0.14);
+}
+
 .stats-row {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     flex: 1 1 auto;
     align-items: center;
-    padding: 6px 0;
+    padding: 4px 0;
 }
 
 .stats-cell {
     min-width: 0;
-    padding: 8px 6px;
+    padding: 7px 4px;
     text-align: center;
     border-left: 1px solid rgba(128, 128, 128, 0.14);
 }
@@ -151,7 +207,7 @@ const formatCount = (value) => {
 
 .stats-value {
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    font-size: clamp(24px, 2.4vw, 30px);
+    font-size: clamp(17px, 1.8vw, 22px);
     font-weight: 700;
     line-height: 1.2;
     font-variant-numeric: tabular-nums;
@@ -159,8 +215,8 @@ const formatCount = (value) => {
 }
 
 .stats-label {
-    margin-top: 4px;
-    font-size: 12px;
+    margin-top: 3px;
+    font-size: 11px;
     opacity: 0.65;
     overflow: hidden;
     text-overflow: ellipsis;

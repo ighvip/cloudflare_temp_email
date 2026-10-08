@@ -8,7 +8,7 @@ import { getBooleanValue, getDomains, getJsonObjectValue, trimLower } from '../u
 import { TelegramSettings } from "./settings";
 import { sendTelegramAttachments } from "./tg_file_upload";
 import { bindTelegramAddress, deleteTelegramAddress, jwtListToAddressData, tgUserNewAddress, unbindTelegramAddress, unbindTelegramByAddress } from "./common";
-import { commonParseMail } from "../common";
+import { commonParseMail, getSitePrefix } from "../common";
 import { resolveRawEmail } from "../gzip";
 import { UserFromGetMe } from "telegraf/types";
 import i18n from "../i18n";
@@ -167,7 +167,7 @@ export function newTelegramBot(c: Context<HonoCustomType>, token: string): Teleg
 
     bot.command("start", async (ctx: TgContext) => {
         const msgs = await getTgMessages(c, ctx);
-        const prefix = trimLower(c.env.PREFIX)
+        const prefix = await getSitePrefix(c)
         const domains = getDomains(c);
         const commands = getTelegramCommands(c);
         return await ctx.reply(

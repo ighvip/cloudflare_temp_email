@@ -17,6 +17,10 @@ export const MESSAGE_REGISTRY = {
       "en": "Webhook is not enabled for you",
       "zh": "Webhook 未开启，请联系管理员开启"
     },
+    "notEnabledHint": {
+      "en": "This feature is currently disabled. Contact the administrator to enable it (ENABLE_WEBHOOK).",
+      "zh": "该功能当前未启用。如需使用，请联系管理员开启（ENABLE_WEBHOOK）。"
+    },
     "presets": {
       "en": "Presets",
       "zh": "示例模板"
@@ -463,6 +467,18 @@ export const MESSAGE_REGISTRY = {
       "en": "Simple Mode",
       "zh": "极简模式"
     },
+    "panelUserCenter": {
+      "en": "User Center",
+      "zh": "用户中心"
+    },
+    "panelHelp": {
+      "en": "Help Center",
+      "zh": "帮助中心"
+    },
+    "panelBack": {
+      "en": "Back to homepage",
+      "zh": "返回首页"
+    },
     "inbox": {
       "en": "Inbox",
       "zh": "收件箱"
@@ -685,17 +701,9 @@ export const MESSAGE_REGISTRY = {
       "en": "Please enter the correct access password",
       "zh": "请输入站点访问密码"
     },
-    "dark": {
-      "en": "Dark",
-      "zh": "深色"
-    },
     "mailbox": {
       "en": "Mailbox",
       "zh": "邮箱"
-    },
-    "light": {
-      "en": "Light",
-      "zh": "浅色"
     },
     "menu": {
       "en": "Menu",
@@ -789,10 +797,6 @@ export const MESSAGE_REGISTRY = {
       "en": "Global Mailbox Settings",
       "zh": "全局邮箱设置"
     },
-    "adminAccount": {
-      "en": "Admin",
-      "zh": "管理员"
-    },
     "aiExtractSettings": {
       "en": "AI Extract Settings",
       "zh": "AI 提取设置"
@@ -872,10 +876,6 @@ export const MESSAGE_REGISTRY = {
     "roleAddressConfig": {
       "en": "Role Address Config",
       "zh": "角色地址配置"
-    },
-    "securitySettings": {
-      "en": "Security",
-      "zh": "安全设置"
     },
     "sendBox": {
       "en": "Sent",
@@ -1707,6 +1707,34 @@ export const MESSAGE_REGISTRY = {
       "en": "Received this month",
       "zh": "本月收信"
     },
+    "statYear": {
+      "en": "Received this year",
+      "zh": "年度收信"
+    },
+    "statSendToday": {
+      "en": "Sent today",
+      "zh": "今日发送"
+    },
+    "statSendWeek": {
+      "en": "Sent this week",
+      "zh": "本周发送"
+    },
+    "statSendMonth": {
+      "en": "Sent this month",
+      "zh": "本月发送"
+    },
+    "statSendYear": {
+      "en": "Sent this year",
+      "zh": "本年发送"
+    },
+    "statsRowReceive": {
+      "en": "RECEIVE",
+      "zh": "收信"
+    },
+    "statsRowSend": {
+      "en": "SEND",
+      "zh": "发信"
+    },
     "statsUpdatedAt": {
       "en": "Updated at {time} (auto refresh every minute)",
       "zh": "更新于 {time}（每分钟自动刷新）"
@@ -1764,6 +1792,22 @@ export const MESSAGE_REGISTRY = {
     "refresh": {
       "en": "Refresh activity",
       "zh": "刷新活动数据"
+    },
+    "eventReceived": {
+      "en": "Received",
+      "zh": "收信"
+    },
+    "eventCreated": {
+      "en": "Address created",
+      "zh": "建号"
+    },
+    "eventSent": {
+      "en": "Sent",
+      "zh": "发信"
+    },
+    "eventEmpty": {
+      "en": "No event",
+      "zh": "暂无事件"
     }
   },
   "views.index.AddressBar": {
@@ -1876,6 +1920,14 @@ export const MESSAGE_REGISTRY = {
     "edit": {
       "en": "Edit",
       "zh": "编辑"
+    },
+    "notEnabled": {
+      "en": "Send mail is not enabled",
+      "zh": "发信功能未启用"
+    },
+    "notEnabledHint": {
+      "en": "This feature is currently disabled. To use it, ask the admin to configure RESEND_API_KEY, SMTP_* or SEND_MAIL for at least one domain in the worker env.",
+      "zh": "该功能当前未启用。如需使用，请联系管理员在 Worker 环境变量中配置 RESEND_API_KEY、SMTP_* 或 SEND_MAIL（至少为一个域名开启）。"
     },
     "fromMailEmpty": {
       "en": "Sender address is empty",
@@ -2617,6 +2669,14 @@ export const MESSAGE_REGISTRY = {
       "en": "Telegram Mini App URL",
       "zh": "电报小程序 URL(请输入你部署的电报小程序网页地址)"
     },
+    "notEnabled": {
+      "en": "Telegram is not enabled",
+      "zh": "Telegram 未启用"
+    },
+    "notEnabledHint": {
+      "en": "This feature is currently disabled. To use it, ask the admin to set the TELEGRAM_BOT_TOKEN environment variable on the worker.",
+      "zh": "该功能当前未启用。如需使用，请联系管理员在 Worker 环境变量中设置 TELEGRAM_BOT_TOKEN。"
+    },
     "save": {
       "en": "Save",
       "zh": "保存"
@@ -2678,6 +2738,10 @@ export const MESSAGE_REGISTRY = {
     "linkWithAddressCredential": {
       "en": "Open to auto login email link",
       "zh": "打开即可自动登录邮箱的链接"
+    },
+    "prefixPlaceholder": {
+      "en": "Prefix (leave empty for none)",
+      "zh": "前缀（留空则不加前缀）"
     },
     "normalSubdomain": {
       "en": "Normal Domain",
@@ -2820,6 +2884,22 @@ export const MESSAGE_REGISTRY = {
     "top": {
       "en": "top",
       "zh": "顶部"
+    },
+    "themeMode": {
+      "en": "Theme",
+      "zh": "主题"
+    },
+    "themeLight": {
+      "en": "Light",
+      "zh": "浅色"
+    },
+    "themeAuto": {
+      "en": "Follow system",
+      "zh": "跟随系统"
+    },
+    "themeDark": {
+      "en": "Dark",
+      "zh": "深色"
     },
     "useIframeShowMail": {
       "en": "Use iframe Show HTML Mail",
@@ -3331,6 +3411,14 @@ export const MESSAGE_REGISTRY = {
     }
   },
   "views.Redeem": {
+    "notEnabled": {
+      "en": "Redemption is not enabled",
+      "zh": "兑换功能未开启"
+    },
+    "notEnabledHint": {
+      "en": "This feature is currently disabled. Contact the administrator or check the ENABLE_REDEEM_CODE setting.",
+      "zh": "该功能当前未启用。如需使用，请联系管理员开启（ENABLE_REDEEM_CODE）。"
+    },
     "address": {
       "en": "Email address",
       "zh": "邮箱地址"
@@ -3500,6 +3588,14 @@ export const MESSAGE_REGISTRY = {
     "notEnabled": {
       "en": "Webhook is not enabled",
       "zh": "Webhook 未开启"
+    },
+    "notEnabledHint": {
+      "en": "This feature is currently disabled. Set ENABLE_WEBHOOK in the Worker environment to turn it on.",
+      "zh": "该功能当前未启用。请在 Worker 环境变量中设置 ENABLE_WEBHOOK 以开启。"
+    },
+    "loadFailed": {
+      "en": "Failed to load settings",
+      "zh": "设置加载失败"
     },
     "save": {
       "en": "Save",

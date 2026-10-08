@@ -8,7 +8,8 @@ import i18n from '../i18n';
 import { CONSTANTS } from '../constants'
 import { getJsonSetting, getDomains, getBooleanValue, getJsonObjectValue, getDomainMapValue, getMailDomain, includesDomain } from '../utils';
 import { GeoData } from '../models'
-import { handleListQuery, isSendMailBindingEnabled, updateAddressUpdatedAt } from '../common'
+import { handleListQuery, resolveSendMailBindingEnabled, updateAddressUpdatedAt } from '../common'
+import { getSendMailOverride } from '../mail_domains';
 import { getSendBalanceState, requestSendMailAccess } from './send_balance';
 import { ensureSendMailLimit, increaseSendMailLimitCount } from './send_mail_limit_utils';
 
@@ -148,6 +149,13 @@ export const sendMail = async (
     if (!includesDomain(domains, mailDomain)) {
         throw new Error(msgs.InvalidDomainMsg)
     }
+    // 问题6 批次1: the D1 per-domain 发信 switch is a kill switch first —
+    // only domains present in the stored list are affected, env-only sites
+    // keep the exact legacy behaviour below (incl. the verified-list path)
+    const sendMailOverride = await getSendMailOverride(c, mailDomain);
+    if (sendMailOverride === false) {
+        throw new Error(msgs.SendMailDisabledForDomainMsg)
+    }
     const sendBalanceState = await getSendBalanceState(c, address, {
         isAdmin: options?.isAdmin,
     });
@@ -192,7 +200,9 @@ export const sendMail = async (
             sendByVerifiedAddressList = true;
         }
     }
-    const sendMailBindingEnabled = isSendMailBindingEnabled(c, mailDomain);
+    // 问题6: stored switch wins (true allows the binding for that domain),
+    // env SEND_MAIL_DOMAINS stays the fallback for unmanaged domains
+    const sendMailBindingEnabled = await resolveSendMailBindingEnabled(c, mailDomain);
 
     // send mail workflow
     if (sendByVerifiedAddressList) {

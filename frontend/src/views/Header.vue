@@ -1,13 +1,12 @@
 <script setup>
-import { ref, h, computed, onMounted, onUnmounted } from 'vue'
+import { ref, h, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useScopedI18n } from '@/i18n/app'
 import { useHead } from '@unhead/vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { useIsMobile } from '../utils/composables'
 import {
-    DarkModeFilled, LightModeFilled, MenuFilled,
-    AdminPanelSettingsFilled, MonitorHeartFilled,
-    HelpOutlineOutlined, KeyboardArrowDownOutlined
+    MenuFilled,
+    MonitorHeartFilled, HelpOutlineOutlined, KeyboardArrowDownOutlined
 } from '@vicons/material'
 import { Envelope, Language, User } from '@vicons/fa'
 
@@ -25,7 +24,7 @@ const message = useMessage()
 const notification = useNotification()
 
 const {
-    toggleDark, isDark, isTelegram,
+    isTelegram,
     showAuth, auth, loading, openSettings, preferredLocale, userSettings
 } = useGlobalState()
 const route = useRoute()
@@ -136,6 +135,8 @@ const changeLocale = async (lang) => {
     if (localeSwitched) preferredLocale.value = lang;
 }
 
+// 问题4: no "管理后台" list item any more — the homepage dot is the one
+// and only entry point (it mints the one-time token)
 const menuOptions = computed(() => [
     {
         label: () => h(NButton,
@@ -203,42 +204,6 @@ const menuOptions = computed(() => [
             {
                 text: true,
                 size: "small",
-                type: menuValue.value == "admin" ? "primary" : "default",
-                style: "width: 100%",
-                onClick: onAdminEntry
-            },
-            {
-                default: () => t('admin'),
-                icon: () => h(NIcon, { component: AdminPanelSettingsFilled }),
-            }
-        ),
-        show: isHomeRoute.value,
-        key: "admin"
-    },
-    {
-        label: () => h(
-            NButton,
-            {
-                text: true,
-                size: "small",
-                style: "width: 100%",
-                onClick: () => { toggleDark(); showMobileMenu.value = false; }
-            },
-            {
-                default: () => isDark.value ? t('light') : t('dark'),
-                icon: () => h(
-                    NIcon, { component: isDark.value ? LightModeFilled : DarkModeFilled }
-                )
-            }
-        ),
-        key: "theme"
-    },
-    {
-        label: () => h(
-            NButton,
-            {
-                text: true,
-                size: "small",
                 style: "width: 100%",
                 tag: "a",
                 target: "_blank",
@@ -265,23 +230,8 @@ useHead({
     ]
 });
 
-const logoClickCount = ref(0);
-const logoClick = async () => {
-    if (route.path.includes("admin")) {
-        logoClickCount.value = 0;
-        return;
-    }
-    if (logoClickCount.value >= 5) {
-        logoClickCount.value = 0;
-        // P0-B4 rework: same one-time-token flow as the homepage dot
-        await onAdminEntry();
-    } else {
-        logoClickCount.value++;
-    }
-    if (logoClickCount.value > 0) {
-        message.info(`Click ${5 - logoClickCount.value + 1} times to enter the admin page`);
-    }
-}
+// 问题4: the logo's click-count easter egg is removed together with the
+// menu link — the dot in the title row is the only admin entry left
 
 // ---- header clock ----
 // P0-B4: admin entry dot (opens in a new tab, see template)
@@ -309,8 +259,34 @@ const currentAnnouncement = computed(() => {
 const showAllAnnouncements = ref(false);
 let announcementTimer = null;
 
+// 问题1: the ticker scrolls right-to-left when the text does not fit —
+// the viewport is measured against the non-shrinking text span, and the
+// sweep duration follows the measured width (~45px/s)
+const announcementViewport = ref(null);
+const announcementOverflow = ref(false);
+const announcementDuration = ref('12s');
+const measureAnnouncement = () => {
+    const el = announcementViewport.value;
+    if (!el) {
+        announcementOverflow.value = false;
+        return;
+    }
+    const overflows = el.scrollWidth > el.clientWidth + 2;
+    announcementOverflow.value = overflows;
+    if (overflows) {
+        const seconds = Math.min(60, Math.max(6, (el.clientWidth + el.scrollWidth) / 45));
+        announcementDuration.value = `${seconds.toFixed(1)}s`;
+    }
+};
+watch(currentAnnouncement, async () => {
+    await nextTick();
+    measureAnnouncement();
+});
+
 onMounted(async () => {
     clockTimer = setInterval(() => { now.value = new Date(); }, 1000);
+    // 问题1: re-measure the marquee whenever the header width changes
+    window.addEventListener('resize', measureAnnouncement);
     // rotate the announcement ticker every 10s when there is more than one
     announcementTimer = setInterval(() => {
         if (announcementList.value.length > 1) {
@@ -325,6 +301,7 @@ onMounted(async () => {
 onUnmounted(() => {
     if (clockTimer) clearInterval(clockTimer);
     if (announcementTimer) clearInterval(announcementTimer);
+    window.removeEventListener('resize', measureAnnouncement);
 });
 </script>
 
@@ -349,18 +326,28 @@ onUnmounted(() => {
                         <div class="header-clock-date">{{ clockDate }}</div>
                         <div class="header-clock-time">{{ clockTime }}</div>
                     </div>
-                    <div v-if="currentAnnouncement" class="header-announcement"
-                        @click="showAllAnnouncements = true" :title="currentAnnouncement">
-                        <span class="header-announcement-tag">{{ t('announcementTag') }}</span>
-                        <span class="header-announcement-text">{{ currentAnnouncement }}</span>
-                        <span v-if="announcementList.length > 1" class="header-announcement-more">
-                            {{ t('announcementMore', { count: announcementList.length }) }}
-                        </span>
+                    <!-- 问题1: bar + ticker travel as one group, so the
+                         ticker wraps to its own full-width line on phones -->
+                    <div v-if="currentAnnouncement" class="header-announcement-group">
+                        <span class="header-announcement-divider" aria-hidden="true"></span>
+                        <div class="header-announcement" @click="showAllAnnouncements = true"
+                            :title="currentAnnouncement">
+                            <span class="header-announcement-tag">{{ t('announcementTag') }}</span>
+                            <!-- 问题1: overflow scrolls right-to-left instead of being cut off -->
+                            <span ref="announcementViewport" class="header-announcement-viewport">
+                                <span class="header-announcement-text"
+                                    :class="{ 'is-scrolling': announcementOverflow }"
+                                    :style="{ animationDuration: announcementDuration }">{{ currentAnnouncement }}</span>
+                            </span>
+                            <span v-if="announcementList.length > 1" class="header-announcement-more">
+                                {{ t('announcementMore', { count: announcementList.length }) }}
+                            </span>
+                        </div>
                     </div>
                 </div>
             </template>
             <template #avatar>
-                <div class="header-logo" @click="logoClick">
+                <div class="header-logo">
                     <SiteLogo style="margin-left: 10px;" />
                 </div>
             </template>
@@ -434,8 +421,13 @@ onUnmounted(() => {
     overflow: hidden;
 }
 
-:deep(.n-page-header__title) {
+/* 问题1: the title row stretches to the menu — the announcement's right
+   gap is then exactly the row's 14px gap (naive's 16px title margin is
+   overridden deep enough to win) */
+:deep(.n-page-header .n-page-header__main .n-page-header__title) {
+    flex: 1 1 auto;
     min-width: 0;
+    margin-right: 14px;
     overflow: hidden;
 }
 
@@ -458,7 +450,6 @@ onUnmounted(() => {
 .header-logo {
     display: inline-flex;
     align-items: center;
-    cursor: pointer;
 }
 
 /* P0-B4: 4px admin entry dot between the logo and the clock */
@@ -472,10 +463,17 @@ onUnmounted(() => {
     transition: background-color 0.2s ease, box-shadow 0.2s ease;
 }
 
+/* 问题15: monochrome hover (was an off-palette blue glow) */
 .header-admin-dot:hover,
 .header-admin-dot:focus-visible {
-    background: #58a6ff;
-    box-shadow: 0 0 4px rgba(88, 166, 255, 0.8);
+    background: #1a1a1a;
+    box-shadow: 0 0 4px rgba(0, 0, 0, 0.55);
+}
+
+:global(html.dark .header-admin-dot:hover),
+:global(html.dark .header-admin-dot:focus-visible) {
+    background: #eee;
+    box-shadow: 0 0 4px rgba(255, 255, 255, 0.55);
 }
 
 .header-title-row {
@@ -490,11 +488,13 @@ onUnmounted(() => {
     flex: 0 0 auto;
 }
 
-/* brand name + tagline stack in the top bar (brand appears here only) */
+/* brand name + tagline stack in the top bar (brand appears here only);
+   问题1: an 80px floor keeps the site name readable — the ticker takes
+   the squeeze instead (it can marquee, the title cannot) */
 .header-brand {
     display: flex;
     flex-direction: column;
-    min-width: 0;
+    min-width: 80px;
 }
 
 .header-brand h3 {
@@ -518,6 +518,8 @@ onUnmounted(() => {
 }
 
 /* ---- clock ---- */
+/* 问题1: only the leading hairline stays — the bar in front of the
+   announcement is its own element now (no double rule) */
 .header-clock {
     flex: 0 0 auto;
     display: flex;
@@ -525,7 +527,6 @@ onUnmounted(() => {
     line-height: 1.2;
     padding: 2px 12px;
     border-left: 1px solid rgba(128, 128, 128, 0.28);
-    border-right: 1px solid rgba(128, 128, 128, 0.28);
 }
 
 .header-clock-date {
@@ -543,13 +544,23 @@ onUnmounted(() => {
 }
 
 /* ---- announcement ---- */
+/* 问题1: bar + ticker are one flex item so they wrap together; the
+   ticker fills the row, so its right gap is the same adaptive 14px as
+   every other gap in the header (the old 460px cap is gone) */
+.header-announcement-group {
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
 .header-announcement {
     flex: 1 1 auto;
     display: flex;
     align-items: center;
     gap: 8px;
     min-width: 0;
-    max-width: 460px;
     padding: 5px 10px;
     border: 1px solid rgba(240, 160, 32, 0.5);
     border-radius: 8px;
@@ -563,6 +574,14 @@ onUnmounted(() => {
     background: rgba(240, 160, 32, 0.18);
 }
 
+/* 问题1: the vertical bar in front of the ticker */
+.header-announcement-divider {
+    flex: 0 0 auto;
+    width: 1px;
+    height: 16px;
+    background: rgba(128, 128, 128, 0.45);
+}
+
 .header-announcement-tag {
     flex: 0 0 auto;
     padding: 0 6px;
@@ -574,12 +593,41 @@ onUnmounted(() => {
     font-weight: 600;
 }
 
-.header-announcement-text {
+/* 问题1: between 768px and 1100px the full menu owns the header — the
+   decorative clock and the ticker's label/counter step aside so the
+   site name and the announcement text both stay readable */
+
+/* 问题1: the viewport clips, the text never shrinks — overflowing copy
+   sweeps right-to-left at a readable pace, and pauses on hover */
+.header-announcement-viewport {
     flex: 1 1 auto;
     min-width: 0;
     overflow: hidden;
-    text-overflow: ellipsis;
+    display: flex;
+    align-items: center;
+}
+
+.header-announcement-text {
+    flex: 0 0 auto;
     white-space: nowrap;
+}
+
+.header-announcement-text.is-scrolling {
+    animation: header-announcement-marquee linear infinite;
+}
+
+.header-announcement:hover .header-announcement-text.is-scrolling {
+    animation-play-state: paused;
+}
+
+@keyframes header-announcement-marquee {
+    0% {
+        transform: translateX(100%);
+    }
+
+    100% {
+        transform: translateX(-100%);
+    }
 }
 
 .header-announcement-more {
@@ -593,15 +641,28 @@ onUnmounted(() => {
     word-break: break-word;
 }
 
+/* 问题1: the ticker is shown on every viewport (was hidden <=1100px) */
+
+/* 问题1: between 768px and 1100px the full menu owns the header — the
+   decorative clock and the ticker's label/counter step aside so the
+   site name and the announcement text both stay readable */
 @media (max-width: 1100px) {
-    .header-announcement {
+    .header-clock {
+        display: none;
+    }
+
+    .header-announcement-tag,
+    .header-announcement-more {
         display: none;
     }
 }
 
 @media (max-width: 640px) {
-    .header-clock {
-        display: none;
+    /* 问题1: the ticker gets its own full-width line on phones instead
+       of being squeezed (or hidden, as before) */
+    .header-title-row {
+        flex-wrap: wrap;
+        row-gap: 10px;
     }
 }
 
