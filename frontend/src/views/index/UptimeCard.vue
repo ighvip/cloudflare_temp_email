@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, onUnmounted } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useScopedI18n } from '@/i18n/app'
 import { useSiteHealth } from './useSiteHealth'
 
@@ -14,6 +14,19 @@ const { uptime, uptimeError, uptimeUpdatedAt, fetchUptime, start, stop } = useSi
 
 onMounted(start)
 onUnmounted(stop)
+
+// manual ↻ refreshes ONLY this card: showLoading=false keeps the request
+// out of the global n-spin overlay (that was the "whole page refresh" bug)
+const refreshing = ref(false)
+const onRefresh = async () => {
+    if (refreshing.value) return
+    refreshing.value = true
+    try {
+        await fetchUptime(false)
+    } finally {
+        refreshing.value = false
+    }
+}
 
 const MONITOR_IDS = ['website', 'api', 'database']
 
@@ -108,8 +121,9 @@ const fmtLatency = (value) =>
                 <template v-else>{{ t('checkedAt', { time: uptimeUpdatedAt }) }}</template>
             </span>
             <span v-if="uptime?.version" class="uptime-version">{{ uptime.version }}</span>
-            <button class="uptime-refresh" type="button" :aria-label="t('refresh')"
-                @click="fetchUptime(true)">↻</button>
+            <button class="uptime-refresh" type="button" :class="{ 'is-refreshing': refreshing }"
+                :aria-label="t('refresh')" :disabled="refreshing"
+                @click="onRefresh">↻</button>
         </div>
     </div>
 </template>
@@ -334,6 +348,20 @@ const fmtLatency = (value) =>
 
 :global(html.dark .uptime-refresh:hover) {
     border-color: #eee;
+}
+
+.uptime-refresh.is-refreshing {
+    opacity: 1;
+    border-color: #1a1a1a;
+    animation: uptime-spin 0.9s linear infinite;
+}
+
+:global(html.dark .uptime-refresh.is-refreshing) {
+    border-color: #eee;
+}
+
+@keyframes uptime-spin {
+    to { transform: rotate(360deg); }
 }
 
 @media (max-width: 560px) {

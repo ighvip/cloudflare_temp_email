@@ -363,6 +363,22 @@ export const MESSAGE_REGISTRY = {
       "en": "Docs",
       "zh": "文档"
     },
+    "downloadFailed": {
+      "en": "Download failed",
+      "zh": "下载失败"
+    },
+    "downloadSuccess": {
+      "en": "TXT download started",
+      "zh": "TXT 已开始下载"
+    },
+    "downloadTxt": {
+      "en": "Download TXT",
+      "zh": "下载 TXT"
+    },
+    "exportTime": {
+      "en": "Exported at",
+      "zh": "导出时间"
+    },
     "imapHost": {
       "en": "IMAP host",
       "zh": "IMAP 主机"
@@ -504,12 +520,8 @@ export const MESSAGE_REGISTRY = {
       "zh": "开源免费"
     },
     "finePrint": {
-      "en": "Mails are deleted automatically after 7 days ·",
-      "zh": "邮件 7 天自动清理 ·"
-    },
-    "helpLinkShort": {
-      "en": "Help Center",
-      "zh": "帮助中心"
+      "en": "Mails are deleted automatically after 7 days",
+      "zh": "邮件 7 天自动清理"
     },
     "quickStartLabel": {
       "en": "QUICK START",
@@ -1648,6 +1660,56 @@ export const MESSAGE_REGISTRY = {
     "statsUnavailable": {
       "en": "Stats are temporarily unavailable",
       "zh": "统计数据暂时不可用"
+    },
+    "refresh": {
+      "en": "Refresh stats",
+      "zh": "刷新统计数据"
+    }
+  },
+  "views.index.ActivityCard": {
+    "title": {
+      "en": "Live Activity",
+      "zh": "实时活动"
+    },
+    "badge": {
+      "en": "public",
+      "zh": "公开数据"
+    },
+    "badgeManual": {
+      "en": "manual",
+      "zh": "手动维护"
+    },
+    "statHour": {
+      "en": "Received (last 60 min)",
+      "zh": "近60分钟收信"
+    },
+    "statCreated": {
+      "en": "Addresses created today",
+      "zh": "今日新建地址"
+    },
+    "statSent": {
+      "en": "Sent today",
+      "zh": "今日发送"
+    },
+    "stripLabel": {
+      "en": "Per-minute activity over the last 60 minutes",
+      "zh": "最近 60 分钟的每分钟活动"
+    },
+    "barTip": {
+      "en": "{time} · received {r} · created {c} · sent {s}",
+      "zh": "{time} · 收 {r} · 建 {c} · 发 {s}"
+    },
+    "updatedAt": {
+      "en": "Updated at {time} (auto refresh every minute)",
+      "zh": "更新于 {time}（每分钟自动刷新）"
+    },
+    "unavailable": {
+      "en": "Activity data is temporarily unavailable",
+      "zh": "活动数据暂时不可用"
+    },
+    "refresh": {
+      "en": "Refresh activity",
+      "zh": "刷新活动数据"
     }
   },
   "views.index.AddressBar": {
@@ -1682,10 +1744,6 @@ export const MESSAGE_REGISTRY = {
     "ok": {
       "en": "OK",
       "zh": "确定"
-    },
-    "helpLink": {
-      "en": "First time here? Visit the help center",
-      "zh": "首次使用？查看帮助中心"
     }
   },
   "views.admin.SendBox": {
@@ -3100,10 +3158,6 @@ export const MESSAGE_REGISTRY = {
     "help": {
       "en": "Help",
       "zh": "帮助"
-    },
-    "guide": {
-      "en": "Guide",
-      "zh": "操作指南"
     },
     "step1Title": {
       "en": "Create a mailbox",

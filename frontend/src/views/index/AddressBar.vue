@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useScopedI18n } from '@/i18n/app'
 import { ExchangeAlt } from '@vicons/fa'
 
@@ -9,7 +9,6 @@ import Login from '../common/Login.vue'
 import TelegramAddress from './TelegramAddress.vue'
 import LocalAddress from './LocalAddress.vue'
 import AddressManagement from '../user/AddressManagement.vue'
-import { getRouterPathWithLang } from '../../utils'
 import AddressSelect from '../../components/AddressSelect.vue'
 import AddressCredentialModal from '../../components/AddressCredentialModal.vue'
 
@@ -18,11 +17,9 @@ const {
     isTelegram, addressPassword
 } = useGlobalState()
 
-const { locale, t } = useScopedI18n('views.index.AddressBar')
+const { t } = useScopedI18n('views.index.AddressBar')
 
 const showAddressManage = ref(false)
-
-const helpPath = computed(() => getRouterPathWithLang('/help', locale.value))
 
 onMounted(async () => {
     await api.getSettings();
@@ -65,9 +62,6 @@ onMounted(async () => {
                     <span>{{ t('fetchAddressError') }}</span>
                 </n-alert>
                 <Login />
-                <div class="action-help">
-                    <router-link class="action-help-link" :to="helpPath">{{ t('helpLink') }}</router-link>
-                </div>
             </n-card>
         </div>
         <AddressCredentialModal v-model:show="showAddressCredential" :address="settings.address" :jwt="jwt"
@@ -103,22 +97,6 @@ onMounted(async () => {
 .address-manage {
     flex: 0 0 auto;
     white-space: nowrap;
-}
-
-.action-help {
-    margin-top: 12px;
-    text-align: center;
-    font-size: 13px;
-}
-
-.action-help-link {
-    opacity: 0.75;
-    text-decoration: underline;
-    text-underline-offset: 3px;
-}
-
-.action-help-link:hover {
-    opacity: 1;
 }
 
 </style>

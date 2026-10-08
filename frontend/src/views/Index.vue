@@ -23,6 +23,7 @@ import SimpleIndex from './index/SimpleIndex.vue';
 import HeroFeatures from './index/HeroFeatures.vue';
 import StatsCard from './index/StatsCard.vue';
 import UptimeCard from './index/UptimeCard.vue';
+import ActivityCard from './index/ActivityCard.vue';
 
 const {
   loading, settings, openSettings, indexTab, globalTabplacement, useSimpleIndex,
@@ -149,7 +150,8 @@ onMounted(() => {
     </div>
     <div v-else class="home-layout">
       <!-- left/right split hero: value headline + proof on the left,
-           action card right (bottoms aligned via the right column's flex) -->
+           ALL operations (including the mailbox tabs) live in the right
+           panel, which is pinned to the hero height of the left column -->
       <div class="hero">
         <section class="hero-left">
           <div class="hero-head">
@@ -168,10 +170,11 @@ onMounted(() => {
           <div class="hero-cards">
             <StatsCard />
             <UptimeCard />
+            <ActivityCard />
           </div>
         </section>
 
-        <aside class="hero-right">
+        <aside class="hero-right" :class="{ 'has-address': !!settings.address }">
           <!-- one independent operations panel: pills → form → quick start →
                fine print (its own frame, no stretch/void at the bottom) -->
           <div class="action-panel">
@@ -183,6 +186,61 @@ onMounted(() => {
 
             <AddressBar />
 
+            <!-- all mailbox operations live INSIDE the panel: the right column
+                 is one independent operations block, nothing runs below FAQ -->
+            <n-tabs v-if="settings.address" type="card" v-model:value="indexTab" :placement="globalTabplacement">
+              <template #prefix v-if="!isMobile">
+                <n-button @click="useSimpleIndex = true" tertiary size="small">
+                  <template #icon>
+                    <n-icon>
+                      <FullscreenExitOutlined />
+                    </n-icon>
+                  </template>
+                  {{ t('enterSimpleMode') }}
+                </n-button>
+              </template>
+              <n-tab-pane name="mailbox" :tab="t('inbox')">
+                <div v-if="showMailIdQuery" style="margin-bottom: 10px;">
+                  <n-input-group>
+                    <n-input v-model:value="mailIdQuery" />
+                    <n-button @click="queryMail" type="primary" tertiary>
+                      {{ t('query') }}
+                    </n-button>
+                  </n-input-group>
+                </div>
+                <MailBox :key="mailBoxKey" :showEMailTo="false" :showReply="openSettings.enableSendMail" :showSaveS3="openSettings.isS3Enabled"
+                  :saveToS3="saveToS3" :enableUserDeleteEmail="openSettings.enableUserDeleteEmail"
+                  :fetchMailData="fetchMailData" :deleteMail="deleteMail" :showFilterInput="true"
+                  :enableMailReadStatus="openSettings.enableMailReadStatus" :updateMailReadStatus="updateMailReadStatus"
+                  :narrow="true" />
+              </n-tab-pane>
+              <n-tab-pane v-if="openSettings.enableSendMail" name="sendbox" :tab="t('sendbox')">
+                <SendBox :fetchMailData="fetchSenboxData" :enableUserDeleteEmail="openSettings.enableUserDeleteEmail"
+                  :deleteMail="deleteSenboxMail" />
+              </n-tab-pane>
+              <n-tab-pane v-if="openSettings.enableSendMail" name="sendmail" :tab="t('sendmail')">
+                <SendMail />
+              </n-tab-pane>
+              <n-tab-pane name="accountSettings" :tab="t('mailboxSettings')">
+                <AccountSettings />
+              </n-tab-pane>
+              <n-tab-pane name="appearance" :tab="t('appearance')">
+                <Appearance :showUseSimpleIndex="true" />
+              </n-tab-pane>
+              <n-tab-pane v-if="openSettings.enableAutoReply" name="auto_reply" :tab="t('auto_reply')">
+                <AutoReply />
+              </n-tab-pane>
+              <n-tab-pane v-if="openSettings.enableWebhook" name="webhook" :tab="t('webhookSettings')">
+                <Webhook />
+              </n-tab-pane>
+              <n-tab-pane v-if="openSettings.isS3Enabled" name="s3_attachment" :tab="t('s3Attachment')">
+                <Attachment />
+              </n-tab-pane>
+              <n-tab-pane v-if="openSettings.enableIndexAbout" name="about" :tab="t('about')">
+                <About />
+              </n-tab-pane>
+            </n-tabs>
+
             <div v-if="showQuickStart" class="panel-qs">
               <div class="panel-qs-label">{{ t('quickStartLabel') }}</div>
               <div v-for="(step, stepIndex) in quickSteps" :key="stepIndex" class="qs-row">
@@ -193,13 +251,12 @@ onMounted(() => {
 
             <div class="panel-fine">
               {{ t('finePrint') }}
-              <router-link class="panel-fine-link" :to="helpPath">{{ t('helpLinkShort') }}</router-link>
             </div>
           </div>
         </aside>
       </div>
 
-      <!-- curated FAQ banner fills the width between hero and inbox tabs -->
+      <!-- curated FAQ banner: the LAST content block on the homepage -->
       <div class="faq-banner">
         <span class="faq-banner-title">{{ t('faqBannerTitle') }}</span>
         <div class="faq-banner-links">
@@ -208,59 +265,6 @@ onMounted(() => {
         </div>
         <router-link class="faq-banner-cta" :to="helpPath">{{ t('faqBannerMore') }} →</router-link>
       </div>
-
-      <!-- inbox and friends keep their full width below the hero -->
-      <n-tabs v-if="settings.address" type="card" v-model:value="indexTab" :placement="globalTabplacement">
-        <template #prefix v-if="!isMobile">
-          <n-button @click="useSimpleIndex = true" tertiary size="small">
-            <template #icon>
-              <n-icon>
-                <FullscreenExitOutlined />
-              </n-icon>
-            </template>
-            {{ t('enterSimpleMode') }}
-          </n-button>
-        </template>
-        <n-tab-pane name="mailbox" :tab="t('inbox')">
-          <div v-if="showMailIdQuery" style="margin-bottom: 10px;">
-            <n-input-group>
-              <n-input v-model:value="mailIdQuery" />
-              <n-button @click="queryMail" type="primary" tertiary>
-                {{ t('query') }}
-              </n-button>
-            </n-input-group>
-          </div>
-          <MailBox :key="mailBoxKey" :showEMailTo="false" :showReply="openSettings.enableSendMail" :showSaveS3="openSettings.isS3Enabled"
-            :saveToS3="saveToS3" :enableUserDeleteEmail="openSettings.enableUserDeleteEmail"
-            :fetchMailData="fetchMailData" :deleteMail="deleteMail" :showFilterInput="true"
-            :enableMailReadStatus="openSettings.enableMailReadStatus" :updateMailReadStatus="updateMailReadStatus" />
-        </n-tab-pane>
-        <n-tab-pane v-if="openSettings.enableSendMail" name="sendbox" :tab="t('sendbox')">
-          <SendBox :fetchMailData="fetchSenboxData" :enableUserDeleteEmail="openSettings.enableUserDeleteEmail"
-            :deleteMail="deleteSenboxMail" />
-        </n-tab-pane>
-        <n-tab-pane v-if="openSettings.enableSendMail" name="sendmail" :tab="t('sendmail')">
-          <SendMail />
-        </n-tab-pane>
-        <n-tab-pane name="accountSettings" :tab="t('mailboxSettings')">
-          <AccountSettings />
-        </n-tab-pane>
-        <n-tab-pane name="appearance" :tab="t('appearance')">
-          <Appearance :showUseSimpleIndex="true" />
-        </n-tab-pane>
-        <n-tab-pane v-if="openSettings.enableAutoReply" name="auto_reply" :tab="t('auto_reply')">
-          <AutoReply />
-        </n-tab-pane>
-        <n-tab-pane v-if="openSettings.enableWebhook" name="webhook" :tab="t('webhookSettings')">
-          <Webhook />
-        </n-tab-pane>
-        <n-tab-pane v-if="openSettings.isS3Enabled" name="s3_attachment" :tab="t('s3Attachment')">
-          <Attachment />
-        </n-tab-pane>
-        <n-tab-pane v-if="openSettings.enableIndexAbout" name="about" :tab="t('about')">
-          <About />
-        </n-tab-pane>
-      </n-tabs>
     </div>
   </div>
 </template>
@@ -293,11 +297,26 @@ onMounted(() => {
     z-index: 0;
 }
 
-.hero-left,
-.hero-right {
+.hero-left {
     position: relative;
     z-index: 1;
     min-width: 0;
+}
+
+/* right column: ONE independent operations block, pinned to the hero's
+   second track. Absolute so the row height is driven by the left column
+   alone — the panel bottom always lands on the left column's bottom and
+   the FAQ banner stays the last content block on the page. */
+.hero-right {
+    position: absolute;
+    top: 12px;
+    right: 4px;
+    bottom: 4px;
+    width: calc((100% - 32px) / 2.15);
+    z-index: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
 }
 
 /* ---- left column ---- */
@@ -435,29 +454,70 @@ onMounted(() => {
     }
 }
 
-/* stats + uptime cards sit side by side under the feature grid */
+/* stats + uptime cards sit side by side, the live activity card spans
+   both columns below — two equal-height rows so all three match */
 .hero-cards {
     display: grid;
     grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    grid-template-rows: repeat(2, minmax(0, 1fr));
     gap: 16px;
     margin-top: 18px;
     align-items: stretch;
 }
 
+/* the activity card is its own component root — parent scope attr applies */
+.activity-card {
+    grid-column: 1 / -1;
+}
+
 @media (max-width: 992px) {
     .hero-cards {
         grid-template-columns: 1fr;
+        grid-template-rows: repeat(3, minmax(0, 1fr));
     }
 }
 
 /* ---- right column: independent operations panel ---- */
 .action-panel {
     position: relative;
+    /* safety bound: panel content can never spill past the hero (e.g. the
+       address-management list) and overlap the FAQ banner — it scrolls */
+    max-height: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
     padding: 16px;
     border: 1px solid rgba(128, 128, 128, 0.16);
     border-radius: 14px;
     background: rgba(128, 128, 128, 0.04);
     text-align: left;
+}
+
+/* with an address the panel fills the hero height and the tab region
+   absorbs the leftover space (single internal scrollbar per tab) */
+.hero-right.has-address .action-panel {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.hero-right.has-address .action-panel :deep(.n-tabs) {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.hero-right.has-address .action-panel :deep(.n-tabs-nav) {
+    flex: 0 0 auto;
+}
+
+/* naive renders the active pane as a direct child of .n-tabs — it absorbs
+   the leftover panel height and becomes the single scroll container */
+.hero-right.has-address .action-panel :deep(.n-tab-pane) {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
 }
 
 .panel-pills {
@@ -538,6 +598,35 @@ onMounted(() => {
 
 :global(html.dark .action-panel .n-tabs-bar) {
     background-color: #eee;
+}
+
+/* card-type tabs (the mailbox operations inside the panel): monochrome
+   segment look — active = solid black/white, inactive = gray tint.
+   This also removes naive's green accent from the active tab. NOTE: naive
+   uses deep BEM chains like `.n-tabs .n-tabs-nav.n-tabs-nav--card-type .n-tabs-tab...`
+   (0,5,0) — selectors here must be at least as deep to win. */
+.action-panel :deep(.n-tabs.n-tabs--card-type .n-tabs-tab) {
+    color: inherit;
+    background-color: rgba(128, 128, 128, 0.07);
+    border-color: rgba(128, 128, 128, 0.20);
+}
+
+.action-panel :deep(.n-tabs.n-tabs--card-type .n-tabs-tab:not(.n-tabs-tab--active):hover) {
+    background-color: rgba(128, 128, 128, 0.14);
+}
+
+.action-panel :deep(.n-tabs.n-tabs--card-type .n-tabs-tab.n-tabs-tab--active),
+.action-panel :deep(.n-tabs.n-tabs--card-type .n-tabs-tab.n-tabs-tab--active:hover) {
+    color: #fff;
+    background-color: #1a1a1a;
+    border-color: #1a1a1a;
+}
+
+:global(html.dark .action-panel .n-tabs.n-tabs--card-type .n-tabs-tab.n-tabs-tab--active),
+:global(html.dark .action-panel .n-tabs.n-tabs--card-type .n-tabs-tab.n-tabs-tab--active:hover) {
+    color: #111;
+    background-color: #eee;
+    border-color: #eee;
 }
 
 /* primary action buttons become solid black with white text */
@@ -649,14 +738,7 @@ onMounted(() => {
     opacity: 0.55;
 }
 
-.panel-fine-link {
-    color: inherit;
-    text-decoration: underline;
-    text-underline-offset: 3px;
-    white-space: nowrap;
-}
-
-/* ---- FAQ banner between hero and inbox tabs ---- */
+/* ---- FAQ banner: the LAST content block on the homepage ---- */
 .faq-banner {
     display: flex;
     align-items: center;
@@ -723,7 +805,7 @@ onMounted(() => {
     text-underline-offset: 3px;
 }
 
-/* ---- responsive: action card first, everything else below ---- */
+/* ---- responsive: operations panel first, everything else below ---- */
 @media (max-width: 992px) {
     .hero {
         grid-template-columns: 1fr;
@@ -731,7 +813,15 @@ onMounted(() => {
     }
 
     .hero-right {
+        position: static;
+        width: auto;
         order: -1;
+    }
+
+    /* in flow on small screens: cap the tab region so the panel (and the
+       page) never outgrows the viewport — content scrolls inside the tab */
+    .hero-right.has-address .action-panel :deep(.n-tab-pane) {
+        max-height: 72vh;
     }
 }
 </style>

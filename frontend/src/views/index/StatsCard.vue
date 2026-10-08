@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, onUnmounted } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useScopedI18n } from '@/i18n/app'
 import { useSiteHealth } from './useSiteHealth'
 
@@ -11,10 +11,23 @@ import { useSiteHealth } from './useSiteHealth'
  */
 const { t } = useScopedI18n('views.index.HomeInfo')
 
-const { stats, statsError, statsUpdatedAt, start, stop } = useSiteHealth()
+const { stats, statsError, statsUpdatedAt, fetchStats, start, stop } = useSiteHealth()
 
 onMounted(start)
 onUnmounted(stop)
+
+// manual ↻ refreshes ONLY this card: showLoading=false keeps the request
+// out of the global n-spin overlay (that was the "whole page refresh" bug)
+const refreshing = ref(false)
+const onRefresh = async () => {
+    if (refreshing.value) return
+    refreshing.value = true
+    try {
+        await fetchStats(false)
+    } finally {
+        refreshing.value = false
+    }
+}
 
 const statItems = computed(() => [
     { key: 'today', label: t('statToday'), value: stats.value.today },
@@ -55,6 +68,8 @@ const formatCount = (value) => {
                 <template v-else>{{ t('statsUpdatedAt', { time: statsUpdatedAt }) }}</template>
             </span>
             <span class="stats-auto">AUTO · 60S</span>
+            <button class="stats-refresh" type="button" :class="{ 'is-refreshing': refreshing }"
+                :aria-label="t('refresh')" :disabled="refreshing" @click="onRefresh">↻</button>
         </div>
     </div>
 </template>
@@ -177,5 +192,44 @@ const formatCount = (value) => {
     font-size: 10px;
     letter-spacing: 0.8px;
     opacity: 0.7;
+}
+
+.stats-refresh {
+    flex: 0 0 auto;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: 1px solid rgba(128, 128, 128, 0.35);
+    border-radius: 6px;
+    background: transparent;
+    color: inherit;
+    font-size: 13px;
+    line-height: 1;
+    opacity: 0.7;
+    cursor: pointer;
+    transition: opacity 0.15s ease, border-color 0.15s ease;
+}
+
+.stats-refresh:hover {
+    opacity: 1;
+    border-color: #1a1a1a;
+}
+
+:global(html.dark .stats-refresh:hover) {
+    border-color: #eee;
+}
+
+.stats-refresh.is-refreshing {
+    opacity: 1;
+    border-color: #1a1a1a;
+    animation: stats-spin 0.9s linear infinite;
+}
+
+:global(html.dark .stats-refresh.is-refreshing) {
+    border-color: #eee;
+}
+
+@keyframes stats-spin {
+    to { transform: rotate(360deg); }
 }
 </style>

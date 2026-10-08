@@ -58,6 +58,53 @@ const smtpImapText = computed(() => [
   `${t('password')}: ${props.jwt}`,
 ].join('\n'))
 
+// whole modal → one TXT: header, credential block, optional agent and
+// SMTP/IMAP sections, auto-login link and the safety tip — everything the
+// dialog shows, exportable in a single click
+const buildTxt = () => {
+  const lines = [
+    `tempemail · ${t('title')}`,
+    `${t('exportTime')}: ${new Date().toLocaleString()}`,
+    '',
+    `== ${t('addressCredential')} ==`,
+    `${t('currentAddress')}: ${props.address || '-'}`,
+    `${t('addressCredentialLabel')}: ${props.jwt || '-'}`,
+  ]
+  if (props.addressPassword) {
+    lines.push(`${t('addressPassword')}: ${props.addressPassword}`)
+  }
+  lines.push('')
+  if (showAgent.value) {
+    lines.push(`== ${t('agentAccess')} ==`, agentText.value, '')
+  }
+  if (showSmtpImap.value) {
+    lines.push(`== ${t('smtpImapAccess')} ==`, smtpImapText.value, '')
+  }
+  lines.push(`== ${t('autoLoginLink')} ==`, autoLoginUrl.value, '')
+  lines.push(t('tip'))
+  return lines.join('\r\n')
+}
+
+const downloadTxt = () => {
+  try {
+    // BOM keeps Windows Notepad from mangling the UTF-8 Chinese text
+    const blob = new Blob(['\uFEFF' + buildTxt()], { type: 'text/plain;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    const safeAddress = (props.address || 'mailbox').replace(/[@\s]+/g, '_')
+    link.href = url
+    link.download = `tempemail-凭证-${safeAddress}.txt`
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+    message.success(t('downloadSuccess'))
+  } catch (error) {
+    console.error(error)
+    message.error(t('downloadFailed'))
+  }
+}
+
 const copyText = async (text) => {
   if (!text) return
   try {
@@ -96,7 +143,12 @@ const copyText = async (text) => {
       {{ t('tip') }}
     </n-alert>
     <section class="credential-panel">
-      <h3 class="credential-title">{{ t('addressCredential') }}</h3>
+      <div class="credential-head">
+        <h3 class="credential-title">{{ t('addressCredential') }}</h3>
+        <n-button size="small" tertiary type="primary" @click="downloadTxt">
+          {{ t('downloadTxt') }}
+        </n-button>
+      </div>
       <div class="credential-section">
         <div v-if="address" class="credential-field">
           <span class="credential-label">{{ t('currentAddress') }}</span>
@@ -216,6 +268,13 @@ const copyText = async (text) => {
   font-size: 15px;
   font-weight: 600;
   line-height: 1.4;
+}
+
+.credential-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .credential-section {

@@ -5,7 +5,6 @@ import { useRouter } from 'vue-router'
 import { NewLabelOutlined, EmailOutlined, RedeemOutlined } from '@vicons/material'
 
 import Turnstile from '../../components/Turnstile.vue'
-import GuideFaq from '../index/GuideFaq.vue'
 
 import { useGlobalState } from '../../store'
 import { api } from '../../api'
@@ -376,11 +375,6 @@ onMounted(async () => {
                         </div>
                     </n-form>
                 </n-spin>
-            </n-tab-pane>
-            <!-- help tab is always available: on the redesigned homepage the
-                 full tutorial lives on /help, the compact one stays here -->
-            <n-tab-pane name="help" :tab="t('guide')">
-                <GuideFaq />
             </n-tab-pane>
         </n-tabs>
     </div>

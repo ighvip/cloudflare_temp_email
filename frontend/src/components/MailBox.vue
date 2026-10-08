@@ -63,7 +63,15 @@ const props = defineProps({
     type: Function,
     default: () => { }
   },
+  // homepage action panel: render the narrow list + drawer variant on any
+  // viewport (no side-by-side split — the column is too small for it)
+  narrow: {
+    type: Boolean,
+    default: false
+  },
 })
+
+const compact = computed(() => isMobile.value || props.narrow)
 
 const localFilterKeyword = ref('')
 
@@ -220,7 +228,7 @@ const refresh = async () => {
       count.value = totalCount;
     }
     curMail.value = null;
-    if (!isMobile.value && !mailListView.value && data.value.length > 0) {
+    if (!compact.value && !mailListView.value && data.value.length > 0) {
       curMail.value = data.value[0];
     }
   } catch (error) {
@@ -370,7 +378,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div>
-    <div v-if="!isMobile" class="left">
+    <div v-if="!compact" class="left">
       <div style="margin-bottom: 10px;">
         <n-space v-if="multiActionMode" align="center">
           <n-button @click="multiActionModeClick(false)" tertiary>
@@ -566,7 +574,7 @@ onBeforeUnmount(() => {
         <n-input v-model:value="localFilterKeyword"
           :placeholder="t('keywordQueryTip')" size="small" clearable />
       </div>
-      <div style="overflow: auto; min-height: 60vh; max-height: 100vh;">
+      <div :style="narrow ? undefined : { overflow: 'auto', minHeight: '60vh', maxHeight: '100vh' }">
         <n-list hoverable clickable>
           <n-list-item v-for="row in data" v-bind:key="row.id" @click="() => clickRow(row)"
             :class="{ 'mail-list-unread': enableMailReadStatus && row.is_unread === 1 }">
