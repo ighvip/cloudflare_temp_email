@@ -26,6 +26,7 @@ import UptimeCard from './index/UptimeCard.vue';
 
 const {
   loading, settings, openSettings, indexTab, globalTabplacement, useSimpleIndex,
+  userJwt, isTelegram,
 } = useGlobalState()
 const message = useMessage()
 const route = useRoute()
@@ -41,12 +42,31 @@ const { t, locale } = useScopedI18n('views.Index')
 // the intro copy lives in the HomeInfo namespace — it moves from the info
 // card to the hero subtitle on the redesigned homepage (same source text)
 const { t: tHomeInfo } = useScopedI18n('views.index.HomeInfo')
+// the FAQ banner links reuse question copy from the help / login namespaces
+const { t: tHelp } = useScopedI18n('views.Help')
+const { t: tLogin } = useScopedI18n('views.common.Login')
 
 const introText = computed(() =>
   (openSettings.value.siteIntro || '').trim() || tHomeInfo('defaultIntro'))
 
 // the full tutorial / FAQ / troubleshooting lives on its own page now
 const helpPath = computed(() => getRouterPathWithLang('/help', locale.value))
+
+// compact 3-step guide inside the action panel (first-run visitors only)
+const quickSteps = computed(() => [1, 2, 3].map((n) => ({
+  title: t(`qs${n}Title`),
+  desc: t(`qs${n}Desc`),
+})))
+
+const showQuickStart = computed(() =>
+  settings.value.fetched && !settings.value.address && !userJwt.value && !isTelegram.value)
+
+// curated FAQ links jump straight to the matching help section
+const faqLinks = computed(() => [
+  { text: tHelp('trouble1Q'), hash: '#help-trouble' },
+  { text: tHelp('faqExtraQ3'), hash: '#help-faq' },
+  { text: tLogin('faqLifetime'), hash: '#help-faq' },
+])
 
 const fetchMailData = async (limit, offset) => {
   if (mailIdQuery.value > 0) {
@@ -133,7 +153,13 @@ onMounted(() => {
       <div class="hero">
         <section class="hero-left">
           <div class="hero-head">
-            <h1 class="hero-title">{{ t('heroTitle') }}</h1>
+            <div class="hero-kicker">
+              <span class="kicker-sq" />
+              <span class="kicker-text">{{ t('heroKicker') }}</span>
+            </div>
+            <h1 class="hero-title">
+              <span class="seg seg-1">{{ t('heroTitleA') }}</span><span class="seg seg-2">{{ t('heroTitleB') }}</span><span class="seg seg-3">{{ t('heroTitleC') }}</span>
+            </h1>
             <p class="hero-sub">{{ introText }}</p>
           </div>
 
@@ -146,21 +172,41 @@ onMounted(() => {
         </section>
 
         <aside class="hero-right">
-          <div class="right-pills">
-            <span class="right-pill pill-blue">{{ t('pillNoSignup') }}</span>
-            <span class="right-pill pill-green">{{ t('pillCleanup') }}</span>
-            <span class="right-pill pill-amber">{{ t('pillOpenSource') }}</span>
-          </div>
+          <!-- one independent operations panel: pills → form → quick start →
+               fine print (its own frame, no stretch/void at the bottom) -->
+          <div class="action-panel">
+            <div class="panel-pills">
+              <span class="panel-pill pill-strong">{{ t('pillNoSignup') }}</span>
+              <span class="panel-pill pill-outline">{{ t('pillCleanup') }}</span>
+              <span class="panel-pill pill-soft">{{ t('pillOpenSource') }}</span>
+            </div>
 
-          <n-card class="action-card" :bordered="false" embedded>
             <AddressBar />
-          </n-card>
 
-          <div class="right-fine">
-            {{ t('finePrint') }}
-            <router-link class="right-fine-link" :to="helpPath">{{ t('helpLinkShort') }}</router-link>
+            <div v-if="showQuickStart" class="panel-qs">
+              <div class="panel-qs-label">{{ t('quickStartLabel') }}</div>
+              <div v-for="(step, stepIndex) in quickSteps" :key="stepIndex" class="qs-row">
+                <span class="qs-index">{{ stepIndex + 1 }}</span>
+                <span class="qs-text"><b>{{ step.title }}</b>{{ step.desc }}</span>
+              </div>
+            </div>
+
+            <div class="panel-fine">
+              {{ t('finePrint') }}
+              <router-link class="panel-fine-link" :to="helpPath">{{ t('helpLinkShort') }}</router-link>
+            </div>
           </div>
         </aside>
+      </div>
+
+      <!-- curated FAQ banner fills the width between hero and inbox tabs -->
+      <div class="faq-banner">
+        <span class="faq-banner-title">{{ t('faqBannerTitle') }}</span>
+        <div class="faq-banner-links">
+          <router-link v-for="(link, linkIndex) in faqLinks" :key="linkIndex" class="faq-banner-link"
+            :to="{ path: helpPath, hash: link.hash }">{{ link.text }}</router-link>
+        </div>
+        <router-link class="faq-banner-cta" :to="helpPath">{{ t('faqBannerMore') }} →</router-link>
       </div>
 
       <!-- inbox and friends keep their full width below the hero -->
@@ -254,18 +300,38 @@ onMounted(() => {
     min-width: 0;
 }
 
-/* right column stretches with the row so both columns end flush at the
-   bottom — the fine print is pushed down by margin-top: auto */
-.hero-right {
-    display: flex;
-    flex-direction: column;
-}
-
 /* ---- left column ---- */
 .hero-head {
     padding: 10px 2px 18px;
 }
 
+/* kicker: category label, its square wipes in first */
+.hero-kicker {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin-bottom: 14px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 2.5px;
+    opacity: 0.7;
+}
+
+.kicker-sq {
+    width: 11px;
+    height: 11px;
+    flex: 0 0 auto;
+    background: currentColor;
+    transform-origin: left center;
+    animation: hero-wipe 0.4s 0.05s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+
+.kicker-text {
+    animation: hero-fade-in 0.5s 0.15s ease both;
+}
+
+/* headline: three segments rise in sequence; the last segment gets a
+   marker-sweep highlight plus a subtle recurring shimmer */
 .hero-title {
     margin: 0;
     font-size: clamp(26px, 3vw, 38px);
@@ -273,13 +339,100 @@ onMounted(() => {
     letter-spacing: -0.5px;
 }
 
+.hero-title .seg {
+    display: inline-block;
+    animation: hero-fade-up 0.55s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+
+.hero-title .seg-1 {
+    animation-delay: 0.10s;
+}
+
+.hero-title .seg-2 {
+    animation-delay: 0.18s;
+}
+
+.hero-title .seg-3 {
+    position: relative;
+    overflow: hidden;
+    animation-delay: 0.26s;
+}
+
+.seg-3::before {
+    content: '';
+    position: absolute;
+    inset: 6% 0 2%;
+    z-index: -1;
+    background: rgba(128, 128, 128, 0.32);
+    transform: scaleX(0);
+    transform-origin: left center;
+    animation: hero-wipe 0.45s 0.75s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+
+.seg-3::after {
+    content: '';
+    position: absolute;
+    inset: 6% 0 2%;
+    z-index: -1;
+    background: linear-gradient(105deg, transparent 42%, rgba(255, 255, 255, 0.55) 50%, transparent 58%);
+    transform: translateX(-130%);
+    animation: hero-shimmer 6s 1.6s ease-in-out infinite;
+}
+
 .hero-sub {
     margin: 12px 0 0;
     max-width: 46em;
     font-size: 15px;
     line-height: 1.75;
+    text-align: left;
     opacity: 0.75;
-    text-align: justify;
+    animation: hero-sub-in 0.6s 0.55s ease both;
+}
+
+@keyframes hero-fade-up {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: none; }
+}
+
+@keyframes hero-fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes hero-wipe {
+    from { transform: scaleX(0); }
+    to { transform: scaleX(1); }
+}
+
+/* the subtitle keeps its muted 0.75 opacity after the fade */
+@keyframes hero-sub-in {
+    from { opacity: 0; }
+    to { opacity: 0.75; }
+}
+
+@keyframes hero-shimmer {
+    0% { transform: translateX(-130%); }
+    8% { transform: translateX(130%); }
+    100% { transform: translateX(130%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .kicker-sq,
+    .kicker-text,
+    .hero-title .seg,
+    .hero-sub {
+        animation: none;
+    }
+
+    .seg-3::before {
+        animation: none;
+        transform: scaleX(1);
+    }
+
+    .seg-3::after {
+        animation: none;
+        display: none;
+    }
 }
 
 /* stats + uptime cards sit side by side under the feature grid */
@@ -297,15 +450,24 @@ onMounted(() => {
     }
 }
 
-/* ---- right column ---- */
-.right-pills {
+/* ---- right column: independent operations panel ---- */
+.action-panel {
+    position: relative;
+    padding: 16px;
+    border: 1px solid rgba(128, 128, 128, 0.16);
+    border-radius: 14px;
+    background: rgba(128, 128, 128, 0.04);
+    text-align: left;
+}
+
+.panel-pills {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-    margin: 4px 0 12px;
+    margin-bottom: 14px;
 }
 
-.right-pill {
+.panel-pill {
     padding: 3px 10px;
     border-radius: 999px;
     font-size: 12px;
@@ -313,61 +475,252 @@ onMounted(() => {
     border: 1px solid transparent;
 }
 
-.pill-blue {
-    color: #2080f0;
-    background: rgba(32, 128, 240, 0.10);
-    border-color: rgba(32, 128, 240, 0.35);
+/* three grayscale levels: solid / outline / soft fill */
+.pill-strong {
+    color: #fff;
+    background: #1a1a1a;
+    border-color: #1a1a1a;
 }
 
-.pill-green {
-    color: #18a058;
-    background: rgba(24, 160, 88, 0.10);
-    border-color: rgba(24, 160, 88, 0.35);
+.pill-outline {
+    color: inherit;
+    background: transparent;
+    border-color: rgba(128, 128, 128, 0.5);
 }
 
-.pill-amber {
-    color: #d48806;
-    background: rgba(240, 160, 32, 0.10);
-    border-color: rgba(240, 160, 32, 0.4);
+.pill-soft {
+    color: inherit;
+    background: rgba(128, 128, 128, 0.12);
 }
 
-.action-card {
-    overflow: visible;
+:global(html.dark .pill-strong) {
+    color: #111;
+    background: #eee;
+    border-color: #eee;
 }
 
-/* AddressBar already centers its own card — no double frame needed here */
-.action-card :deep(.center) {
+/* AddressBar already centers its own card — no double frame in the panel */
+.action-panel :deep(.center) {
     margin: 0;
 }
 
-.action-card :deep(.n-card) {
+.action-panel :deep(.n-card) {
     margin-top: 0;
     width: 100%;
-    max-width: 100%;
+    max-width: 100% !important;
+    background-color: transparent;
 }
 
-.action-card :deep(.n-alert) {
+.action-panel :deep(.n-alert) {
     margin-top: 0;
 }
 
-.right-fine {
-    margin-top: auto;
-    padding: 14px 4px 0;
-    font-size: 12px;
-    line-height: 1.7;
-    opacity: 0.55;
-    text-align: center;
+/* the panel owns the monochrome accent — the blue info / orange warning
+   alerts inside it flatten to the site's neutral gray tint */
+.action-panel :deep(.n-alert--info-type),
+.action-panel :deep(.n-alert--warning-type) {
+    background-color: rgba(128, 128, 128, 0.07);
+    color: inherit;
 }
 
-.right-fine-link {
+/* tabs: active label + sliding bar go black (white in dark theme) */
+.action-panel :deep(.n-tabs-tab.n-tabs-tab--active) {
+    color: #111;
+}
+
+.action-panel :deep(.n-tabs-bar) {
+    background-color: #111;
+}
+
+:global(html.dark .action-panel .n-tabs-tab.n-tabs-tab--active) {
+    color: #eee;
+}
+
+:global(html.dark .action-panel .n-tabs-bar) {
+    background-color: #eee;
+}
+
+/* primary action buttons become solid black with white text */
+.action-panel :deep(.n-button--primary-type) {
+    color: #fff;
+    background-color: #1a1a1a;
+    border-color: #1a1a1a;
+}
+
+.action-panel :deep(.n-button--primary-type:not(:disabled):hover) {
+    color: #fff;
+    background-color: #333;
+    border-color: #333;
+}
+
+:global(html.dark .action-panel .n-button--primary-type) {
+    color: #111;
+    background-color: #eee;
+    border-color: #eee;
+}
+
+:global(html.dark .action-panel .n-button--primary-type:not(:disabled):hover) {
+    color: #111;
+    background-color: #ddd;
+    border-color: #ddd;
+}
+
+/* input focus ring: black instead of the green primary */
+.action-panel :deep(.n-input--focus .n-input__state-border) {
+    border-color: #111;
+    box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.15);
+}
+
+:global(html.dark .action-panel .n-input--focus .n-input__state-border) {
+    border-color: #eee;
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.18);
+}
+
+/* the text caret follows the monochrome accent too */
+.action-panel :deep(.n-input__input-el) {
+    caret-color: #111;
+}
+
+:global(html.dark .action-panel .n-input__input-el) {
+    caret-color: #eee;
+}
+
+/* compact first-run guide: 3 steps, hidden once an address exists */
+.panel-qs {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px dashed rgba(128, 128, 128, 0.28);
+}
+
+.panel-qs-label {
+    margin-bottom: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    opacity: 0.55;
+}
+
+.qs-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    padding: 3px 0;
+}
+
+.qs-index {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    margin-top: 1px;
+    border-radius: 5px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #fff;
+    background: #1a1a1a;
+}
+
+:global(html.dark .qs-index) {
+    color: #111;
+    background: #eee;
+}
+
+.qs-text {
+    min-width: 0;
+    font-size: 12.5px;
+    line-height: 1.55;
+    opacity: 0.8;
+}
+
+.qs-text b {
+    margin-right: 6px;
+    font-weight: 700;
+}
+
+.panel-fine {
+    margin-top: 14px;
+    padding-top: 11px;
+    border-top: 1px solid rgba(128, 128, 128, 0.14);
+    font-size: 12px;
+    line-height: 1.7;
+    text-align: center;
+    opacity: 0.55;
+}
+
+.panel-fine-link {
     color: inherit;
     text-decoration: underline;
     text-underline-offset: 3px;
     white-space: nowrap;
 }
 
-.right-fine-link:hover {
+/* ---- FAQ banner between hero and inbox tabs ---- */
+.faq-banner {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px 18px;
+    margin-top: 18px;
+    padding: 13px 16px;
+    border: 1px solid rgba(128, 128, 128, 0.16);
+    border-radius: 12px;
+    background: rgba(128, 128, 128, 0.04);
+    text-align: left;
+}
+
+.faq-banner-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-weight: 700;
+    font-size: 13.5px;
+    white-space: nowrap;
+}
+
+.faq-banner-title::before {
+    content: '';
+    width: 4px;
+    height: 13px;
+    border-radius: 2px;
+    background: currentColor;
+}
+
+.faq-banner-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.faq-banner-link {
+    font-size: 13px;
+    color: inherit;
+    opacity: 0.72;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-color: rgba(128, 128, 128, 0.55);
+    transition: opacity 0.15s ease;
+}
+
+.faq-banner-link:hover {
     opacity: 1;
+    text-decoration-color: currentColor;
+}
+
+.faq-banner-cta {
+    font-size: 13px;
+    font-weight: 600;
+    color: inherit;
+    white-space: nowrap;
+    text-decoration: none;
+}
+
+.faq-banner-cta:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
 }
 
 /* ---- responsive: action card first, everything else below ---- */
@@ -379,14 +732,6 @@ onMounted(() => {
 
     .hero-right {
         order: -1;
-    }
-
-    .hero-sub {
-        text-align: left;
-    }
-
-    .right-fine {
-        margin-top: 10px;
     }
 }
 </style>

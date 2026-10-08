@@ -1,6 +1,6 @@
 <script setup>
-import { computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, nextTick, onMounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useScopedI18n } from '@/i18n/app'
 
 import { getRouterPathWithLang } from '../utils'
@@ -11,8 +11,11 @@ import AdminContact from './common/AdminContact.vue'
  * troubleshooting section (problem → cause → fix). The compact guide in
  * the login card's help tab stays as-is (its copy lives in the
  * views.common.Login namespace and is reused here for the core steps).
+ * Deep links from the homepage FAQ banner (#help-faq / #help-trouble)
+ * scroll to their section after mount.
  */
 const router = useRouter()
+const route = useRoute()
 const { t, locale } = useScopedI18n('views.Help')
 const { t: tl } = useScopedI18n('views.common.Login')
 
@@ -21,6 +24,16 @@ const goHome = () => router.push(getRouterPathWithLang('/', locale.value))
 const scrollTo = (id) => {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
+
+const scrollToHash = async () => {
+    const id = (route.hash || '').slice(1)
+    if (!id) return
+    await nextTick()
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+onMounted(scrollToHash)
+watch(() => route.hash, scrollToHash)
 
 const steps = computed(() => [1, 2, 3, 4, 5, 6].map((n) => ({
     title: tl(`step${n}Title`),
@@ -178,8 +191,7 @@ const sections = computed(() => [
 }
 
 .help-nav-link:hover {
-    background: rgba(32, 128, 240, 0.10);
-    color: #2080f0;
+    background: rgba(128, 128, 128, 0.14);
 }
 
 .help-content {
@@ -206,7 +218,7 @@ const sections = computed(() => [
     width: 4px;
     height: 15px;
     border-radius: 2px;
-    background: #2080f0;
+    background: currentColor;
 }
 
 /* ---- tutorial ---- */
@@ -236,7 +248,12 @@ const sections = computed(() => [
     font-size: 14px;
     font-weight: 700;
     color: #fff;
-    background: #2080f0;
+    background: #1a1a1a;
+}
+
+:global(html.dark .help-step-index) {
+    color: #111;
+    background: #eee;
 }
 
 .help-step-body {
@@ -302,7 +319,7 @@ const sections = computed(() => [
 .help-trouble-card {
     padding: 12px 14px;
     border: 1px solid rgba(128, 128, 128, 0.16);
-    border-left: 3px solid #f0a020;
+    border-left: 3px solid currentColor;
     border-radius: 12px;
     background: rgba(128, 128, 128, 0.04);
     font-size: 13px;
@@ -335,9 +352,22 @@ const sections = computed(() => [
     white-space: nowrap;
 }
 
-.tag-q { background: #f0a020; }
-.tag-cause { background: #8b949e; }
-.tag-fix { background: #18a058; }
+/* monochrome tag hierarchy: symptom = solid black, cause = mid gray,
+   fix = outline (dark theme inverts the solid black) */
+.tag-q { background: #1a1a1a; }
+.tag-cause { background: #767676; }
+.tag-fix {
+    padding: 0 6px;
+    border: 1px solid rgba(128, 128, 128, 0.6);
+    line-height: 16px;
+    color: inherit;
+    background: transparent;
+}
+
+:global(html.dark .tag-q) {
+    color: #111;
+    background: #eee;
+}
 
 @media (max-width: 860px) {
     .help-nav {

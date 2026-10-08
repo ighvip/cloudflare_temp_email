@@ -120,11 +120,9 @@ const fmtLatency = (value) =>
     flex-direction: column;
     min-width: 0;
     padding: 14px 16px;
-    border: 1px solid rgba(120, 140, 170, 0.25);
+    border: 1px solid rgba(128, 128, 128, 0.16);
     border-radius: 12px;
-    background: linear-gradient(165deg, #0c1017 0%, #0a0e15 60%, #0b0f16 100%);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
-    color: #c9d1d9;
+    background: rgba(128, 128, 128, 0.04);
 }
 
 .uptime-head {
@@ -132,7 +130,7 @@ const fmtLatency = (value) =>
     align-items: center;
     gap: 8px;
     padding-bottom: 10px;
-    border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+    border-bottom: 1px solid rgba(128, 128, 128, 0.14);
 }
 
 .uptime-title {
@@ -142,7 +140,6 @@ const fmtLatency = (value) =>
     font-size: 13px;
     font-weight: 600;
     letter-spacing: 0.4px;
-    color: #e6edf3;
     white-space: nowrap;
 }
 
@@ -151,17 +148,16 @@ const fmtLatency = (value) =>
     height: 8px;
     flex: 0 0 auto;
     border-radius: 50%;
-    background: #6e7681;
+    background: rgba(128, 128, 128, 0.6);
 }
 
 .uptime-led.up {
-    background: #5cdd8b;
-    box-shadow: 0 0 6px rgba(92, 221, 139, 0.9);
+    background: currentColor;
 }
 
 .uptime-led.down {
-    background: #ff5f6d;
-    box-shadow: 0 0 6px rgba(255, 95, 109, 0.9);
+    background: #e5484d;
+    box-shadow: 0 0 6px rgba(229, 72, 77, 0.8);
     animation: uptime-blink 1.2s ease-in-out infinite;
 }
 
@@ -172,28 +168,35 @@ const fmtLatency = (value) =>
 .uptime-badge {
     margin-left: auto;
     padding: 2px 10px;
-    border: 1px solid rgba(110, 118, 129, 0.5);
+    border: 1px solid rgba(128, 128, 128, 0.4);
     border-radius: 999px;
-    background: rgba(110, 118, 129, 0.15);
+    background: rgba(128, 128, 128, 0.10);
     font-size: 11px;
     font-weight: 600;
     white-space: nowrap;
 }
 
+/* up = solid black (white in dark theme), down = the site's only alert red */
 .uptime-badge.up {
-    color: #5cdd8b;
-    border-color: rgba(92, 221, 139, 0.5);
-    background: rgba(92, 221, 139, 0.12);
+    color: #fff;
+    border-color: #1a1a1a;
+    background: #1a1a1a;
 }
 
 .uptime-badge.down {
-    color: #ff808a;
-    border-color: rgba(255, 95, 109, 0.55);
-    background: rgba(255, 95, 109, 0.14);
+    color: #fff;
+    border-color: #e5484d;
+    background: #e5484d;
 }
 
 .uptime-badge.unknown {
-    color: #9aa4b2;
+    opacity: 0.75;
+}
+
+:global(html.dark .uptime-badge.up) {
+    color: #111;
+    border-color: #eee;
+    background: #eee;
 }
 
 .uptime-rows {
@@ -219,7 +222,6 @@ const fmtLatency = (value) =>
     gap: 7px;
     min-width: 0;
     font-size: 12.5px;
-    color: #c9d1d9;
 }
 
 .uptime-name-text {
@@ -233,11 +235,11 @@ const fmtLatency = (value) =>
     height: 8px;
     flex: 0 0 auto;
     border-radius: 50%;
-    background: #6e7681;
+    background: rgba(128, 128, 128, 0.6);
 }
 
-.uptime-dot.up { background: #5cdd8b; }
-.uptime-dot.down { background: #ff5f6d; }
+.uptime-dot.up { background: currentColor; }
+.uptime-dot.down { background: #e5484d; }
 
 .uptime-bars {
     flex: 1 1 auto;
@@ -251,11 +253,11 @@ const fmtLatency = (value) =>
     min-width: 2px;
     height: 24px;
     border-radius: 3px;
-    background: rgba(110, 118, 129, 0.22);
+    background: rgba(128, 128, 128, 0.18);
 }
 
-.uptime-bar.bar-up { background: #5cdd8b; }
-.uptime-bar.bar-down { background: #ff5f6d; }
+.uptime-bar.bar-up { background: currentColor; }
+.uptime-bar.bar-down { background: #e5484d; }
 
 .uptime-stats {
     flex: 0 0 auto;
@@ -270,7 +272,6 @@ const fmtLatency = (value) =>
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     font-size: 12.5px;
     font-variant-numeric: tabular-nums;
-    color: #e6edf3;
     cursor: help;
 }
 
@@ -278,7 +279,7 @@ const fmtLatency = (value) =>
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     font-size: 11px;
     font-variant-numeric: tabular-nums;
-    color: #8b949e;
+    opacity: 0.6;
     width: 54px;
     text-align: right;
 }
@@ -288,9 +289,8 @@ const fmtLatency = (value) =>
     align-items: center;
     gap: 10px;
     padding-top: 10px;
-    border-top: 1px solid rgba(148, 163, 184, 0.14);
+    border-top: 1px solid rgba(128, 128, 128, 0.14);
     font-size: 11px;
-    color: #8b949e;
     line-height: 1.5;
 }
 
@@ -300,6 +300,7 @@ const fmtLatency = (value) =>
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    opacity: 0.6;
 }
 
 .uptime-version {
@@ -307,8 +308,7 @@ const fmtLatency = (value) =>
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     font-size: 10px;
     letter-spacing: 0.6px;
-    color: #58a6ff;
-    opacity: 0.85;
+    opacity: 0.7;
 }
 
 .uptime-refresh {
@@ -316,19 +316,24 @@ const fmtLatency = (value) =>
     width: 22px;
     height: 22px;
     padding: 0;
-    border: 1px solid rgba(148, 163, 184, 0.3);
+    border: 1px solid rgba(128, 128, 128, 0.35);
     border-radius: 6px;
     background: transparent;
-    color: #8b949e;
+    color: inherit;
     font-size: 13px;
     line-height: 1;
+    opacity: 0.7;
     cursor: pointer;
-    transition: color 0.15s ease, border-color 0.15s ease;
+    transition: opacity 0.15s ease, border-color 0.15s ease;
 }
 
 .uptime-refresh:hover {
-    color: #58a6ff;
-    border-color: rgba(88, 166, 255, 0.6);
+    opacity: 1;
+    border-color: #1a1a1a;
+}
+
+:global(html.dark .uptime-refresh:hover) {
+    border-color: #eee;
 }
 
 @media (max-width: 560px) {

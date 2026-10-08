@@ -4,9 +4,10 @@ import { useScopedI18n } from '@/i18n/app'
 import { useSiteHealth } from './useSiteHealth'
 
 /**
- * Sci-fi "run stats" card: dark instrument-panel look (black background,
- * indicator light, hairline dividers, monospace digits) — same data source
- * as before, manual stats mode is shown honestly via the badge.
+ * "Run stats" card in the site's light card language: neutral gray frame,
+ * indicator light, hairline dividers, monospace digits — same data source
+ * as before, manual stats mode is shown honestly via the badge. The red
+ * indicator is reserved for the error state (red = the only alert color).
  */
 const { t } = useScopedI18n('views.index.HomeInfo')
 
@@ -64,11 +65,9 @@ const formatCount = (value) => {
     flex-direction: column;
     min-width: 0;
     padding: 14px 16px;
-    border: 1px solid rgba(120, 140, 170, 0.25);
+    border: 1px solid rgba(128, 128, 128, 0.16);
     border-radius: 12px;
-    background: linear-gradient(165deg, #0c1017 0%, #0a0e15 60%, #0b0f16 100%);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
-    color: #c9d1d9;
+    background: rgba(128, 128, 128, 0.04);
 }
 
 .stats-head {
@@ -76,7 +75,7 @@ const formatCount = (value) => {
     align-items: center;
     gap: 8px;
     padding-bottom: 10px;
-    border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+    border-bottom: 1px solid rgba(128, 128, 128, 0.14);
 }
 
 .stats-led {
@@ -84,14 +83,13 @@ const formatCount = (value) => {
     height: 8px;
     flex: 0 0 auto;
     border-radius: 50%;
-    background: #3fb950;
-    box-shadow: 0 0 6px rgba(63, 185, 80, 0.9);
+    background: currentColor;
     animation: stats-led-pulse 2s ease-in-out infinite;
 }
 
 .stats-led-error {
-    background: #f85149;
-    box-shadow: 0 0 6px rgba(248, 81, 73, 0.9);
+    background: #e5484d;
+    box-shadow: 0 0 6px rgba(229, 72, 77, 0.8);
 }
 
 @keyframes stats-led-pulse {
@@ -102,16 +100,14 @@ const formatCount = (value) => {
     font-size: 13px;
     font-weight: 600;
     letter-spacing: 0.4px;
-    color: #e6edf3;
 }
 
 .stats-badge {
     margin-left: auto;
     padding: 1px 8px;
-    border: 1px solid rgba(88, 166, 255, 0.4);
+    border: 1px solid rgba(128, 128, 128, 0.45);
     border-radius: 999px;
-    background: rgba(88, 166, 255, 0.1);
-    color: #58a6ff;
+    background: rgba(128, 128, 128, 0.10);
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     font-size: 10px;
     letter-spacing: 0.6px;
@@ -131,7 +127,7 @@ const formatCount = (value) => {
     min-width: 0;
     padding: 8px 6px;
     text-align: center;
-    border-left: 1px solid rgba(148, 163, 184, 0.12);
+    border-left: 1px solid rgba(128, 128, 128, 0.14);
 }
 
 .stats-cell:first-child {
@@ -143,16 +139,14 @@ const formatCount = (value) => {
     font-size: clamp(24px, 2.4vw, 30px);
     font-weight: 700;
     line-height: 1.2;
-    color: #3fb950;
     font-variant-numeric: tabular-nums;
     letter-spacing: 0.5px;
-    text-shadow: 0 0 12px rgba(63, 185, 80, 0.35);
 }
 
 .stats-label {
     margin-top: 4px;
     font-size: 12px;
-    color: #8b949e;
+    opacity: 0.65;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -163,9 +157,8 @@ const formatCount = (value) => {
     align-items: center;
     gap: 10px;
     padding-top: 10px;
-    border-top: 1px solid rgba(148, 163, 184, 0.14);
+    border-top: 1px solid rgba(128, 128, 128, 0.14);
     font-size: 11px;
-    color: #8b949e;
     line-height: 1.5;
 }
 
@@ -175,6 +168,7 @@ const formatCount = (value) => {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    opacity: 0.6;
 }
 
 .stats-auto {
@@ -182,7 +176,6 @@ const formatCount = (value) => {
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     font-size: 10px;
     letter-spacing: 0.8px;
-    color: #58a6ff;
-    opacity: 0.85;
+    opacity: 0.7;
 }
 </style>

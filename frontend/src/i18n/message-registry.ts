@@ -475,9 +475,21 @@ export const MESSAGE_REGISTRY = {
       "en": "Webhook Settings",
       "zh": "Webhook 设置"
     },
-    "heroTitle": {
-      "en": "Verify signups without handing over your real inbox",
-      "zh": "验证注册，不必交出真实邮箱"
+    "heroKicker": {
+      "en": "DISPOSABLE MAIL · THROWAWAY INBOX",
+      "zh": "DISPOSABLE MAIL · 临时邮箱"
+    },
+    "heroTitleA": {
+      "en": "Verify signups",
+      "zh": "验证注册，"
+    },
+    "heroTitleB": {
+      "en": " without handing over",
+      "zh": "不必交出"
+    },
+    "heroTitleC": {
+      "en": " your real inbox",
+      "zh": "真实邮箱"
     },
     "pillNoSignup": {
       "en": "No signup",
@@ -498,6 +510,42 @@ export const MESSAGE_REGISTRY = {
     "helpLinkShort": {
       "en": "Help Center",
       "zh": "帮助中心"
+    },
+    "quickStartLabel": {
+      "en": "QUICK START",
+      "zh": "快速开始"
+    },
+    "qs1Title": {
+      "en": "Create an address",
+      "zh": "创建邮箱"
+    },
+    "qs1Desc": {
+      "en": "One click — no signup, no phone number",
+      "zh": "点击按钮即生成，免注册、免手机号"
+    },
+    "qs2Title": {
+      "en": "Paste it on the target site",
+      "zh": "粘贴到目标站"
+    },
+    "qs2Desc": {
+      "en": "Fill in the email field of any signup or login form",
+      "zh": "填入任意注册 / 登录页的邮箱输入框"
+    },
+    "qs3Title": {
+      "en": "Come back for the code",
+      "zh": "回来收验证码"
+    },
+    "qs3Desc": {
+      "en": "The inbox refreshes live — codes arrive in seconds",
+      "zh": "收件箱实时刷新，验证码即到即看"
+    },
+    "faqBannerTitle": {
+      "en": "FAQ",
+      "zh": "常见问题"
+    },
+    "faqBannerMore": {
+      "en": "View all help",
+      "zh": "查看全部帮助"
     },
     "feature1Title": {
       "en": "No signup needed",

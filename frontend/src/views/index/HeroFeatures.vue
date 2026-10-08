@@ -70,7 +70,7 @@ const features = computed(() => [
 
 .feature-item:hover {
     transform: translateY(-2px);
-    border-color: rgba(32, 128, 240, 0.45);
+    border-color: rgba(128, 128, 128, 0.55);
     box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
 }
 
@@ -83,8 +83,8 @@ const features = computed(() => [
     height: 34px;
     margin-top: 1px;
     border-radius: 10px;
-    color: #2080f0;
-    background: rgba(32, 128, 240, 0.12);
+    color: currentColor;
+    background: rgba(128, 128, 128, 0.12);
 }
 
 .feature-body {
