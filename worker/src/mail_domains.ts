@@ -2,7 +2,7 @@ import { Context } from 'hono';
 
 import { CONSTANTS } from './constants';
 import { MailDomainSetting, MailDomainSettings } from './models';
-import { getJsonSetting, normalizeDomain, saveSetting } from './utils';
+import { getDomains, getJsonSetting, normalizeDomain, saveSetting } from './utils';
 
 // 问题6 批次1: the D1-backed per-domain switch list. Same label rules as
 // common.ts (DOMAIN_LABEL_RE / MAX_DOMAIN_LENGTH) so the admin panel and the
@@ -75,6 +75,21 @@ export const saveMailDomainSettings = async (
         CONSTANTS.MAIL_DOMAIN_SETTINGS_KEY,
         JSON.stringify({ domains } satisfies MailDomainSettings)
     );
+}
+
+// 问题6 批次2: env 域名 ∪ 纳管域名（去重，env 在前）。
+// 用于建址下拉 / 域名校验等"用户可选域名"场景；getDomains() 本身保持
+// env-only 语义不动（uptime / telegram / send_mail 等仍按 env 假设运行）。
+export const getManagedDomains = async (
+    c: Context<HonoCustomType>
+): Promise<string[]> => {
+    const envDomains = getDomains(c);
+    const envSet = new Set(envDomains.map((d) => d.toLowerCase()));
+    const stored = await getMailDomainSettings(c);
+    const extras = stored
+        .map((item) => item.name)
+        .filter((name) => !envSet.has(name.toLowerCase()));
+    return [...envDomains, ...extras];
 }
 
 const findStoredDomain = async (

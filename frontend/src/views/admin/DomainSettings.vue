@@ -279,6 +279,9 @@ onMounted(load)
                     请输入要接入的完整域名（小写）。前提：该域名已托管在 Cloudflare，
                     且已在 CF 控制台开启 Email Routing（子域名不会继承主域的 Email Routing，需单独接入）。
                 </p>
+                <div class="wiz-actions">
+                    <n-button size="small" type="primary" @click="wizNextFromDomain">下一步</n-button>
+                </div>
             </div>
 
             <!-- 步骤 2: DNS 自动检测 -->

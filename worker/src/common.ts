@@ -3,7 +3,7 @@ import { Jwt } from 'hono/utils/jwt'
 import { WorkerMailerOptions } from 'worker-mailer';
 
 import { getBooleanValue, getDomains, getStringArray, getStringValue, getIntValue, getUserRoles, getDefaultDomains, getJsonSetting, getAnotherWorkerList, hashPassword, getJsonObjectValue, getRandomSubdomainDomains, getDomainMapValue, isDomainOrSubdomain, normalizeDomains, trimLower } from './utils';
-import { getSendMailOverride } from './mail_domains';
+import { getSendMailOverride, getManagedDomains } from './mail_domains';
 import { unbindTelegramByAddress } from './telegram_api/common';
 import { CONSTANTS } from './constants';
 import { AddressCreationSettings, AdminWebhookSettings, ExtractResult, WebhookMail, WebhookSettings } from './models';
@@ -882,13 +882,13 @@ export const getAddressPrefix = async (c: Context<HonoCustomType>): Promise<stri
 export const getAllowDomains = async (c: Context<HonoCustomType>): Promise<string[]> => {
     const user = c.get("userPayload");
     if (!user) {
-        return getDefaultDomains(c);
+        return getManagedDomains(c);
     }
     const user_role = await commonGetUserRole(c, user.user_id);
     if (user_role?.domains && user_role.domains.length > 0) {
         return normalizeDomains(user_role.domains);
     }
-    return getDefaultDomains(c);
+    return getManagedDomains(c);
 }
 
 export async function sendWebhook(

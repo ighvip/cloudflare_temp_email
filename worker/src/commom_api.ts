@@ -7,6 +7,7 @@ import { isS3Enabled } from './mails_api/s3_attachment';
 import { isAnySendMailEnabled, getSitePrefix } from './common';
 import { getWebhookAttachment } from './open_api/webhook_attachment';
 import { getUptimePayload } from './uptime';
+import { getManagedDomains } from './mail_domains';
 
 const api = new Hono<HonoCustomType>
 
@@ -268,7 +269,7 @@ api.get('/open_api/settings', async (c) => {
         "minAddressLen": utils.getIntValue(c.env.MIN_ADDRESS_LEN, 1),
         "maxAddressLen": utils.getIntValue(c.env.MAX_ADDRESS_LEN, 30),
         "defaultDomains": utils.getDefaultDomains(c),
-        "domains": utils.getDomains(c),
+        "domains": await getManagedDomains(c),
         "randomSubdomainDomains": utils.getRandomSubdomainDomains(c),
         "domainLabels": utils.getStringArray(c.env.DOMAIN_LABELS),
         "needAuth": needAuth,
