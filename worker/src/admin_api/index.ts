@@ -19,6 +19,7 @@ import ip_blacklist_settings from './ip_blacklist_settings'
 import ai_extract_settings from './ai_extract_settings'
 import config_api from './config_api'
 import gate_sessions from './gate_sessions'
+import { changeAdminPassword } from './security_api'
 import redeem_code_api from '../redeem_api/admin_redeem_code_api'
 
 export const api = new Hono<HonoCustomType>()
@@ -101,6 +102,10 @@ api.post('admin/db_migration', db_api.migrate)
 // generic admin config
 api.get('/admin/config/:key', config_api.get)
 api.post('/admin/config', config_api.save)
+
+// security: change the admin password from the panel (stored as a sha256
+// digest in D1; the env ADMIN_PASSWORDS list remains a recovery path)
+api.post('/admin/change_admin_password', changeAdminPassword)
 
 // P0-B4 rework: live admin gate sessions (tokens are only minted from the
 // homepage admin link — the panel can list/revoke sessions, not create tokens)

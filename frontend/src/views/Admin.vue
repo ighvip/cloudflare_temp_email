@@ -33,6 +33,7 @@ import SiteSettings from './admin/SiteSettings.vue';
 import IpBlacklistSettings from './admin/IpBlacklistSettings.vue';
 import AiExtractSettings from './admin/AiExtractSettings.vue';
 import RedeemCodes from './admin/RedeemCodes.vue';
+import SecuritySettings from './admin/SecuritySettings.vue';
 
 const {
   adminAuth, showAdminAuth, adminTab, loading,
@@ -250,6 +251,9 @@ onUnmounted(() => {
           </n-tab-pane>
           <n-tab-pane name="workerconfig" :tab="t('workerconfig')">
             <WorkerConfig />
+          </n-tab-pane>
+          <n-tab-pane name="security" :tab="t('securitySettings')">
+            <SecuritySettings />
           </n-tab-pane>
         </n-tabs>
       </n-tab-pane>

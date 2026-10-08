@@ -480,6 +480,11 @@ onMounted(() => {
 /* ---- right column: independent operations panel ---- */
 .action-panel {
     position: relative;
+    /* always fill the pinned hero height — the panel border lands exactly on
+       the left column's bottom in every state (guest tabs included, which
+       otherwise end hundreds of pixels short) */
+    flex: 1 1 auto;
+    min-height: 0;
     /* safety bound: panel content can never spill past the hero (e.g. the
        address-management list) and overlap the FAQ banner — it scrolls */
     max-height: 100%;

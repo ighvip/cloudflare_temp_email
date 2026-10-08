@@ -328,11 +328,42 @@ export const getAdminPasswords = (c: Context<HonoCustomType>): string[] => {
     return c.env.ADMIN_PASSWORDS.filter((item) => item.length > 0);
 }
 
-export const checkIsAdmin = (c: Context<HonoCustomType>): boolean => {
-    const adminPasswords = getAdminPasswords(c);
-    if (!adminPasswords.length) return false;
+// panel-changed admin password: only the sha256 digest is persisted (never
+// plaintext). The generic admin-config API writes under an `admin-config:`
+// prefix, so this key stays out of its reach.
+export const ADMIN_PASSWORD_HASH_KEY = "admin-password-hash";
+
+export const getAdminPasswordHash = async (
+    c: Context<HonoCustomType>
+): Promise<string> => {
+    try {
+        const raw = await getSetting(c, ADMIN_PASSWORD_HASH_KEY);
+        if (!raw) return "";
+        if (raw.startsWith("{")) {
+            const parsed = JSON.parse(raw);
+            return typeof parsed?.hash === "string" ? parsed.hash : "";
+        }
+        return raw;
+    } catch (e) {
+        console.error("Failed to parse admin password hash", e);
+        return "";
+    }
+}
+
+export const checkIsAdmin = async (c: Context<HonoCustomType>): Promise<boolean> => {
     const adminAuth = c.req.raw.headers.get("x-admin-auth");
-    return !!adminAuth && adminPasswords.includes(adminAuth);
+    if (!adminAuth) return false;
+    const adminPasswords = getAdminPasswords(c);
+    if (adminPasswords.includes(adminAuth)) return true;
+    // password changed from the panel: the env list no longer matches —
+    // hash the plaintext header and compare against the stored digest
+    try {
+        const stored = await getAdminPasswordHash(c);
+        if (stored && (await hashPassword(adminAuth)) === stored) return true;
+    } catch (e) {
+        console.error("checkIsAdmin stored-hash lookup failed", e);
+    }
+    return false;
 }
 
 /**
@@ -373,7 +404,7 @@ export const checkIsAdminWithJwt = async (
         }
     }
 
-    return checkIsAdmin(c);
+    return await checkIsAdmin(c);
 }
 
 export const getEnvStringList = (value: string | string[] | undefined): string[] => {

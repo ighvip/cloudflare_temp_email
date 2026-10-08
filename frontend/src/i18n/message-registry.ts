@@ -873,6 +873,10 @@ export const MESSAGE_REGISTRY = {
       "en": "Role Address Config",
       "zh": "角色地址配置"
     },
+    "securitySettings": {
+      "en": "Security",
+      "zh": "安全设置"
+    },
     "sendBox": {
       "en": "Sent",
       "zh": "发件箱"
@@ -920,6 +924,56 @@ export const MESSAGE_REGISTRY = {
     "workerconfig": {
       "en": "Worker Config",
       "zh": "Worker 配置"
+    }
+  },
+  "views.admin.SecuritySettings": {
+    "confirmPassword": {
+      "en": "Confirm new password",
+      "zh": "确认新密码"
+    },
+    "currentPassword": {
+      "en": "Current password",
+      "zh": "当前密码"
+    },
+    "currentRequired": {
+      "en": "Please enter the current password",
+      "zh": "请输入当前密码"
+    },
+    "currentWrong": {
+      "en": "Current password is incorrect",
+      "zh": "当前密码不正确"
+    },
+    "hint": {
+      "en": "The change takes effect immediately — use the new password the next time you log in. The environment-variable password remains valid as a recovery path.",
+      "zh": "修改立即生效，下次登录请使用新密码；环境变量中的旧密码仍可作为找回方式。"
+    },
+    "mismatch": {
+      "en": "The new passwords do not match",
+      "zh": "两次输入的新密码不一致"
+    },
+    "newPassword": {
+      "en": "New password (at least 8 characters)",
+      "zh": "新密码（至少 8 位）"
+    },
+    "sameAsCurrent": {
+      "en": "The new password must differ from the current one",
+      "zh": "新密码不能与当前密码相同"
+    },
+    "submit": {
+      "en": "Change password",
+      "zh": "修改密码"
+    },
+    "success": {
+      "en": "Password changed — use the new password next time you log in",
+      "zh": "密码已修改，下次登录请使用新密码"
+    },
+    "title": {
+      "en": "Change Admin Password",
+      "zh": "修改后台密码"
+    },
+    "tooShort": {
+      "en": "The new password must be at least 8 characters",
+      "zh": "新密码至少 8 位"
     }
   },
   "views.admin.RedeemCodes": {
