@@ -924,6 +924,98 @@ export const MESSAGE_REGISTRY = {
     "workerconfig": {
       "en": "Worker Config",
       "zh": "Worker 配置"
+    },
+    "siteSettingsTab": {
+      "en": "Site Settings",
+      "zh": "站点设置"
+    },
+    "domainsTab": {
+      "en": "Domains",
+      "zh": "站点域名"
+    },
+    "adminSettingsTab": {
+      "en": "Admin Settings",
+      "zh": "管理员设置"
+    },
+    "revokedOthersToast": {
+      "en": "Revoked other sessions",
+      "zh": "已吊销其它会话"
+    },
+    "neverHeartbeat": {
+      "en": "Never",
+      "zh": "从未心跳"
+    },
+    "secondsAgo": {
+      "en": "{n}s ago",
+      "zh": "{n} 秒前"
+    },
+    "minutesAgo": {
+      "en": "{n}m ago",
+      "zh": "{n} 分钟前"
+    },
+    "gateSessionsTitle": {
+      "en": "Admin Sessions",
+      "zh": "后台会话管理"
+    },
+    "gateSessionsDesc": {
+      "en": "Opening the admin URL directly returns 404. A one-time 60-second token (64 chars) is minted only by clicking the admin entry on the homepage (the dot beside the logo). The redeemed session lives in this tab's sessionStorage; closing the window stops the heartbeat and the server expires it after about 2 minutes. Tokens can only be created on the homepage — here you can only view and revoke sessions.",
+      "zh": "直接输入后台地址会返回 404。只有在首页点击后台入口（logo 旁的小圆点）， 才会生成一个 60 秒有效的一次性令牌（64 位）打开后台；令牌兑换出的会话 保存在该标签页的 sessionStorage 中，关闭窗口后心跳停止，约 2 分钟后 服务端自动失效。令牌只能从首页生成，这里只能查看和吊销。"
+    },
+    "refreshSessions": {
+      "en": "Refresh",
+      "zh": "刷新"
+    },
+    "revokeOtherSessions": {
+      "en": "Revoke All Other Sessions",
+      "zh": "吊销其它所有会话"
+    },
+    "activeSessions": {
+      "en": "Active Sessions",
+      "zh": "活跃会话"
+    },
+    "noSessions": {
+      "en": "No sessions yet",
+      "zh": "暂无会话记录"
+    },
+    "sessionCol": {
+      "en": "Session",
+      "zh": "会话"
+    },
+    "createdAtCol": {
+      "en": "Created",
+      "zh": "创建时间"
+    },
+    "lastHeartbeatCol": {
+      "en": "Last Heartbeat",
+      "zh": "最后心跳"
+    },
+    "statusCol": {
+      "en": "Status",
+      "zh": "状态"
+    },
+    "actionCol": {
+      "en": "Actions",
+      "zh": "操作"
+    },
+    "currentSessionTag": {
+      "en": "Current",
+      "zh": "当前"
+    },
+    "revokedTag": {
+      "en": "Revoked",
+      "zh": "已吊销"
+    },
+    "expiredTag": {
+      "en": "Expired",
+      "zh": "已过期"
+    },
+    "activeTag": {
+      "en": "Active",
+      "zh": "活跃"
+    },
+    "revokeAction": {
+      "en": "Revoke",
+      "zh": "吊销"
     }
   },
   "views.admin.SecuritySettings": {
@@ -974,6 +1066,46 @@ export const MESSAGE_REGISTRY = {
     "tooShort": {
       "en": "The new password must be at least 8 characters",
       "zh": "新密码至少 8 位"
+    },
+    "authModeStored": {
+      "en": "Stored password",
+      "zh": "面板存储的新密码"
+    },
+    "authModeEnv": {
+      "en": "Environment variable password (ADMIN_PASSWORDS)",
+      "zh": "环境变量密码（ADMIN_PASSWORDS）"
+    },
+    "envLoginDisabled": {
+      "en": "Environment-variable password login disabled",
+      "zh": "已禁用环境变量旧密码登录"
+    },
+    "envLoginRestored": {
+      "en": "Environment-variable password login restored",
+      "zh": "已恢复环境变量旧密码登录"
+    },
+    "noNewPassword": {
+      "en": "No new password stored, cannot disable env login",
+      "zh": "未设置新密码，无法禁用 env 旧密码"
+    },
+    "infoCardTitle": {
+      "en": "Authentication Info",
+      "zh": "认证信息"
+    },
+    "currentAuthMode": {
+      "en": "Current auth mode",
+      "zh": "当前认证方式"
+    },
+    "passwordUpdatedAt": {
+      "en": "Password last changed",
+      "zh": "密码最后修改时间"
+    },
+    "disableEnvLoginTitle": {
+      "en": "Disable env password login",
+      "zh": "禁用环境变量旧密码登录"
+    },
+    "disableEnvLoginHint": {
+      "en": "When enabled, only the stored password can open the admin panel (change the password first).",
+      "zh": "开启后，只有存储的新密码可以登录后台（建议先修改密码后再开启）"
     }
   },
   "views.admin.RedeemCodes": {
@@ -1790,6 +1922,18 @@ export const MESSAGE_REGISTRY = {
     "queryTip": {
       "en": "Please input address to query, leave blank to query all",
       "zh": "请输入地址查询, 留空则查询所有"
+    },
+    "pageTitle": {
+      "en": "Sent Mail",
+      "zh": "发件箱"
+    },
+    "pageDesc": {
+      "en": "Review mail delivered by the admin, filter by sender address, select and delete in bulk.",
+      "zh": "查看管理员投递出的邮件记录，可按发件地址检索，支持多选删除。"
+    },
+    "emptyTitle": {
+      "en": "No sent mail yet",
+      "zh": "暂无发件记录"
     }
   },
   "views.admin.AiExtractSettings": {
@@ -1938,6 +2082,14 @@ export const MESSAGE_REGISTRY = {
     "tooLarge": {
       "en": "Too large file, please upload file less than 1MB.",
       "zh": "文件过大, 请上传小于1MB的文件。"
+    },
+    "pageTitle": {
+      "en": "Send Mail",
+      "zh": "发送邮件"
+    },
+    "pageDesc": {
+      "en": "Deliver mail directly as the admin — plain text, HTML and rich text are supported.",
+      "zh": "以管理员身份直接投递邮件，支持纯文本、HTML 与富文本格式。"
     }
   },
   "views.admin.Account": {
@@ -3212,6 +3364,82 @@ export const MESSAGE_REGISTRY = {
     "verified_address_list": {
       "en": "Verified Address List(Can send email by cf internal api)",
       "zh": "已验证地址列表(可通过 cf 内部 api 发送邮件)"
+    },
+    "receiveCard": {
+      "en": "Receive Filtering",
+      "zh": "收信过滤"
+    },
+    "receiveUsage": {
+      "en": "When enabled, mail addressed to a nonexistent recipient is discarded immediately.",
+      "zh": "开启后，收件人不存在的来信将被直接丢弃。"
+    },
+    "sectionSaveFailed": {
+      "en": "Save failed: {msg}",
+      "zh": "保存失败：{msg}"
+    },
+    "keywordCard": {
+      "en": "Keyword Filtering",
+      "zh": "关键词过滤"
+    },
+    "keywordUsage": {
+      "en": "Address creation, sending and receiving share one keyword set — verify with the tester before saving.",
+      "zh": "建址、发信与来信共用同一组关键词，保存前可先用测试器验证。"
+    },
+    "keywordLabel": {
+      "en": "Keywords",
+      "zh": "关键词"
+    },
+    "kvKeywordNote": {
+      "en": "KV not configured: sender blocking has no effect; other keywords are saved as usual.",
+      "zh": "未配置 KV：来源（发件人）屏蔽不会生效，其余关键词照常保存。"
+    },
+    "testLabel": {
+      "en": "Test",
+      "zh": "测试"
+    },
+    "testPlaceholder": {
+      "en": "Enter an address or mail subject",
+      "zh": "输入地址或邮件主题"
+    },
+    "keywordTestFailed": {
+      "en": "Failed — matched keywords: {list}",
+      "zh": "不通过，命中关键词：{list}"
+    },
+    "keywordTestPassed": {
+      "en": "Passed — no keywords matched",
+      "zh": "通过，未命中任何关键词"
+    },
+    "forwardCard": {
+      "en": "Forwarding",
+      "zh": "转发"
+    },
+    "forwardUsage": {
+      "en": "Forward incoming mail to another verified address by recipient domain and sender regex.",
+      "zh": "按收件域名与发件人正则，将来信转发到其他已验证地址。"
+    },
+    "forwardingRuleCount": {
+      "en": "{count} forwarding rules configured",
+      "zh": "已配置 {count} 条转发规则"
+    },
+    "sendCard": {
+      "en": "Sending",
+      "zh": "发信"
+    },
+    "sendUsage": {
+      "en": "Manage allowed recipient addresses and the daily / monthly send quotas.",
+      "zh": "管理可发送的目标地址与每日、每月发送额度。"
+    },
+    "sendDisabledNote": {
+      "en": "Sending is disabled; these settings are unavailable.",
+      "zh": "发信功能未启用，相关设置不可用。"
+    },
+    "addressCard": {
+      "en": "Address Creation",
+      "zh": "地址创建"
+    },
+    "addressUsage": {
+      "en": "Controls the domain match range when creating new addresses.",
+      "zh": "控制新建邮箱地址时的域名匹配范围。"
     }
   },
   "views.admin.Mails": {
@@ -3222,6 +3450,304 @@ export const MESSAGE_REGISTRY = {
     "query": {
       "en": "Query",
       "zh": "查询"
+    },
+    "pageTitle": {
+      "en": "Mail List",
+      "zh": "邮件列表"
+    },
+    "pageDesc": {
+      "en": "Search and manage all inbox mail by address, with multi-select and bulk delete.",
+      "zh": "按地址检索并管理全部收件箱邮件，支持多选与批量删除。"
+    },
+    "emptyTitle": {
+      "en": "No mail matches the current filter",
+      "zh": "暂无符合条件的邮件"
+    }
+  },
+  "views.admin.MailsUnknow": {
+    "pageTitle": {
+      "en": "Mail Without Recipient",
+      "zh": "无收件人邮件"
+    },
+    "pageDesc": {
+      "en": "Mail whose recipient address does not exist or was deleted is archived here; view and delete.",
+      "zh": "收件地址不存在或已删除的邮件会归档到这里，可查看与删除。"
+    },
+    "emptyTitle": {
+      "en": "No recipient-less mail yet",
+      "zh": "这里还没有无收件人邮件"
+    }
+  },
+  "views.admin.MailWebhook": {
+    "pageTitle": {
+      "en": "Mail Webhook",
+      "zh": "邮件 Webhook"
+    },
+    "pageDesc": {
+      "en": "Push a notification to an external service when new mail arrives; common presets are built in.",
+      "zh": "收到新邮件时向外部服务推送通知，内置常用服务预设。"
+    }
+  },
+  "views.admin.SiteSettings": {
+    "pageTitle": {
+      "en": "Site Settings",
+      "zh": "站点设置"
+    },
+    "pageDesc": {
+      "en": "Unified configuration for site copy, UI language and public statistics. Values stored in D1 take priority over wrangler.toml environment variables.",
+      "zh": "站点文案、界面语言与公开统计的统一配置。数据库中的值优先于 wrangler.toml 环境变量。"
+    },
+    "followBrowser": {
+      "en": "Follow browser (Recommended)",
+      "zh": "跟随浏览器（推荐）"
+    },
+    "tzBeijing": {
+      "en": "UTC+8 Beijing (Recommended)",
+      "zh": "UTC+8 北京（推荐）"
+    },
+    "tzTokyo": {
+      "en": "UTC+9 Tokyo/Seoul",
+      "zh": "UTC+9 东京/首尔"
+    },
+    "tzBangkok": {
+      "en": "UTC+7 Bangkok/Jakarta",
+      "zh": "UTC+7 曼谷/雅加达"
+    },
+    "tzDhaka": {
+      "en": "UTC+6 Dhaka",
+      "zh": "UTC+6 达卡"
+    },
+    "tzDelhi": {
+      "en": "UTC+5:30 New Delhi",
+      "zh": "UTC+5:30 新德里"
+    },
+    "tzDubai": {
+      "en": "UTC+4 Dubai",
+      "zh": "UTC+4 迪拜"
+    },
+    "tzMoscow": {
+      "en": "UTC+3 Moscow",
+      "zh": "UTC+3 莫斯科"
+    },
+    "tzCairo": {
+      "en": "UTC+2 Cairo",
+      "zh": "UTC+2 开罗"
+    },
+    "tzBerlin": {
+      "en": "UTC+1 Berlin/Paris",
+      "zh": "UTC+1 柏林/巴黎"
+    },
+    "tzLondon": {
+      "en": "UTC+0 London",
+      "zh": "UTC+0 伦敦"
+    },
+    "tzNewYork": {
+      "en": "UTC-5 New York",
+      "zh": "UTC-5 纽约"
+    },
+    "tzLosAngeles": {
+      "en": "UTC-8 Los Angeles",
+      "zh": "UTC-8 洛杉矶"
+    },
+    "tzSaoPaulo": {
+      "en": "UTC-3 Sao Paulo",
+      "zh": "UTC-3 圣保罗"
+    },
+    "saveSuccess": {
+      "en": "Saved — refresh the page to apply",
+      "zh": "保存成功，刷新页面后生效"
+    },
+    "saveFailed": {
+      "en": "Save failed",
+      "zh": "保存失败"
+    },
+    "announcementEmpty": {
+      "en": "Announcement content cannot be empty",
+      "zh": "公告内容不能为空"
+    },
+    "announcementPublished": {
+      "en": "Announcement published",
+      "zh": "公告已发布"
+    },
+    "announcementOffline": {
+      "en": "Announcement taken offline",
+      "zh": "公告已下线"
+    },
+    "announcementUpdated": {
+      "en": "Announcement updated",
+      "zh": "公告已更新"
+    },
+    "announcementDeleted": {
+      "en": "Announcement deleted",
+      "zh": "公告已删除"
+    },
+    "basicInfoCard": {
+      "en": "General",
+      "zh": "基本信息"
+    },
+    "siteTitleLabel": {
+      "en": "Site title",
+      "zh": "站点标题"
+    },
+    "siteTitlePlaceholder": {
+      "en": "Leave empty to use TITLE from wrangler.toml",
+      "zh": "留空则使用 wrangler.toml 中的 TITLE"
+    },
+    "copyrightLabel": {
+      "en": "Footer copyright",
+      "zh": "底部版权信息"
+    },
+    "copyrightPlaceholder": {
+      "en": "Leave empty to use COPYRIGHT from wrangler.toml; shown at the bottom of the homepage",
+      "zh": "留空则使用 wrangler.toml 中的 COPYRIGHT，显示于首页底部"
+    },
+    "introLabel": {
+      "en": "Homepage intro",
+      "zh": "首页简介"
+    },
+    "introPlaceholder": {
+      "en": "Leave empty to use the default intro (shown in the homepage intro card)",
+      "zh": "留空则使用默认简介（显示于首页介绍卡片）"
+    },
+    "defaultLocaleLabel": {
+      "en": "Default language",
+      "zh": "默认语言"
+    },
+    "defaultLocaleHint": {
+      "en": "Visitors who never picked a language see this one; a user's own choice always wins.",
+      "zh": "未手动选择过语言的访客将看到此语言；用户自己选择过的语言优先。"
+    },
+    "prefixLabel": {
+      "en": "Address prefix",
+      "zh": "邮箱前缀"
+    },
+    "prefixPlaceholder": {
+      "en": "Leave empty to use PREFIX from wrangler.toml",
+      "zh": "留空则使用 wrangler.toml 中的 PREFIX"
+    },
+    "prefixHint": {
+      "en": "Prefix appended when creating addresses (site-wide); it can be changed or cleared on the create page.",
+      "zh": "创建邮箱时默认附加的前缀（全站生效），可在创建页单独修改或清空。"
+    },
+    "statsCard": {
+      "en": "Public Statistics",
+      "zh": "公开统计"
+    },
+    "statsModeLabel": {
+      "en": "Counting mode",
+      "zh": "统计方式"
+    },
+    "statsModeReal": {
+      "en": "Read real data",
+      "zh": "读取真实数据"
+    },
+    "statsModeManual": {
+      "en": "Fill in manually",
+      "zh": "手动填写数字"
+    },
+    "timezoneLabel": {
+      "en": "Day-boundary timezone",
+      "zh": "日期分界时区"
+    },
+    "timezoneHint": {
+      "en": "\"Today / This week / This month\" are cut at this timezone, defaulting to Beijing time (UTC+8). Changes take effect within about a minute as the cache refreshes.",
+      "zh": "「今日 / 本周 / 本月」按此时区计算分界，默认北京时间（UTC+8）。修改后约 1 分钟内随缓存刷新生效。"
+    },
+    "receiveStatsLabel": {
+      "en": "Receive numbers",
+      "zh": "收信数字"
+    },
+    "sendStatsLabel": {
+      "en": "Send numbers",
+      "zh": "发信数字"
+    },
+    "periodToday": {
+      "en": "Today",
+      "zh": "今日"
+    },
+    "periodWeek": {
+      "en": "This week",
+      "zh": "本周"
+    },
+    "periodMonth": {
+      "en": "This month",
+      "zh": "本月"
+    },
+    "periodYear": {
+      "en": "Year",
+      "zh": "年度"
+    },
+    "periodThisYear": {
+      "en": "This year",
+      "zh": "本年"
+    },
+    "sendStatsHint": {
+      "en": "When sending is disabled, the homepage always shows the real value 0.",
+      "zh": "发信功能未启用时，首页一律照实显示 0。"
+    },
+    "saveBtn": {
+      "en": "Save",
+      "zh": "保存"
+    },
+    "reloadBtn": {
+      "en": "Reload",
+      "zh": "重新加载"
+    },
+    "statsAlert": {
+      "en": "Saved values in D1 take priority over wrangler.toml environment variables; empty fields fall back to the environment. Refresh the page after changing them.",
+      "zh": "保存后数据库中的值优先于 wrangler.toml 环境变量；留空则回退到环境变量。修改需刷新页面后生效。"
+    },
+    "announcementCard": {
+      "en": "Announcements",
+      "zh": "公告管理"
+    },
+    "announcementPlaceholder": {
+      "en": "Type the announcement (line breaks supported); it appears right of the homepage title after publishing",
+      "zh": "输入公告内容，支持换行；发布后显示在首页顶部标题右侧"
+    },
+    "publishAnnouncementBtn": {
+      "en": "Publish",
+      "zh": "发布公告"
+    },
+    "noAnnouncements": {
+      "en": "No announcements",
+      "zh": "暂无公告"
+    },
+    "editBtn": {
+      "en": "Edit",
+      "zh": "编辑"
+    },
+    "offlineShort": {
+      "en": "Offline",
+      "zh": "下线"
+    },
+    "publishShort": {
+      "en": "Publish",
+      "zh": "发布"
+    },
+    "deleteBtn": {
+      "en": "Delete",
+      "zh": "删除"
+    },
+    "deleteAnnouncementConfirm": {
+      "en": "Delete this announcement?",
+      "zh": "确认删除这条公告？"
+    },
+    "statusPublished": {
+      "en": "Published",
+      "zh": "已发布"
+    },
+    "statusOffline": {
+      "en": "Offline",
+      "zh": "已下线"
+    },
+    "cancelBtn": {
+      "en": "Cancel",
+      "zh": "取消"
+    },
+    "announcementListAlert": {
+      "en": "Enabled announcements rotate at the top of the homepage in order; click to see them all. With everything offline, wrangler.toml's ANNOUNCEMENT is used instead.",
+      "zh": "启用中的公告会按顺序在首页顶部轮播显示，点击可查看全部。全部下线时回退到 wrangler.toml 的 ANNOUNCEMENT。"
     }
   },
   "views.admin.DomainSettings": {

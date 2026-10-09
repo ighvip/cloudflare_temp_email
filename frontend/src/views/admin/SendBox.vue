@@ -48,10 +48,10 @@ const deleteSenboxMail = async (curMailId) => {
         <div class="page-head">
             <div class="page-head-row">
                 <span class="page-sq" aria-hidden="true"></span>
-                <h2>发件箱</h2>
+                <h2>{{ t('pageTitle') }}</h2>
                 <span class="page-badge">ADMIN</span>
             </div>
-            <p class="page-desc">查看管理员投递出的邮件记录，可按发件地址检索，支持多选删除。</p>
+            <p class="page-desc">{{ t('pageDesc') }}</p>
         </div>
 
         <section class="page-card">
@@ -66,7 +66,7 @@ const deleteSenboxMail = async (curMailId) => {
             </div>
             <SendBox class="send-box" :key="sendBoxKey" :enableUserDeleteEmail="true" :deleteMail="deleteSenboxMail"
                 :fetchMailData="fetchData" :showEMailFrom="true" />
-            <EmptyState v-if="listEmpty" variant="sent" title="暂无发件记录" />
+            <EmptyState v-if="listEmpty" variant="sent" :title="t('emptyTitle')" />
         </section>
     </div>
 </template>

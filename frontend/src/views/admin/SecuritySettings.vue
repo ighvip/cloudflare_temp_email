@@ -33,8 +33,8 @@ const loadSecuritySettings = async () => {
 }
 
 const authModeText = computed(() => adminPasswordStored.value
-    ? '面板存储的新密码'
-    : '环境变量密码（ADMIN_PASSWORDS）')
+    ? t('authModeStored')
+    : t('authModeEnv'))
 
 const passwordUpdatedAtText = computed(() => {
     if (!adminPasswordUpdatedAt.value) return '-'
@@ -49,11 +49,11 @@ const onDisableEnvLogin = async (value: boolean) => {
             method: 'POST',
             body: JSON.stringify({ disable_env_login: value }),
         })
-        message.success(value ? '已禁用环境变量旧密码登录' : '已恢复环境变量旧密码登录')
+        message.success(value ? t('envLoginDisabled') : t('envLoginRestored'))
     } catch (error) {
         const err = error as Error & { status?: number }
         message.error(err.status === 400
-            ? '未设置新密码，无法禁用 env 旧密码'
+            ? t('noNewPassword')
             : (err.message || 'error'))
     } finally {
         savingFlag.value = false
@@ -131,28 +131,28 @@ onMounted(loadSecuritySettings)
                 </n-flex>
             </form>
         </n-card>
-        <n-card title="认证信息" :bordered="false" embedded
+        <n-card :title="t('infoCardTitle')" :bordered="false" embedded
             style="max-width: 800px; width: 100%; overflow: auto;">
             <n-descriptions :column="1" size="small" label-placement="left" bordered>
-                <n-descriptions-item label="当前认证方式">
+                <n-descriptions-item :label="t('currentAuthMode')">
                     {{ authModeText }}
                 </n-descriptions-item>
-                <n-descriptions-item label="密码最后修改时间">
+                <n-descriptions-item :label="t('passwordUpdatedAt')">
                     {{ passwordUpdatedAtText }}
                 </n-descriptions-item>
             </n-descriptions>
             <n-divider style="margin: 12px 0;" />
             <div class="env-switch-row">
                 <div class="env-switch-text">
-                    <n-text strong>禁用环境变量旧密码登录</n-text>
+                    <n-text strong>{{ t('disableEnvLoginTitle') }}</n-text>
                     <div>
                         <n-text depth="3" class="env-switch-hint">
-                            开启后，只有存储的新密码可以登录后台（建议先修改密码后再开启）
+                            {{ t('disableEnvLoginHint') }}
                         </n-text>
                     </div>
                     <div v-if="!adminPasswordStored">
                         <n-text depth="3" class="env-switch-hint">
-                            未设置新密码，无法禁用 env 旧密码
+                            {{ t('noNewPassword') }}
                         </n-text>
                     </div>
                 </div>
@@ -162,7 +162,7 @@ onMounted(loadSecuritySettings)
                             <n-switch :value="false" disabled />
                         </span>
                     </template>
-                    未设置新密码，无法禁用 env 旧密码
+                    {{ t('noNewPassword') }}
                 </n-tooltip>
                 <n-switch v-else v-model:value="disableEnvLogin" :loading="savingFlag"
                     :disabled="savingFlag" @update:value="onDisableEnvLogin" />

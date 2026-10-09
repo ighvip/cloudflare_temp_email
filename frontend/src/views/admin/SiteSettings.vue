@@ -3,6 +3,9 @@ import { ref, onMounted } from 'vue'
 import { useMessage } from 'naive-ui'
 import { api } from '../../api'
 import { LOCALE_REGISTRY } from '../../i18n/locale-registry'
+import { useScopedI18n } from '@/i18n/app'
+
+const { t } = useScopedI18n('views.admin.SiteSettings')
 
 const STORAGE_KEY = 'site-settings'
 const ANNOUNCEMENTS_KEY = 'announcements'
@@ -12,25 +15,25 @@ const saving = ref(false)
 const loading = ref(false)
 
 const localeOptions = [
-    { label: '跟随浏览器（推荐）', value: '' },
+    { label: t('followBrowser'), value: '' },
     ...LOCALE_REGISTRY.map(({ locale, label }) => ({ label, value: locale })),
 ]
 
 // 问题18-①: day-boundary timezone for public stats, default Beijing time
 const timezoneOptions = [
-    { label: 'UTC+8 北京（推荐）', value: '+08:00' },
-    { label: 'UTC+9 东京/首尔', value: '+09:00' },
-    { label: 'UTC+7 曼谷/雅加达', value: '+07:00' },
-    { label: 'UTC+6 达卡', value: '+06:00' },
-    { label: 'UTC+5:30 新德里', value: '+05:30' },
-    { label: 'UTC+4 迪拜', value: '+04:00' },
-    { label: 'UTC+3 莫斯科', value: '+03:00' },
-    { label: 'UTC+2 开罗', value: '+02:00' },
-    { label: 'UTC+1 柏林/巴黎', value: '+01:00' },
-    { label: 'UTC+0 伦敦', value: '+00:00' },
-    { label: 'UTC-5 纽约', value: '-05:00' },
-    { label: 'UTC-8 洛杉矶', value: '-08:00' },
-    { label: 'UTC-3 圣保罗', value: '-03:00' },
+    { label: t('tzBeijing'), value: '+08:00' },
+    { label: t('tzTokyo'), value: '+09:00' },
+    { label: t('tzBangkok'), value: '+07:00' },
+    { label: t('tzDhaka'), value: '+06:00' },
+    { label: t('tzDelhi'), value: '+05:30' },
+    { label: t('tzDubai'), value: '+04:00' },
+    { label: t('tzMoscow'), value: '+03:00' },
+    { label: t('tzCairo'), value: '+02:00' },
+    { label: t('tzBerlin'), value: '+01:00' },
+    { label: t('tzLondon'), value: '+00:00' },
+    { label: t('tzNewYork'), value: '-05:00' },
+    { label: t('tzLosAngeles'), value: '-08:00' },
+    { label: t('tzSaoPaulo'), value: '-03:00' },
 ]
 
 const form = ref({
@@ -132,9 +135,9 @@ const saveSettings = async () => {
                 }),
             },
         })
-        message.success('保存成功，刷新页面后生效')
+        message.success(t('saveSuccess'))
     } catch (error) {
-        message.error(error.message || '保存失败')
+        message.error(error.message || t('saveFailed'))
     } finally {
         saving.value = false
     }
@@ -153,7 +156,7 @@ const persistAnnouncements = async () => {
 const addAnnouncement = async () => {
     const content = newAnnouncement.value.trim()
     if (!content) {
-        message.warning('公告内容不能为空')
+        message.warning(t('announcementEmpty'))
         return
     }
     announcements.value.push({
@@ -164,9 +167,9 @@ const addAnnouncement = async () => {
     newAnnouncement.value = ''
     try {
         await persistAnnouncements()
-        message.success('公告已发布')
+        message.success(t('announcementPublished'))
     } catch (error) {
-        message.error(error.message || '保存失败')
+        message.error(error.message || t('saveFailed'))
     }
 }
 
@@ -176,9 +179,9 @@ const toggleAnnouncement = async (index) => {
     item.enabled = !item.enabled
     try {
         await persistAnnouncements()
-        message.success(item.enabled ? '公告已发布' : '公告已下线')
+        message.success(item.enabled ? t('announcementPublished') : t('announcementOffline'))
     } catch (error) {
-        message.error(error.message || '保存失败')
+        message.error(error.message || t('saveFailed'))
     }
 }
 
@@ -190,7 +193,7 @@ const startEditAnnouncement = (index) => {
 const confirmEditAnnouncement = async () => {
     const content = editingContent.value.trim()
     if (!content) {
-        message.warning('公告内容不能为空')
+        message.warning(t('announcementEmpty'))
         return
     }
     const item = announcements.value[editingIndex.value]
@@ -199,9 +202,9 @@ const confirmEditAnnouncement = async () => {
     editingContent.value = ''
     try {
         await persistAnnouncements()
-        message.success('公告已更新')
+        message.success(t('announcementUpdated'))
     } catch (error) {
-        message.error(error.message || '保存失败')
+        message.error(error.message || t('saveFailed'))
     }
 }
 
@@ -210,9 +213,9 @@ const removeAnnouncement = async (index) => {
     if (editingIndex.value === index) editingIndex.value = -1
     try {
         await persistAnnouncements()
-        message.success('公告已删除')
+        message.success(t('announcementDeleted'))
     } catch (error) {
-        message.error(error.message || '保存失败')
+        message.error(error.message || t('saveFailed'))
     }
 }
 
@@ -222,38 +225,38 @@ onMounted(load)
 <template>
     <div class="site-settings">
         <div class="page-head">
-            <h2>站点设置</h2>
-            <p>站点文案、界面语言与公开统计的统一配置。数据库中的值优先于 wrangler.toml 环境变量。</p>
+            <h2>{{ t('pageTitle') }}</h2>
+            <p>{{ t('pageDesc') }}</p>
         </div>
 
-        <n-card :bordered="false" embedded title="基本信息" style="margin-bottom: 12px;">
+        <n-card :bordered="false" embedded :title="t('basicInfoCard')" style="margin-bottom: 12px;">
             <n-spin :show="loading">
                 <n-form label-placement="left" label-width="96px" style="max-width: 760px">
-                    <n-form-item label="站点标题">
-                        <n-input v-model:value="form.title" placeholder="留空则使用 wrangler.toml 中的 TITLE" />
+                    <n-form-item :label="t('siteTitleLabel')">
+                        <n-input v-model:value="form.title" :placeholder="t('siteTitlePlaceholder')" />
                     </n-form-item>
-                    <n-form-item label="底部版权信息">
+                    <n-form-item :label="t('copyrightLabel')">
                         <n-input v-model:value="form.copyright"
-                            placeholder="留空则使用 wrangler.toml 中的 COPYRIGHT，显示于首页底部" />
+                            :placeholder="t('copyrightPlaceholder')" />
                     </n-form-item>
-                    <n-form-item label="首页简介">
+                    <n-form-item :label="t('introLabel')">
                         <n-input v-model:value="form.intro" type="textarea" :rows="3"
-                            placeholder="留空则使用默认简介（显示于首页介绍卡片）" />
+                            :placeholder="t('introPlaceholder')" />
                     </n-form-item>
-                    <n-form-item label="默认语言">
+                    <n-form-item :label="t('defaultLocaleLabel')">
                         <n-select v-model:value="form.defaultLocale" :options="localeOptions" />
                         <template #feedback>
                             <span class="form-hint">
-                                未手动选择过语言的访客将看到此语言；用户自己选择过的语言优先。
+                                {{ t('defaultLocaleHint') }}
                             </span>
                         </template>
                     </n-form-item>
-                    <n-form-item label="邮箱前缀">
+                    <n-form-item :label="t('prefixLabel')">
                         <n-input v-model:value="form.prefix" clearable
-                            placeholder="留空则使用 wrangler.toml 中的 PREFIX" />
+                            :placeholder="t('prefixPlaceholder')" />
                         <template #feedback>
                             <span class="form-hint">
-                                创建邮箱时默认附加的前缀（全站生效），可在创建页单独修改或清空。
+                                {{ t('prefixHint') }}
                             </span>
                         </template>
                     </n-form-item>
@@ -261,75 +264,75 @@ onMounted(load)
             </n-spin>
         </n-card>
 
-        <n-card :bordered="false" embedded title="公开统计" style="margin-bottom: 12px;">
+        <n-card :bordered="false" embedded :title="t('statsCard')" style="margin-bottom: 12px;">
             <n-form label-placement="left" label-width="96px" style="max-width: 760px">
-                <n-form-item label="统计方式">
+                <n-form-item :label="t('statsModeLabel')">
                     <n-radio-group v-model:value="form.statsMode">
                         <n-space>
-                            <n-radio value="real">读取真实数据</n-radio>
-                            <n-radio value="manual">手动填写数字</n-radio>
+                            <n-radio value="real">{{ t('statsModeReal') }}</n-radio>
+                            <n-radio value="manual">{{ t('statsModeManual') }}</n-radio>
                         </n-space>
                     </n-radio-group>
                 </n-form-item>
-                <n-form-item label="日期分界时区">
+                <n-form-item :label="t('timezoneLabel')">
                     <n-select v-model:value="form.statsTimezone" :options="timezoneOptions" filterable tag />
                     <template #feedback>
                         <span class="form-hint">
-                            「今日 / 本周 / 本月」按此时区计算分界，默认北京时间（UTC+8）。修改后约 1 分钟内随缓存刷新生效。
+                            {{ t('timezoneHint') }}
                         </span>
                     </template>
                 </n-form-item>
                 <template v-if="form.statsMode === 'manual'">
-                    <n-form-item label="收信数字">
+                    <n-form-item :label="t('receiveStatsLabel')">
                         <n-input-group style="width: 100%">
-                            <n-input-group-label>今日</n-input-group-label>
+                            <n-input-group-label>{{ t('periodToday') }}</n-input-group-label>
                             <n-input v-model:value="form.statsToday" />
-                            <n-input-group-label>本周</n-input-group-label>
+                            <n-input-group-label>{{ t('periodWeek') }}</n-input-group-label>
                             <n-input v-model:value="form.statsWeek" />
-                            <n-input-group-label>本月</n-input-group-label>
+                            <n-input-group-label>{{ t('periodMonth') }}</n-input-group-label>
                             <n-input v-model:value="form.statsMonth" />
-                            <n-input-group-label>年度</n-input-group-label>
+                            <n-input-group-label>{{ t('periodYear') }}</n-input-group-label>
                             <n-input v-model:value="form.statsYear" />
                         </n-input-group>
                     </n-form-item>
-                    <n-form-item label="发信数字">
+                    <n-form-item :label="t('sendStatsLabel')">
                         <n-input-group style="width: 100%">
-                            <n-input-group-label>今日</n-input-group-label>
+                            <n-input-group-label>{{ t('periodToday') }}</n-input-group-label>
                             <n-input v-model:value="form.statsSendToday" />
-                            <n-input-group-label>本周</n-input-group-label>
+                            <n-input-group-label>{{ t('periodWeek') }}</n-input-group-label>
                             <n-input v-model:value="form.statsSendWeek" />
-                            <n-input-group-label>本月</n-input-group-label>
+                            <n-input-group-label>{{ t('periodMonth') }}</n-input-group-label>
                             <n-input v-model:value="form.statsSendMonth" />
-                            <n-input-group-label>本年</n-input-group-label>
+                            <n-input-group-label>{{ t('periodThisYear') }}</n-input-group-label>
                             <n-input v-model:value="form.statsSendYear" />
                         </n-input-group>
                         <template #feedback>
-                            <span class="form-hint">发信功能未启用时，首页一律照实显示 0。</span>
+                            <span class="form-hint">{{ t('sendStatsHint') }}</span>
                         </template>
                     </n-form-item>
                 </template>
                 <n-form-item label=" ">
                     <n-space>
-                        <n-button type="primary" :loading="saving" @click="saveSettings">保存</n-button>
-                        <n-button secondary @click="load">重新加载</n-button>
+                        <n-button type="primary" :loading="saving" @click="saveSettings">{{ t('saveBtn') }}</n-button>
+                        <n-button secondary @click="load">{{ t('reloadBtn') }}</n-button>
                     </n-space>
                 </n-form-item>
             </n-form>
             <n-alert type="info" :bordered="false" style="margin-top: 8px">
-                保存后数据库中的值优先于 wrangler.toml 环境变量；留空则回退到环境变量。修改需刷新页面后生效。
+                {{ t('statsAlert') }}
             </n-alert>
         </n-card>
 
-        <n-card :bordered="false" embedded title="公告管理">
+        <n-card :bordered="false" embedded :title="t('announcementCard')">
             <div class="announcement-form">
                 <n-input v-model:value="newAnnouncement" type="textarea" :rows="2"
-                    placeholder="输入公告内容，支持换行；发布后显示在首页顶部标题右侧" @keyup.ctrl.enter="addAnnouncement" />
+                    :placeholder="t('announcementPlaceholder')" @keyup.ctrl.enter="addAnnouncement" />
                 <n-button type="primary" size="small" style="margin-top: 8px;" @click="addAnnouncement">
-                    发布公告
+                    {{ t('publishAnnouncementBtn') }}
                 </n-button>
             </div>
 
-            <n-empty v-if="!announcements.length" description="暂无公告" style="margin-top: 16px;" />
+            <n-empty v-if="!announcements.length" :description="t('noAnnouncements')" style="margin-top: 16px;" />
 
             <n-list v-else :show-divider="false" style="margin-top: 12px;">
                 <n-list-item v-for="(item, index) in announcements" :key="item.id || index">
@@ -337,8 +340,8 @@ onMounted(load)
                         <template v-if="editingIndex === index">
                             <n-input v-model:value="editingContent" type="textarea" :rows="2" />
                             <n-space size="small" style="margin-top: 6px;">
-                                <n-button type="primary" size="tiny" @click="confirmEditAnnouncement">保存</n-button>
-                                <n-button size="tiny" secondary @click="editingIndex = -1">取消</n-button>
+                                <n-button type="primary" size="tiny" @click="confirmEditAnnouncement">{{ t('saveBtn') }}</n-button>
+                                <n-button size="tiny" secondary @click="editingIndex = -1">{{ t('cancelBtn') }}</n-button>
                             </n-space>
                         </template>
                         <template v-else>
@@ -347,18 +350,18 @@ onMounted(load)
                             </div>
                             <div class="announcement-actions">
                                 <n-tag :bordered="false" size="small">
-                                    {{ item.enabled ? '已发布' : '已下线' }}
+                                    {{ item.enabled ? t('statusPublished') : t('statusOffline') }}
                                 </n-tag>
-                                <n-button size="tiny" secondary @click="startEditAnnouncement(index)">编辑</n-button>
+                                <n-button size="tiny" secondary @click="startEditAnnouncement(index)">{{ t('editBtn') }}</n-button>
                                 <n-button size="tiny" secondary
                                     @click="toggleAnnouncement(index)">
-                                    {{ item.enabled ? '下线' : '发布' }}
+                                    {{ item.enabled ? t('offlineShort') : t('publishShort') }}
                                 </n-button>
                                 <n-popconfirm @positive-click="removeAnnouncement(index)">
                                     <template #trigger>
-                                        <n-button size="tiny" type="error" secondary>删除</n-button>
+                                        <n-button size="tiny" type="error" secondary>{{ t('deleteBtn') }}</n-button>
                                     </template>
-                                    确认删除这条公告？
+                                    {{ t('deleteAnnouncementConfirm') }}
                                 </n-popconfirm>
                             </div>
                         </template>
@@ -367,7 +370,7 @@ onMounted(load)
             </n-list>
 
             <n-alert type="info" :bordered="false" style="margin-top: 12px">
-                启用中的公告会按顺序在首页顶部轮播显示，点击可查看全部。全部下线时回退到 wrangler.toml 的 ANNOUNCEMENT。
+                {{ t('announcementListAlert') }}
             </n-alert>
         </n-card>
     </div>

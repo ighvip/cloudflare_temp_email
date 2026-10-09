@@ -185,7 +185,7 @@ const revokeOtherGateSessions = async () => {
       body: JSON.stringify({ all_except_current: true })
     });
     await loadGateSessions();
-    message.success('已吊销其它会话');
+    message.success(t('revokedOthersToast'));
   } catch (error) {
     if (error?.status === 404) return handleGateDeath();
     message.error(error.message || "error");
@@ -193,10 +193,10 @@ const revokeOtherGateSessions = async () => {
 }
 const formatGateTime = (seconds) => seconds ? new Date(seconds * 1000).toLocaleString() : '-';
 const gateLastSeen = (seconds) => {
-  if (!seconds) return '从未心跳';
+  if (!seconds) return t('neverHeartbeat');
   const diff = Math.max(0, Math.floor(Date.now() / 1000) - seconds);
-  if (diff < 60) return `${diff} 秒前`;
-  if (diff < 3600) return `${Math.floor(diff / 60)} 分钟前`;
+  if (diff < 60) return t('secondsAgo', { n: diff });
+  if (diff < 3600) return t('minutesAgo', { n: Math.floor(diff / 60) });
   return formatGateTime(seconds);
 }
 
@@ -241,22 +241,22 @@ onUnmounted(() => {
         </n-button>
       </template>
     </n-modal>
-    <n-tabs v-if="showAdminPage" type="card" v-model:value="adminTab" :placement="globalTabplacement" justify-content="flex-start">
+    <n-tabs v-if="showAdminPage" type="card" v-model:value="adminTab" :placement="globalTabplacement" class="admin-l1-tabs">
       <template #suffix>
         <n-button size="small" type="warning" secondary class="admin-logout-button" @click="showLogoutModal = true">
           {{ t('logout') }}
         </n-button>
       </template>
       <n-tab-pane name="qucickSetup" :tab="t('qucickSetup')">
-        <n-tabs key="quick-setup-tabs" v-model:value="quickSetupTab" type="bar" justify-content="flex-start"
+        <n-tabs key="quick-setup-tabs" v-model:value="quickSetupTab" type="bar" justify-content="center"
           animated>
           <n-tab-pane name="database" :tab="t('database')">
             <DatabaseManager />
           </n-tab-pane>
-          <n-tab-pane name="site_settings" tab="站点设置">
+          <n-tab-pane name="site_settings" :tab="t('siteSettingsTab')">
             <SiteSettings />
           </n-tab-pane>
-          <n-tab-pane name="domains" tab="站点域名">
+          <n-tab-pane name="domains" :tab="t('domainsTab')">
             <DomainSettings />
           </n-tab-pane>
           <n-tab-pane name="account_settings" :tab="t('mailbox_settings')">
@@ -268,8 +268,8 @@ onUnmounted(() => {
           <n-tab-pane name="workerconfig" :tab="t('workerconfig')">
             <WorkerConfig />
           </n-tab-pane>
-          <n-tab-pane name="admin_settings" tab="管理员设置">
-            <div style="display: flex; justify-content: flex-start; padding: 20px 20px 0;">
+          <n-tab-pane name="admin_settings" :tab="t('adminSettingsTab')">
+            <div style="display: flex; justify-content: center; padding: 20px 20px 0;">
               <n-card style="width: 600px; max-width: 100%;">
                 <n-space vertical>
                   <n-text strong>{{ t('loginMethod') }}</n-text>
@@ -284,36 +284,33 @@ onUnmounted(() => {
             <div style="padding: 20px 20px 0;">
               <SecuritySettings />
             </div>
-            <div style="display: flex; justify-content: flex-start; padding: 20px;">
+            <div style="display: flex; justify-content: center; padding: 20px;">
               <n-card style="width: 640px; max-width: 100%;">
                 <n-space vertical>
-                  <n-text strong>后台会话管理</n-text>
+                  <n-text strong>{{ t('gateSessionsTitle') }}</n-text>
                   <n-text depth="3">
-                    直接输入后台地址会返回 404。只有在首页点击后台入口（logo 旁的小圆点），
-                    才会生成一个 60 秒有效的一次性令牌（64 位）打开后台；令牌兑换出的会话
-                    保存在该标签页的 sessionStorage 中，关闭窗口后心跳停止，约 2 分钟后
-                    服务端自动失效。令牌只能从首页生成，这里只能查看和吊销。
+                    {{ t('gateSessionsDesc') }}
                   </n-text>
                   <n-space align="center" justify="space-between">
                     <n-button size="small" :loading="loading" @click="loadGateSessions">
-                      刷新
+                      {{ t('refreshSessions') }}
                     </n-button>
                     <n-button size="small" type="error" secondary @click="revokeOtherGateSessions"
                       :disabled="!gateSessions.some(s => s.active && !s.current)">
-                      吊销其它所有会话
+                      {{ t('revokeOtherSessions') }}
                     </n-button>
                   </n-space>
                   <n-divider style="margin: 8px 0;" />
-                  <n-text strong>活跃会话</n-text>
-                  <n-empty v-if="!gateSessions.length" size="small" description="暂无会话记录" />
+                  <n-text strong>{{ t('activeSessions') }}</n-text>
+                  <n-empty v-if="!gateSessions.length" size="small" :description="t('noSessions')" />
                   <n-table v-else size="small" :bordered="false">
                     <thead>
                       <tr>
-                        <th>会话</th>
-                        <th>创建时间</th>
-                        <th>最后心跳</th>
-                        <th>状态</th>
-                        <th style="width: 80px;">操作</th>
+                        <th>{{ t('sessionCol') }}</th>
+                        <th>{{ t('createdAtCol') }}</th>
+                        <th>{{ t('lastHeartbeatCol') }}</th>
+                        <th>{{ t('statusCol') }}</th>
+                        <th style="width: 80px;">{{ t('actionCol') }}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -321,19 +318,19 @@ onUnmounted(() => {
                         <td>
                           <n-text code>{{ session.prefix }}</n-text>
                           <n-tag v-if="session.current" type="success" size="tiny"
-                            style="margin-left: 6px;">当前</n-tag>
+                            style="margin-left: 6px;">{{ t('currentSessionTag') }}</n-tag>
                         </td>
                         <td>{{ formatGateTime(session.created_at) }}</td>
                         <td>{{ gateLastSeen(session.last_seen) }}</td>
                         <td>
-                          <n-tag v-if="session.revoked_at" type="error" size="tiny">已吊销</n-tag>
-                          <n-tag v-else-if="!session.active" size="tiny">已过期</n-tag>
-                          <n-tag v-else type="success" size="tiny">活跃</n-tag>
+                          <n-tag v-if="session.revoked_at" type="error" size="tiny">{{ t('revokedTag') }}</n-tag>
+                          <n-tag v-else-if="!session.active" size="tiny">{{ t('expiredTag') }}</n-tag>
+                          <n-tag v-else type="success" size="tiny">{{ t('activeTag') }}</n-tag>
                         </td>
                         <td>
                           <n-button v-if="!session.revoked_at" size="tiny" tertiary type="error"
                             @click="revokeGateSession(session.token_hash)">
-                            吊销
+                            {{ t('revokeAction') }}
                           </n-button>
                         </td>
                       </tr>
@@ -346,7 +343,7 @@ onUnmounted(() => {
         </n-tabs>
       </n-tab-pane>
       <n-tab-pane name="account" :tab="t('mailbox_management')">
-        <n-tabs key="account-tabs" type="bar" justify-content="flex-start" animated>
+        <n-tabs key="account-tabs" type="bar" justify-content="center" animated>
           <n-tab-pane name="account" :tab="t('mailbox_list')">
             <Account />
           </n-tab-pane>
@@ -371,7 +368,7 @@ onUnmounted(() => {
         </n-tabs>
       </n-tab-pane>
       <n-tab-pane name="user" :tab="t('user')">
-        <n-tabs key="user-tabs" type="bar" justify-content="flex-start" animated>
+        <n-tabs key="user-tabs" type="bar" justify-content="center" animated>
           <n-tab-pane name="user_management" :tab="t('user_management')">
             <UserManagement />
           </n-tab-pane>
@@ -387,7 +384,7 @@ onUnmounted(() => {
         </n-tabs>
       </n-tab-pane>
       <n-tab-pane name="mails" :tab="t('mails')">
-        <n-tabs key="mails-tabs" type="bar" justify-content="flex-start" animated>
+        <n-tabs key="mails-tabs" type="bar" justify-content="center" animated>
           <n-tab-pane name="mails" :tab="t('mails')">
             <Mails />
           </n-tab-pane>
@@ -415,7 +412,7 @@ onUnmounted(() => {
         <RedeemCodes />
       </n-tab-pane>
       <n-tab-pane name="maintenance" :tab="t('maintenance')">
-        <n-tabs key="maintenance-tabs" type="bar" justify-content="flex-start" animated>
+        <n-tabs key="maintenance-tabs" type="bar" justify-content="center" animated>
           <n-tab-pane name="database" :tab="t('database')">
             <DatabaseManager />
           </n-tab-pane>
@@ -451,6 +448,22 @@ onUnmounted(() => {
 /* 增加 tab 项之间的间距，避免文字挤压 */
 :deep(.n-tabs-tab) {
   padding: 10px 28px !important;
+}
+
+/* 一级菜单（card 型）：naive-ui 对 card 忽略 justify-content prop，且其
+   `.n-tabs-nav--card-type .n-tabs-pad { flex-grow: 1 }`（特异性 0-4-0）会吃掉
+   scroll-content 的全部自由空间，导致 wrapper 永远停在内容宽、贴左。
+   修复：wrapper 抢回全部自由空间并居中，pad 强制归零（需 !important 反制）。
+   溢出时 wrapper 受 flex min-content 下限保护停在 tabs 内容宽（904 > 容器），
+   justify-content 无自由空间可分配 → 自动退化为左排 + v-x-scroll 横向滚动，
+   首项不被裁剪（safe-center 效果），移动端窄屏安全 */
+.admin-l1-tabs :deep(.n-tabs-wrapper) {
+  flex-grow: 1;
+  justify-content: center;
+}
+
+.admin-l1-tabs :deep(.n-tabs-pad) {
+  flex-grow: 0 !important;
 }
 
 .n-pagination {

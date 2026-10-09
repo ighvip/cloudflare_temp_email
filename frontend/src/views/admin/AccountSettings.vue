@@ -475,12 +475,12 @@ onMounted(async () => {
 <template>
     <div class="center">
         <!-- 收信过滤 -->
-        <n-card class="section-card" title="收信过滤">
-            <p class="acc-usage">开启后，收件人不存在的来信将被直接丢弃。</p>
+        <n-card class="section-card" :title="t('receiveCard')">
+            <p class="acc-usage">{{ t('receiveUsage') }}</p>
             <n-form-item-row :label="t('block_receive_unknow_address_email')">
                 <n-switch v-model:value="receiveUnknown" :round="false" />
             </n-form-item-row>
-            <p v-if="sectionError.receive" class="acc-error">保存失败：{{ sectionError.receive }}</p>
+            <p v-if="sectionError.receive" class="acc-error">{{ t('sectionSaveFailed', { msg: sectionError.receive }) }}</p>
             <div class="acc-actions">
                 <n-button type="primary" :loading="sectionSaving.receive" @click="saveReceiveSection">
                     {{ t('save') }}
@@ -489,9 +489,9 @@ onMounted(async () => {
         </n-card>
 
         <!-- 关键词过滤 -->
-        <n-card class="section-card" title="关键词过滤">
-            <p class="acc-usage">建址、发信与来信共用同一组关键词，保存前可先用测试器验证。</p>
-            <n-form-item-row label="关键词">
+        <n-card class="section-card" :title="t('keywordCard')">
+            <p class="acc-usage">{{ t('keywordUsage') }}</p>
+            <n-form-item-row :label="t('keywordLabel')">
                 <n-select v-model:value="keywordFilterList" filterable multiple tag
                     :placeholder="t('address_block_list_placeholder')">
                     <template #empty>
@@ -502,23 +502,23 @@ onMounted(async () => {
                 </n-select>
             </n-form-item-row>
             <p v-if="!kvEnabled" class="acc-note">
-                未配置 KV：来源（发件人）屏蔽不会生效，其余关键词照常保存。
+                {{ t('kvKeywordNote') }}
             </p>
-            <n-form-item-row label="测试">
+            <n-form-item-row :label="t('testLabel')">
                 <div class="acc-test-row">
-                    <n-input v-model:value="testText" clearable placeholder="输入地址或邮件主题"
+                    <n-input v-model:value="testText" clearable :placeholder="t('testPlaceholder')"
                         class="acc-test-input" />
                 </div>
             </n-form-item-row>
             <p v-if="keywordTest" :class="keywordTest.matched.length ? 'acc-error' : 'acc-pass'">
                 <template v-if="keywordTest.matched.length">
-                    不通过，命中关键词：{{ keywordTest.matched.join('、') }}
+                    {{ t('keywordTestFailed', { list: keywordTest.matched.join('、') }) }}
                 </template>
                 <template v-else>
-                    通过，未命中任何关键词
+                    {{ t('keywordTestPassed') }}
                 </template>
             </p>
-            <p v-if="sectionError.keyword" class="acc-error">保存失败：{{ sectionError.keyword }}</p>
+            <p v-if="sectionError.keyword" class="acc-error">{{ t('sectionSaveFailed', { msg: sectionError.keyword }) }}</p>
             <div class="acc-actions">
                 <n-button type="primary" :loading="sectionSaving.keyword" @click="saveKeywordSection">
                     {{ t('save') }}
@@ -527,17 +527,17 @@ onMounted(async () => {
         </n-card>
 
         <!-- 转发 -->
-        <n-card class="section-card" title="转发">
-            <p class="acc-usage">按收件域名与发件人正则，将来信转发到其他已验证地址。</p>
+        <n-card class="section-card" :title="t('forwardCard')">
+            <p class="acc-usage">{{ t('forwardUsage') }}</p>
             <div class="acc-row">
-                <n-text depth="3">已配置 {{ savedForwardingList.length }} 条转发规则</n-text>
+                <n-text depth="3">{{ t('forwardingRuleCount', { count: savedForwardingList.length }) }}</n-text>
                 <n-button @click="openEmailForwardingModal">{{ t('config') }}</n-button>
             </div>
         </n-card>
 
         <!-- 发信 -->
-        <n-card class="section-card" :class="{ 'is-off': !sendEnabled }" title="发信">
-            <p class="acc-usage">管理可发送的目标地址与每日、每月发送额度。</p>
+        <n-card class="section-card" :class="{ 'is-off': !sendEnabled }" :title="t('sendCard')">
+            <p class="acc-usage">{{ t('sendUsage') }}</p>
             <template v-if="sendEnabled">
                 <n-form-item-row :label="t('verified_address_list')">
                     <n-select v-model:value="verifiedAddressList" filterable multiple tag
@@ -584,19 +584,19 @@ onMounted(async () => {
                         </n-text>
                     </n-flex>
                 </n-form-item-row>
-                <p v-if="sectionError.send" class="acc-error">保存失败：{{ sectionError.send }}</p>
+                <p v-if="sectionError.send" class="acc-error">{{ t('sectionSaveFailed', { msg: sectionError.send }) }}</p>
                 <div class="acc-actions">
                     <n-button type="primary" :loading="sectionSaving.send" @click="saveSendSection">
                         {{ t('save') }}
                     </n-button>
                 </div>
             </template>
-            <p v-else class="acc-off-note">发信功能未启用，相关设置不可用。</p>
+            <p v-else class="acc-off-note">{{ t('sendDisabledNote') }}</p>
         </n-card>
 
         <!-- 地址创建 -->
-        <n-card class="section-card" title="地址创建">
-            <p class="acc-usage">控制新建邮箱地址时的域名匹配范围。</p>
+        <n-card class="section-card" :title="t('addressCard')">
+            <p class="acc-usage">{{ t('addressUsage') }}</p>
             <n-form-item-row :label="t('create_address_subdomain_match')">
                 <n-flex vertical style="width: 100%;">
                     <n-radio-group v-model:value="addressCreationSubdomainMatchMode">
@@ -620,7 +620,7 @@ onMounted(async () => {
                     </n-alert>
                 </n-flex>
             </n-form-item-row>
-            <p v-if="sectionError.address" class="acc-error">保存失败：{{ sectionError.address }}</p>
+            <p v-if="sectionError.address" class="acc-error">{{ t('sectionSaveFailed', { msg: sectionError.address }) }}</p>
             <div class="acc-actions">
                 <n-button type="primary" :loading="sectionSaving.address" @click="saveAddressSection">
                     {{ t('save') }}
@@ -638,7 +638,7 @@ onMounted(async () => {
                 <br />
                 <span>{{ t('source_patterns_tip') }}</span>
             </n-alert>
-            <p v-if="sectionError.forward" class="acc-error">保存失败：{{ sectionError.forward }}</p>
+            <p v-if="sectionError.forward" class="acc-error">{{ t('sectionSaveFailed', { msg: sectionError.forward }) }}</p>
             <n-space justify="end">
                 <n-button @click="addNewEmailForwardingItem">{{ t('add') }}</n-button>
             </n-space>

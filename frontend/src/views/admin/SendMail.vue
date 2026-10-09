@@ -168,10 +168,10 @@ const handleCreated = (editor) => {
         <div class="page-head">
             <div class="page-head-row">
                 <span class="page-sq" aria-hidden="true"></span>
-                <h2>发送邮件</h2>
+                <h2>{{ t('pageTitle') }}</h2>
                 <span class="page-badge">ADMIN</span>
             </div>
-            <p class="page-desc">以管理员身份直接投递邮件，支持纯文本、HTML 与富文本格式。</p>
+            <p class="page-desc">{{ t('pageDesc') }}</p>
         </div>
 
         <!-- 问题10: send channel not configured anywhere → quiet panel -->

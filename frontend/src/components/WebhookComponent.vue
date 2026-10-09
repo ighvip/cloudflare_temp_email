@@ -174,7 +174,10 @@ const testing = ref(false)
 
 const isFeatureDisabledError = (error: unknown) => {
     const err = error as { status?: number, message?: string }
-    return err?.status === 403 || /not enabled|not allowed|未启用|未开启|未允许/i.test(err?.message || '')
+    const msg = err?.message || ''
+    // 403 = 未启用；400「KV 不可用」= 生产未绑定 KV，同样按安静的未启用态处理
+    return err?.status === 403 || /not enabled|not allowed|未启用|未开启|未允许/i.test(msg)
+        || /KV 不可用|KV is not available/i.test(msg)
 }
 
 const fetchData = async () => {

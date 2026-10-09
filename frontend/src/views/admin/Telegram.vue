@@ -21,7 +21,12 @@ const notEnabled = ref(false)
 
 const isNotEnabledError = (error: unknown) => {
     const err = error as { status?: number; message?: string }
-    return err?.status === 403 || /not enabled|not set/i.test(err?.message || '')
+    if (err?.status === 403) return true
+    const msg = err?.message || ''
+    // 除 403 外，把「未配置」类 400（缺 TELEGRAM_BOT_TOKEN / 缺 KV 绑定）
+    // 也归为安静的未启用态，而不是报错（问题10 的延伸）
+    return /not enabled|not set/i.test(msg)
+        || /TELEGRAM_BOT_TOKEN|KV 不可用|KV is not available/i.test(msg)
 }
 
 const fetchStatus = async () => {
@@ -80,6 +85,10 @@ const getSettings = async () => {
         const res = await api.fetch(`/admin/telegram/settings`)
         Object.assign(settings.value, res)
     } catch (error) {
+        if (isNotEnabledError(error)) {
+            notEnabled.value = true
+            return
+        }
         message.error((error as Error).message || "error");
     }
 }
@@ -111,6 +120,7 @@ onMounted(async () => {
                 <div class="feature-disabled-title">{{ t('notEnabled') }}</div>
                 <div class="feature-disabled-hint">{{ t('notEnabledHint') }}</div>
             </div>
+            <template v-if="!notEnabled">
             <n-flex justify="end">
                 <n-button @click="fetchStatus" secondary>
                     {{ t('status') }}
@@ -165,6 +175,7 @@ onMounted(async () => {
                 </n-form-item-row>
             </n-card>
             <pre v-if="status.fetched">{{ JSON.stringify(status, null, 2) }}</pre>
+            </template>
         </n-card>
     </div>
 </template>

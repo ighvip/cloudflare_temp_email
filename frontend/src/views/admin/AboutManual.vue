@@ -238,7 +238,8 @@ const version = computed(() => openSettings.value.version || '')
 <style scoped>
 .manual {
     max-width: 860px;
-    text-align: left;
+    margin: 0 auto;
+    text-align: center;
 }
 
 .page-head {
@@ -268,6 +269,7 @@ const version = computed(() => openSettings.value.version || '')
 .manual-head {
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 10px;
     width: 100%;
     padding: 12px 14px;
@@ -275,7 +277,7 @@ const version = computed(() => openSettings.value.version || '')
     background: transparent;
     color: inherit;
     font: inherit;
-    text-align: left;
+    text-align: center;
     cursor: pointer;
 }
 
@@ -298,7 +300,7 @@ const version = computed(() => openSettings.value.version || '')
 }
 
 .manual-title {
-    flex: 1 1 auto;
+    flex: 0 0 auto;
     font-size: 13.5px;
     font-weight: 700;
 }
@@ -345,7 +347,8 @@ const version = computed(() => openSettings.value.version || '')
 
 .manual-list {
     margin: 0;
-    padding-left: 18px;
+    padding-left: 0;
+    list-style-position: inside;
     font-size: 13px;
     line-height: 1.8;
     opacity: 0.8;

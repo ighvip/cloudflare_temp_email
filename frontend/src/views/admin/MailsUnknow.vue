@@ -1,8 +1,11 @@
 <script setup>
 import { ref } from 'vue'
+import { useScopedI18n } from '@/i18n/app'
 import { api } from '../../api'
 import MailBox from '../../components/MailBox.vue';
 import EmptyState from '../../components/EmptyState.vue';
+
+const { t } = useScopedI18n('views.admin.MailsUnknow')
 
 // 问题9: track emptiness through the fetch proxy so this wrapper can swap
 // naive's n-result illustration for the shared line-art empty state
@@ -33,16 +36,16 @@ const deleteMail = async (curMailId) => {
         <div class="page-head">
             <div class="page-head-row">
                 <span class="page-sq" aria-hidden="true"></span>
-                <h2>无收件人邮件</h2>
+                <h2>{{ t('pageTitle') }}</h2>
                 <span class="page-badge">ADMIN</span>
             </div>
-            <p class="page-desc">收件地址不存在或已删除的邮件会归档到这里，可查看与删除。</p>
+            <p class="page-desc">{{ t('pageDesc') }}</p>
         </div>
 
         <section class="page-card">
             <MailBox class="mail-box" :enableUserDeleteEmail="true" :fetchMailData="fetchMailUnknowData"
                 :deleteMail="deleteMail" />
-            <EmptyState v-if="listEmpty" variant="inbox" title="这里还没有无收件人邮件" />
+            <EmptyState v-if="listEmpty" variant="inbox" :title="t('emptyTitle')" />
         </section>
     </div>
 </template>

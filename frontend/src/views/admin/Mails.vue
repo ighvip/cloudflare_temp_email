@@ -48,10 +48,10 @@ const deleteMail = async (curMailId) => {
         <div class="page-head">
             <div class="page-head-row">
                 <span class="page-sq" aria-hidden="true"></span>
-                <h2>邮件列表</h2>
+                <h2>{{ t('pageTitle') }}</h2>
                 <span class="page-badge">ADMIN</span>
             </div>
-            <p class="page-desc">按地址检索并管理全部收件箱邮件，支持多选与批量删除。</p>
+            <p class="page-desc">{{ t('pageDesc') }}</p>
         </div>
 
         <section class="page-card">
@@ -66,7 +66,7 @@ const deleteMail = async (curMailId) => {
             </div>
             <MailBox class="mail-box" :key="mailBoxKey" :enableUserDeleteEmail="true" :fetchMailData="fetchMailData"
                 :deleteMail="deleteMail" :showFilterInput="true" />
-            <EmptyState v-if="listEmpty" variant="inbox" title="暂无符合条件的邮件" />
+            <EmptyState v-if="listEmpty" variant="inbox" :title="t('emptyTitle')" />
         </section>
     </div>
 </template>

@@ -1,9 +1,12 @@
 <script setup lang="ts">
 // @ts-ignore
 import { api } from '../../api'
+import { useScopedI18n } from '@/i18n/app'
 
 // @ts-ignore
 import WebhookComponent from '../../components/WebhookComponent.vue'
+
+const { t } = useScopedI18n('views.admin.MailWebhook')
 
 const fetchData = async () => {
     return await api.fetch(`/admin/mail_webhook/settings`)
@@ -30,10 +33,10 @@ const testSettings = async (webhookSettings: any) => {
         <div class="page-head">
             <div class="page-head-row">
                 <span class="page-sq" aria-hidden="true"></span>
-                <h2>邮件 Webhook</h2>
+                <h2>{{ t('pageTitle') }}</h2>
                 <span class="page-badge">ADMIN</span>
             </div>
-            <p class="page-desc">收到新邮件时向外部服务推送通知，内置常用服务预设。</p>
+            <p class="page-desc">{{ t('pageDesc') }}</p>
         </div>
 
         <WebhookComponent :fetchData="fetchData" :saveSettings="saveSettings" :testSettings="testSettings" />
