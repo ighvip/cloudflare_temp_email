@@ -387,20 +387,51 @@ onMounted(load)
 </template>
 
 <style scoped>
+.domain-settings {
+    text-align: left;
+}
+
 .domain-settings .page-head {
     margin-bottom: 12px;
+    text-align: left;
 }
 
 .domain-settings .page-head h2 {
     font-size: 16px;
     font-weight: 700;
     margin-bottom: 4px;
+    text-align: left;
 }
 
 .domain-settings .page-head p {
     font-size: 12.5px;
     opacity: 0.6;
     line-height: 1.6;
+    text-align: left;
+}
+
+.domain-settings :deep(.n-card-header) {
+    text-align: left;
+}
+
+.domain-settings :deep(.n-card-header__main) {
+    text-align: left;
+}
+
+.domain-settings .env-hint {
+    text-align: left;
+}
+
+.domain-settings .guide-list {
+    text-align: left;
+}
+
+.domain-settings .guide-list li {
+    text-align: left;
+}
+
+.domain-settings .wiz-note {
+    text-align: left;
 }
 
 .add-row {
