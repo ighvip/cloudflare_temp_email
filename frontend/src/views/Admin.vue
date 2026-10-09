@@ -448,8 +448,9 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-/* 强制所有 tab 栏靠左 — naive-ui 内部样式优先级高于 prop，需要 !important */
-:deep(.n-tabs-nav-content) {
+/* 强制所有 tab 栏靠左 — 覆盖 naive-ui 内部 .v-x-scroll / .n-tabs-nav-scroll */
+:deep(.v-x-scroll),
+:deep(.n-tabs-nav-scroll) {
   justify-content: flex-start !important;
 }
 
