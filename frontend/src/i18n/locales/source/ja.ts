@@ -814,6 +814,7 @@ export const jaMessages = {
   "views.Uptime.title": "稼働状況",
   "views.Uptime.uptimeTip": "稼働状況のヒント",
   "views.admin.CreateAccount.prefixPlaceholder": "プレフィックスを入力",
+  "views.admin.CreateAccount.prefixScopeTip": "サイト全体のスイッチです。オフにすると、公開ページや管理画面で新規作成するアドレスにはプレフィックスが付きません。",
   "views.admin.RedeemCodes.actions": "操作",
   "views.admin.RedeemCodes.amount": "数量",
   "views.admin.RedeemCodes.batchCreate": "一括作成",

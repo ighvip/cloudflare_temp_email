@@ -651,6 +651,7 @@ export const zhTWMessages = {
   "views.admin.CreateAccount.generateName": "生成隨機名字",
   "views.admin.CreateAccount.linkWithAddressCredential": "打開即可自動登錄郵箱的鏈接",
   "views.admin.CreateAccount.prefixPlaceholder": "前綴（留空則不加前綴）",
+  "views.admin.CreateAccount.prefixScopeTip": "全站開關：關閉後，前臺與後臺新建的地址都不會添加前綴。",
   "views.admin.CreateAccount.normalSubdomain": "普通域名",
   "views.admin.CreateAccount.randomSubdomainTip": "啟用後，創建出來的地址會自動掛在隨機子域名下，建議僅用於收件。需要在基礎域名 DNS 中配置通配 MX 記錄，詳見隨機子域名文檔。",
   "views.admin.CreateAccount.successTip": "創建成功",

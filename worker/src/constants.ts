@@ -22,6 +22,8 @@ export const CONSTANTS = {
     MAIL_DOMAIN_SETTINGS_KEY: 'mail_domain_settings',
     // admin-editable site settings (generic /admin/config JSON blob)
     SITE_SETTINGS_KEY: 'admin-config:site-settings',
+    // admin CreateAccount master switch for address prefixes (generic /admin/config value: "true"/"false")
+    PREFIX_ENABLED_KEY: 'admin-config:prefix-enabled',
 
     // KV
     TG_KV_PREFIX: "temp-mail-telegram",

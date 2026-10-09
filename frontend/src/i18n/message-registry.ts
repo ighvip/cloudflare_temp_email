@@ -2681,6 +2681,10 @@ export const MESSAGE_REGISTRY = {
       "en": "Prefix (leave empty for none)",
       "zh": "前缀（留空则不加前缀）"
     },
+    "prefixScopeTip": {
+      "en": "Site-wide switch: when off, addresses newly created from the public site or the admin panel get no prefix.",
+      "zh": "全站开关：关闭后，前台与后台新建的地址都不会添加前缀。"
+    },
     "normalSubdomain": {
       "en": "Normal Domain",
       "zh": "普通域名"

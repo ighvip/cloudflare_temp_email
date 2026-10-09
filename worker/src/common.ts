@@ -29,10 +29,30 @@ const areValidDomainLabels = (labels: string[]): boolean => {
 }
 
 /**
+ * Master switch for automatic address prefixes — the "是否启用前缀" toggle on
+ * the admin CreateAccount page, persisted via the generic /admin/config API.
+ * A missing value keeps the historical behaviour: prefix enabled.
+ */
+export const isPrefixEnabled = async (c: Context<HonoCustomType>): Promise<boolean> => {
+    try {
+        const stored = await getJsonSetting<boolean>(c, CONSTANTS.PREFIX_ENABLED_KEY);
+        return stored !== false;
+    } catch (error) {
+        console.error("isPrefixEnabled failed", error);
+        return true;
+    }
+}
+
+/**
  * 问题5: site-wide address prefix — the admin-editable value in the site
  * settings (D1) wins, the wrangler env PREFIX stays as the fallback.
+ * The admin master switch (isPrefixEnabled) wins over both: when it is
+ * off, no automatic prefix is applied anywhere.
  */
 export const getSitePrefix = async (c: Context<HonoCustomType>): Promise<string> => {
+    if (!(await isPrefixEnabled(c))) {
+        return "";
+    }
     try {
         const siteSettings = await getJsonSetting<{ prefix?: unknown }>(
             c, CONSTANTS.SITE_SETTINGS_KEY
@@ -868,6 +888,10 @@ export const commonGetUserRole = async (
 }
 
 export const getAddressPrefix = async (c: Context<HonoCustomType>): Promise<string | undefined> => {
+    // master switch off → no automatic prefix, including role prefixes
+    if (!(await isPrefixEnabled(c))) {
+        return "";
+    }
     const user = c.get("userPayload");
     if (!user) {
         return getSitePrefix(c);

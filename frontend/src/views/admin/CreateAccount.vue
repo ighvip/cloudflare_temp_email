@@ -17,6 +17,8 @@ const { t } = useScopedI18n('views.admin.CreateAccount')
 const enablePrefix = ref(true)
 // 问题5: editable/clearable prefix for this creation, prefilled site-wide
 const prefixInput = ref('')
+// generic /admin/config key holding the site-wide prefix master switch
+const PREFIX_ENABLED_KEY = 'prefix-enabled'
 const subdomainMode = ref("normal")
 const customSubdomain = ref("")
 const emailName = ref("")
@@ -102,10 +104,49 @@ const newEmail = async () => {
     }
 }
 
+// site-wide master switch — persisted via the generic /admin/config API so it
+// survives refresh and applies to the public site (前台) creation too
+const onTogglePrefix = async (enabled) => {
+    const previous = enablePrefix.value
+    enablePrefix.value = enabled
+    try {
+        await api.fetch('/admin/config', {
+            method: 'POST',
+            body: { key: PREFIX_ENABLED_KEY, value: JSON.stringify(enabled) },
+        })
+    } catch (error) {
+        enablePrefix.value = previous
+        message.error(error.message || 'error')
+        return
+    }
+    // keep the in-memory site prefix in sync so the input prefills after re-enabling
+    try {
+        if (enabled) {
+            const settings = await api.fetch('/open_api/settings')
+            openSettings.value.prefix = settings.prefix || ''
+            if (!prefixInput.value && openSettings.value.prefix) {
+                prefixInput.value = openSettings.value.prefix
+            }
+        } else {
+            openSettings.value.prefix = ''
+        }
+    } catch (error) {
+        console.error(error)
+    }
+}
+
 onMounted(async () => {
-    if (openSettings.prefix) {
-        enablePrefix.value = true
-        prefixInput.value = openSettings.prefix
+    // restore the persisted site-wide prefix switch (default: on)
+    try {
+        const res = await api.fetch(`/admin/config/${PREFIX_ENABLED_KEY}`)
+        if (typeof res?.value === 'string' && res.value !== '') {
+            enablePrefix.value = res.value !== 'false'
+        }
+    } catch (error) {
+        console.error(error)
+    }
+    if (enablePrefix.value && openSettings.value.prefix) {
+        prefixInput.value = openSettings.value.prefix
     }
     emailDomain.value = openSettings.value.domains?.[0]?.value || ""
 })
@@ -117,7 +158,12 @@ onMounted(async () => {
             :address-password="addressPassword" />
         <n-card :bordered="false" embedded style="max-width: 600px;">
             <n-form-item-row :label="t('enablePrefix')">
-                <n-switch v-model:value="enablePrefix" :round="false" />
+                <div style="width: 100%;">
+                    <n-switch :value="enablePrefix" :round="false" @update:value="onTogglePrefix" />
+                    <p style="margin: 8px 0 0; opacity: 0.75;">
+                        {{ t('prefixScopeTip') }}
+                    </p>
+                </div>
             </n-form-item-row>
             <n-form-item-row :label="t('address')">
                 <n-spin :show="generateNameLoading" style="width: 100%;">

@@ -651,6 +651,7 @@ export const koMessages = {
   "views.admin.CreateAccount.generateName": "가상 이름 생성",
   "views.admin.CreateAccount.linkWithAddressCredential": "열면 자동으로 메일함에 로그인되는 링크",
   "views.admin.CreateAccount.prefixPlaceholder": "접두사 (비워두면 사용 안 함)",
+  "views.admin.CreateAccount.prefixScopeTip": "사이트 전체 스위치: 끄면 공개 페이지나 관리자 화면에서 새로 만드는 주소에 접두사가 붙지 않습니다.",
   "views.admin.CreateAccount.normalSubdomain": "일반 도메인",
   "views.admin.CreateAccount.randomSubdomainTip": "활성화하면 생성된 주소가 임의의 서브도메인 아래에 배정됩니다. 수신 전용으로만 사용하는 것을 권장합니다. 기본 도메인 DNS에 와일드카드 MX 레코드가 필요합니다 — 임의 서브도메인 문서를 참고하세요.",
   "views.admin.CreateAccount.successTip": "생성되었습니다",
