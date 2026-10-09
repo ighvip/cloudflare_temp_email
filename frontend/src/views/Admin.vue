@@ -448,10 +448,9 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-/* 强制所有 tab 栏靠左 — 覆盖 naive-ui 内部 .v-x-scroll / .n-tabs-nav-scroll */
-:deep(.v-x-scroll),
-:deep(.n-tabs-nav-scroll) {
-  justify-content: flex-start !important;
+/* 增加 tab 项之间的间距，避免文字挤压 */
+:deep(.n-tabs-tab) {
+  padding: 10px 28px !important;
 }
 
 .n-pagination {
