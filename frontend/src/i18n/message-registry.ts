@@ -3043,10 +3043,6 @@ export const MESSAGE_REGISTRY = {
       "en": "Regex pattern too long (max 200 characters)",
       "zh": "正则表达式过长（最大200字符）"
     },
-    "rule_index": {
-      "en": "Rule",
-      "zh": "规则"
-    },
     "save": {
       "en": "Save",
       "zh": "保存"
@@ -3146,10 +3142,6 @@ export const MESSAGE_REGISTRY = {
     "cleanupSuccess": {
       "en": "Cleanup success",
       "zh": "清理成功"
-    },
-    "cronTip": {
-      "en": "Enable cron cleanup, need to configure [crons] in worker, please refer to the document, setting 0 days means clear all",
-      "zh": "启用定时清理, 需在 worker 配置 [crons] 参数, 请参考文档, 配置为 0 天表示全部清空"
     },
     "customSqlCleanup": {
       "en": "Custom SQL Cleanup",

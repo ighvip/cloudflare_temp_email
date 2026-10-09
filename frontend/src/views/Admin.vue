@@ -241,14 +241,14 @@ onUnmounted(() => {
         </n-button>
       </template>
     </n-modal>
-    <n-tabs v-if="showAdminPage" type="card" v-model:value="adminTab" :placement="globalTabplacement">
+    <n-tabs v-if="showAdminPage" type="card" v-model:value="adminTab" :placement="globalTabplacement" justify-content="flex-start">
       <template #suffix>
         <n-button size="small" type="warning" secondary class="admin-logout-button" @click="showLogoutModal = true">
           {{ t('logout') }}
         </n-button>
       </template>
       <n-tab-pane name="qucickSetup" :tab="t('qucickSetup')">
-        <n-tabs key="quick-setup-tabs" v-model:value="quickSetupTab" type="bar" justify-content="center"
+        <n-tabs key="quick-setup-tabs" v-model:value="quickSetupTab" type="bar" justify-content="flex-start"
           animated>
           <n-tab-pane name="database" :tab="t('database')">
             <DatabaseManager />
@@ -269,7 +269,7 @@ onUnmounted(() => {
             <WorkerConfig />
           </n-tab-pane>
           <n-tab-pane name="admin_settings" tab="管理员设置">
-            <div style="display: flex; justify-content: center; padding: 20px 20px 0;">
+            <div style="display: flex; justify-content: flex-start; padding: 20px 20px 0;">
               <n-card style="width: 600px; max-width: 100%;">
                 <n-space vertical>
                   <n-text strong>{{ t('loginMethod') }}</n-text>
@@ -284,7 +284,7 @@ onUnmounted(() => {
             <div style="padding: 20px 20px 0;">
               <SecuritySettings />
             </div>
-            <div style="display: flex; justify-content: center; padding: 20px;">
+            <div style="display: flex; justify-content: flex-start; padding: 20px;">
               <n-card style="width: 640px; max-width: 100%;">
                 <n-space vertical>
                   <n-text strong>后台会话管理</n-text>
@@ -346,7 +346,7 @@ onUnmounted(() => {
         </n-tabs>
       </n-tab-pane>
       <n-tab-pane name="account" :tab="t('mailbox_management')">
-        <n-tabs key="account-tabs" type="bar" justify-content="center" animated>
+        <n-tabs key="account-tabs" type="bar" justify-content="flex-start" animated>
           <n-tab-pane name="account" :tab="t('mailbox_list')">
             <Account />
           </n-tab-pane>
@@ -371,7 +371,7 @@ onUnmounted(() => {
         </n-tabs>
       </n-tab-pane>
       <n-tab-pane name="user" :tab="t('user')">
-        <n-tabs key="user-tabs" type="bar" justify-content="center" animated>
+        <n-tabs key="user-tabs" type="bar" justify-content="flex-start" animated>
           <n-tab-pane name="user_management" :tab="t('user_management')">
             <UserManagement />
           </n-tab-pane>
@@ -387,7 +387,7 @@ onUnmounted(() => {
         </n-tabs>
       </n-tab-pane>
       <n-tab-pane name="mails" :tab="t('mails')">
-        <n-tabs key="mails-tabs" type="bar" justify-content="center" animated>
+        <n-tabs key="mails-tabs" type="bar" justify-content="flex-start" animated>
           <n-tab-pane name="mails" :tab="t('mails')">
             <Mails />
           </n-tab-pane>
@@ -415,7 +415,7 @@ onUnmounted(() => {
         <RedeemCodes />
       </n-tab-pane>
       <n-tab-pane name="maintenance" :tab="t('maintenance')">
-        <n-tabs key="maintenance-tabs" type="bar" justify-content="center" animated>
+        <n-tabs key="maintenance-tabs" type="bar" justify-content="flex-start" animated>
           <n-tab-pane name="database" :tab="t('database')">
             <DatabaseManager />
           </n-tab-pane>
