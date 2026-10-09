@@ -18,8 +18,6 @@ const ANNOUNCEMENTS_KEY = 'admin-config:announcements';
 // public stats cache, refreshed at most once per interval
 const PUBLIC_STATS_CACHE_KEY = 'admin-config:public-stats-cache';
 const PUBLIC_STATS_CACHE_TTL_SECONDS = 60;
-// public activity cache (minute buckets behind the homepage activity card)
-const PUBLIC_ACTIVITY_CACHE_KEY = 'admin-config:public-activity-cache';
 
 type SiteSettings = {
     title?: string;
@@ -37,8 +35,6 @@ type SiteSettings = {
     // day-boundary timezone for the public stats, "+08:00" style
     statsTimezone?: string;
 };
-
-const pad = (value: number) => String(value).padStart(2, '0');
 
 // parse "+08:00" / "-0530" into minutes east of UTC; default Beijing (+08:00).
 // exported so admin_api/statistics_api shares the same day-boundary parsing
@@ -133,95 +129,6 @@ const buildRealPublicStats = async (c: Context<HonoCustomType>) => {
     } catch (e) {
         // cache is best-effort, never break the public endpoint
         console.error('public stats cache write failed', e);
-    }
-    return payload;
-};
-
-const readCachedPublicActivity = async (c: Context<HonoCustomType>) => {
-    const cached = await getJsonSetting<{ expiresAt?: number }>(c, PUBLIC_ACTIVITY_CACHE_KEY);
-    if (cached?.expiresAt && cached.expiresAt > Date.now()) {
-        return cached;
-    }
-    return null;
-};
-
-// per-minute counters for the last hour + today's address/sendbox totals.
-// created_at is stored as `datetime('now')` (UTC) — substr(.., 1, 16) gives
-// a 'YYYY-MM-DD HH:MM' bucket string that groups cleanly with COUNT.
-const buildRealPublicActivity = async (c: Context<HonoCustomType>) => {
-    const siteSettings = await getJsonSetting<SiteSettings>(c, SITE_SETTINGS_KEY) || {};
-    const offset = parseTimezoneOffsetMinutes(siteSettings.statsTimezone);
-    const { dayStart } = getStatsBoundaries(offset);
-    const now = new Date();
-    const from = new Date(now.getTime() - 60 * 60 * 1000);
-    const fromStr = `${from.getUTCFullYear()}-${pad(from.getUTCMonth() + 1)}-${pad(from.getUTCDate())} `
-        + `${pad(from.getUTCHours())}:${pad(from.getUTCMinutes())}:00`;
-
-    const bucketRows = await c.env.DB.prepare(
-        `SELECT 'r' AS k, substr(created_at, 1, 16) AS bucket, COUNT(*) AS n
-         FROM raw_mails WHERE created_at >= ?
-         UNION ALL SELECT 'c', substr(created_at, 1, 16), COUNT(*)
-         FROM address WHERE created_at >= ?
-         UNION ALL SELECT 's', substr(created_at, 1, 16), COUNT(*)
-         FROM sendbox WHERE created_at >= ?`
-    ).bind(fromStr, fromStr, fromStr)
-        .all<{ k: string; bucket: string; n: number }>();
-    const todayRow = await c.env.DB.prepare(
-        `SELECT
-            (SELECT COUNT(*) FROM address WHERE created_at >= ?) AS created,
-            (SELECT COUNT(*) FROM sendbox WHERE created_at >= ?) AS sent`
-    ).bind(dayStart, dayStart)
-        .first<{ created: number | null; sent: number | null }>();
-
-    // 问题19: the 3 most recent events (type + time only — the public
-    // payload never exposes addresses). Three bounded LIMIT 3 queries,
-    // merged and trimmed in JS.
-    const [recentReceive, recentCreate, recentSend] = await Promise.all([
-        c.env.DB.prepare(
-            `SELECT created_at AS at FROM raw_mails WHERE created_at IS NOT NULL
-             ORDER BY created_at DESC LIMIT 3`
-        ).all<{ at: string }>(),
-        c.env.DB.prepare(
-            `SELECT created_at AS at FROM address WHERE created_at IS NOT NULL
-             ORDER BY created_at DESC LIMIT 3`
-        ).all<{ at: string }>(),
-        c.env.DB.prepare(
-            `SELECT created_at AS at FROM sendbox WHERE created_at IS NOT NULL
-             ORDER BY created_at DESC LIMIT 3`
-        ).all<{ at: string }>(),
-    ]);
-    const recent = [
-        ...(recentReceive.results || []).map((row) => ({ type: 'received', at: row.at })),
-        ...(recentCreate.results || []).map((row) => ({ type: 'created', at: row.at })),
-        ...(recentSend.results || []).map((row) => ({ type: 'sent', at: row.at })),
-    ]
-        .sort((a, b) => (a.at || '').localeCompare(b.at || ''))
-        .slice(0, 3);
-
-    const byBucket: Record<string, { r: number; c: number; s: number }> = {};
-    for (const row of bucketRows.results || []) {
-        const slot = byBucket[row.bucket] || { r: 0, c: 0, s: 0 };
-        if (row.k === 'r') slot.r = row.n;
-        else if (row.k === 'c') slot.c = row.n;
-        else if (row.k === 's') slot.s = row.n;
-        byBucket[row.bucket] = slot;
-    }
-
-    const payload = {
-        mode: 'real' as const,
-        minutes: Object.entries(byBucket)
-            .map(([t, v]) => ({ t, r: v.r, c: v.c, s: v.s }))
-            .sort((a, b) => a.t.localeCompare(b.t)),
-        today: { created: todayRow?.created || 0, sent: todayRow?.sent || 0 },
-        recent,
-        updatedAt: new Date().toISOString(),
-        expiresAt: Date.now() + PUBLIC_STATS_CACHE_TTL_SECONDS * 1000,
-    };
-    try {
-        await saveSetting(c, PUBLIC_ACTIVITY_CACHE_KEY, JSON.stringify(payload));
-    } catch (e) {
-        // cache is best-effort, never break the public endpoint
-        console.error('public activity cache write failed', e);
     }
     return payload;
 };
@@ -356,39 +263,6 @@ api.get('/open_api/stats', async (c) => {
             sendMonth: 0,
             sendYear: 0,
             timezone: siteSettings.statsTimezone || '+08:00',
-            updatedAt: new Date().toISOString(),
-            error: true,
-        });
-    }
-})
-
-// public activity stream (per-minute counters for the homepage activity
-// card), cached for 60s — same cadence and manual-mode rule as stats
-api.get('/open_api/activity', async (c) => {
-    const siteSettings = await getJsonSetting<SiteSettings>(c, SITE_SETTINGS_KEY) || {};
-    // manual mode: admin shows hand-typed numbers, no live counters
-    if (siteSettings.statsMode === 'manual') {
-        return c.json({
-            mode: 'manual',
-            minutes: [],
-            today: { created: 0, sent: 0 },
-            recent: [],
-            updatedAt: new Date().toISOString(),
-        });
-    }
-    try {
-        const cached = await readCachedPublicActivity(c);
-        if (cached) {
-            return c.json({ ...cached, cached: true });
-        }
-        return c.json(await buildRealPublicActivity(c));
-    } catch (e) {
-        console.error('public activity failed', e);
-        return c.json({
-            mode: 'real',
-            minutes: [],
-            today: { created: 0, sent: 0 },
-            recent: [],
             updatedAt: new Date().toISOString(),
             error: true,
         });

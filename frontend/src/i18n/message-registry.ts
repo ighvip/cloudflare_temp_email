@@ -1748,68 +1748,6 @@ export const MESSAGE_REGISTRY = {
       "zh": "刷新统计数据"
     }
   },
-  "views.index.ActivityCard": {
-    "title": {
-      "en": "Live Activity",
-      "zh": "实时活动"
-    },
-    "badge": {
-      "en": "public",
-      "zh": "公开数据"
-    },
-    "badgeManual": {
-      "en": "manual",
-      "zh": "手动维护"
-    },
-    "statHour": {
-      "en": "Received (last 60 min)",
-      "zh": "近60分钟收信"
-    },
-    "statCreated": {
-      "en": "Addresses created today",
-      "zh": "今日新建地址"
-    },
-    "statSent": {
-      "en": "Sent today",
-      "zh": "今日发送"
-    },
-    "stripLabel": {
-      "en": "Per-minute activity over the last 60 minutes",
-      "zh": "最近 60 分钟的每分钟活动"
-    },
-    "barTip": {
-      "en": "{time} · received {r} · created {c} · sent {s}",
-      "zh": "{time} · 收 {r} · 建 {c} · 发 {s}"
-    },
-    "updatedAt": {
-      "en": "Updated at {time} (auto refresh every minute)",
-      "zh": "更新于 {time}（每分钟自动刷新）"
-    },
-    "unavailable": {
-      "en": "Activity data is temporarily unavailable",
-      "zh": "活动数据暂时不可用"
-    },
-    "refresh": {
-      "en": "Refresh activity",
-      "zh": "刷新活动数据"
-    },
-    "eventReceived": {
-      "en": "Received",
-      "zh": "收信"
-    },
-    "eventCreated": {
-      "en": "Address created",
-      "zh": "建号"
-    },
-    "eventSent": {
-      "en": "Sent",
-      "zh": "发信"
-    },
-    "eventEmpty": {
-      "en": "No event",
-      "zh": "暂无事件"
-    }
-  },
   "views.index.AddressBar": {
     "addressCredential": {
       "en": "Mail Address Credential",

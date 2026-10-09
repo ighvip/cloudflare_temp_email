@@ -24,7 +24,6 @@ import SimpleIndex from './index/SimpleIndex.vue';
 import HeroFeatures from './index/HeroFeatures.vue';
 import StatsCard from './index/StatsCard.vue';
 import UptimeCard from './index/UptimeCard.vue';
-import ActivityCard from './index/ActivityCard.vue';
 
 const {
   loading, settings, openSettings, indexTab, globalTabplacement, useSimpleIndex,
@@ -193,7 +192,6 @@ onMounted(() => {
           <div class="hero-cards">
             <StatsCard />
             <UptimeCard />
-            <ActivityCard />
           </div>
         </section>
 
@@ -495,26 +493,18 @@ onMounted(() => {
     }
 }
 
-/* stats + uptime cards sit side by side, the live activity card spans
-   both columns below — two equal-height rows so all three match */
+/* stats + uptime cards sit side by side — two equal columns */
 .hero-cards {
     display: grid;
     grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
-    grid-template-rows: repeat(2, minmax(0, 1fr));
     gap: 16px;
     margin-top: 18px;
     align-items: stretch;
 }
 
-/* the activity card is its own component root — parent scope attr applies */
-.activity-card {
-    grid-column: 1 / -1;
-}
-
 @media (max-width: 992px) {
     .hero-cards {
         grid-template-columns: 1fr;
-        grid-template-rows: repeat(3, minmax(0, 1fr));
     }
 }
 

@@ -1,8 +1,8 @@
 import { Context } from 'hono'
 import { getJsonSetting } from '../utils'
 import { CONSTANTS } from '../constants'
-// 问题11: reuse the shared day-boundary parser so admin statistics, the
-// public stats and the activity card all agree on what "today" means
+// 问题11: reuse the shared day-boundary parser so admin statistics and the
+// public stats both agree on what "today" means
 import { parseTimezoneOffsetMinutes } from '../commom_api'
 
 // admin-editable site settings row (same key commom_api reads)
