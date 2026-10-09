@@ -49,17 +49,30 @@ test('generic authentication errors preserve their text messages and CORS header
     const response = await request.get(`${WORKER_URL}${path}`, { headers: { 'x-lang': 'en' } });
     expect(response.status()).toBe(401);
     expect(response.headers()['content-type']).toContain('text/plain');
-    expect(response.headers()['access-control-allow-origin']).toBe('*');
+    // P0-B1: no wildcard any more — without an Origin header no ACAO is emitted
+    expect(response.headers()['access-control-allow-origin']).toBeUndefined();
     expect(await response.text()).toBe(message);
   }
+  // a trusted (same-origin) Origin is echoed back instead of '*'
+  const origin = new URL(WORKER_URL).origin;
+  const echoed = await request.get(`${WORKER_URL}/api/settings`, {
+    headers: { 'x-lang': 'en', origin },
+  });
+  expect(echoed.headers()['access-control-allow-origin']).toBe(origin);
+  // an untrusted Origin is locked out entirely
+  const blocked = await request.get(`${WORKER_URL}/api/settings`, {
+    headers: { 'x-lang': 'en', origin: 'https://evil.example' },
+  });
+  expect(blocked.headers()['access-control-allow-origin']).toBeUndefined();
 });
 
-test('uncaught server errors return JSON with the original error detail', async ({ request }) => {
+test('uncaught server errors return JSON with a sanitized public message', async ({ request }) => {
   const response = await request.post(`${WORKER_URL}/open_api/admin_login`, {
-    headers: { 'content-type': 'application/json' },
+    headers: { 'content-type': 'application/json', 'x-lang': 'en' },
     data: Buffer.from('{invalid-json'),
   });
   expect(response.status()).toBe(500);
   expect(response.headers()['content-type']).toContain('application/json');
-  expect(await response.json()).toEqual({ code: 'INTERNAL_SERVER_ERROR', message: expect.stringContaining('SyntaxError') });
+  // P0-B1: internal details (the SyntaxError text) never reach the client
+  expect(await response.json()).toEqual({ code: 'INTERNAL_SERVER_ERROR', message: 'Operation failed' });
 });

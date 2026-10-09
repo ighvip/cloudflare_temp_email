@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useScopedI18n } from '../../i18n/app'
+
 import { useGlobalState } from '../../store'
 
 /**
@@ -9,10 +11,12 @@ import { useGlobalState } from '../../store'
  */
 const { openSettings } = useGlobalState()
 
+const { t } = useScopedI18n('views.admin.AboutManual')
+
 const sections = [
     {
         id: 's-overview',
-        title: '系统概览',
+        titleKey: 'secOverview',
         blocks: [
             {
                 heading: '这是什么',
@@ -41,7 +45,7 @@ const sections = [
     },
     {
         id: 's-deploy',
-        title: '部署与升级',
+        titleKey: 'secDeploy',
         blocks: [
             {
                 heading: '首次部署',
@@ -67,7 +71,7 @@ const sections = [
     },
     {
         id: 's-domain',
-        title: '域名与收信接入（Cloudflare Email Routing）',
+        titleKey: 'secDomain',
         blocks: [
             {
                 heading: '接入步骤',
@@ -91,7 +95,7 @@ const sections = [
     },
     {
         id: 's-settings',
-        title: '后台功能导航',
+        titleKey: 'secNavigation',
         blocks: [
             {
                 heading: '快速设置',
@@ -125,7 +129,7 @@ const sections = [
     },
     {
         id: 's-security',
-        title: '安全模型',
+        titleKey: 'secSecurity',
         blocks: [
             {
                 heading: '后台入口',
@@ -152,7 +156,7 @@ const sections = [
     },
     {
         id: 's-troubleshoot',
-        title: '排障速查',
+        titleKey: 'secTroubleshoot',
         blocks: [
             {
                 heading: '收不到信',
@@ -199,9 +203,9 @@ const version = computed(() => openSettings.value.version || '')
 <template>
     <div class="manual">
         <div class="page-head">
-            <h2>关于 · 系统说明书</h2>
+            <h2>{{ t('pageTitle') }}</h2>
             <p>
-                从部署、域名接入到安全模型的完整操作手册，按章节折叠，点击标题展开。
+                {{ t('pageDesc') }}
                 <n-tag v-if="version" size="small" :bordered="false" style="margin-left: 6px;">
                     {{ version }}
                 </n-tag>
@@ -211,7 +215,7 @@ const version = computed(() => openSettings.value.version || '')
         <div v-for="section in sections" :key="section.id" class="manual-section">
             <button type="button" class="manual-head" @click="toggle(section.id)">
                 <span class="manual-caret">{{ openIds.includes(section.id) ? '−' : '+' }}</span>
-                <span class="manual-title">{{ section.title }}</span>
+                <span class="manual-title">{{ t(section.titleKey) }}</span>
                 <span class="manual-count">{{ section.blocks.length }}</span>
             </button>
             <div v-if="openIds.includes(section.id)" class="manual-body">
@@ -226,7 +230,7 @@ const version = computed(() => openSettings.value.version || '')
         </div>
 
         <div class="manual-foot">
-            文案与实现不一致时，以后端代码与 wrangler.toml 注释为准；发现错漏请告知管理员补充。
+            {{ t('footNote') }}
         </div>
     </div>
 </template>

@@ -2148,8 +2148,8 @@ export const MESSAGE_REGISTRY = {
       "zh": "邮箱正则表达式"
     },
     "userEmailFormatTip": {
-      "en": "Use regex to transform email. Example: ^(.+)@old\\.com$ with $1@new.com",
-      "zh": "使用正则转换邮箱。示例: ^(.+)@old\\.com$ 配合 $1@new.com"
+      "en": "Use regex to transform email. Example: ^(.+){'@'}old\\.com$ with $1{'@'}new.com",
+      "zh": "使用正则转换邮箱。示例: ^(.+){'@'}old\\.com$ 配合 $1{'@'}new.com"
     },
     "userEmailReplace": {
       "en": "Replace Template",
@@ -2169,17 +2169,181 @@ export const MESSAGE_REGISTRY = {
       "en": "Address Count",
       "zh": "邮箱地址总数"
     },
+    "chartFoot": {
+      "en": "Day boundary {timezone} (site timezone) · peak {max}",
+      "zh": "日界线 {timezone}（站点时区）· 峰值 {max}"
+    },
+    "chartUnitCount": {
+      "en": "items · total",
+      "zh": "个 · 合计"
+    },
+    "chartUnitMails": {
+      "en": "mails · total",
+      "zh": "封 · 合计"
+    },
+    "chartUnitSingle": {
+      "en": "mails",
+      "zh": "封"
+    },
+    "dailyBadge": {
+      "en": "Last 14 days",
+      "zh": "近 14 天"
+    },
+    "databaseSizeLabel": {
+      "en": "Database Size",
+      "zh": "数据库大小"
+    },
+    "dbOnline": {
+      "en": "Online",
+      "zh": "在线"
+    },
+    "dbStatus": {
+      "en": "Database: {status}",
+      "zh": "数据库：{status}"
+    },
+    "domainChartBadge": {
+      "en": "TOP 10 · 30 days",
+      "zh": "TOP 10 · 30 天"
+    },
+    "domainChartTitle": {
+      "en": "Mail per Domain",
+      "zh": "每域名收信"
+    },
+    "emptyData": {
+      "en": "No data",
+      "zh": "暂无数据"
+    },
+    "latencyStatus": {
+      "en": "Latency: {ms}",
+      "zh": "响应延迟：{ms}"
+    },
+    "lowFrequencyMetrics": {
+      "en": "Low-frequency Metrics",
+      "zh": "低频指标"
+    },
     "mailCount": {
       "en": "Mail Count",
       "zh": "邮件总数"
+    },
+    "receive24hLabel": {
+      "en": "Received (24h)",
+      "zh": "24 小时收信"
+    },
+    "receive7dLabel": {
+      "en": "Received (7 days)",
+      "zh": "7 天收信"
+    },
+    "receiveTrendLabel": {
+      "en": "Last 14 days receive trend",
+      "zh": "最近 14 天收信趋势"
+    },
+    "receiveTrendNote": {
+      "en": "Last 14 days receive trend · day boundary {timezone}",
+      "zh": "最近 14 天收信趋势 · 日界线 {timezone}"
+    },
+    "refresh": {
+      "en": "Refresh",
+      "zh": "刷新"
+    },
+    "registerTrendLabel": {
+      "en": "Registration Trend",
+      "zh": "注册趋势"
+    },
+    "securityAudit": {
+      "en": "Security Audit",
+      "zh": "安全审计"
+    },
+    "securityFailedLabel": {
+      "en": "Failed attempts (24h)",
+      "zh": "24 小时内失败尝试"
+    },
+    "securityLockedLabel": {
+      "en": "Locked logins",
+      "zh": "登录锁定数"
+    },
+    "securityNote": {
+      "en": "Counted from login risk control and the admin session table; failed attempts are cleaned up after 24 hours.",
+      "zh": "来自登录风控计数与管理面板会话表，失败记录 24 小时后自动清理"
+    },
+    "securitySessionsLabel": {
+      "en": "Active admin sessions",
+      "zh": "在线管理会话"
     },
     "sendMailCount": {
       "en": "Send Mail Count",
       "zh": "发送邮件总数"
     },
+    "sendTrendLabel": {
+      "en": "Daily Send Trend",
+      "zh": "每日发送趋势"
+    },
+    "serverStatusTitle": {
+      "en": "Server Status",
+      "zh": "服务器状态"
+    },
+    "sourceChartBadge": {
+      "en": "Sender domains · 30 days",
+      "zh": "发件域名 · 30 天"
+    },
+    "sourceChartTitle": {
+      "en": "Source Distribution",
+      "zh": "来源分布"
+    },
+    "sparkBadge": {
+      "en": "Trend · 14 days",
+      "zh": "走势 · 14 天"
+    },
+    "sparkChartTitle": {
+      "en": "Unknown Recipient Mails",
+      "zh": "未知收件人邮件数"
+    },
+    "sparkFootNote": {
+      "en": "The total covers all time; the trend shows the daily increase of the last 14 days (same scope as the \"Unknown Mails\" list).",
+      "zh": "总数为全量；走势为近 14 天按日新增（与「未知邮件」列表同口径）"
+    },
+    "sparkLabel": {
+      "en": "Unknown recipient mail trend",
+      "zh": "未知收件人邮件走势"
+    },
+    "statusCheckedAt": {
+      "en": "Checked at {time} (auto refresh every 30 seconds)",
+      "zh": "检查于 {time}（每 30 秒自动刷新）"
+    },
+    "statusChecking": {
+      "en": "Checking…",
+      "zh": "检测中…"
+    },
+    "statusError": {
+      "en": "Error",
+      "zh": "异常"
+    },
+    "statusOk": {
+      "en": "Healthy",
+      "zh": "运行正常"
+    },
+    "todayCount": {
+      "en": "Today {count}",
+      "zh": "今日 {count}"
+    },
+    "topAddresses": {
+      "en": "Top 5 Addresses",
+      "zh": "热门地址 TOP 5"
+    },
+    "topAddressesTag": {
+      "en": "{address} · {count} mails",
+      "zh": "{address} · {count} 封"
+    },
+    "unreadMailLabel": {
+      "en": "Unread Mails",
+      "zh": "未读邮件"
+    },
     "userCount": {
       "en": "User Count",
       "zh": "用户总数"
+    },
+    "versionStatus": {
+      "en": "Version: {version}",
+      "zh": "版本：{version}"
     }
   },
   "views.admin.SenderAccess": {
@@ -2950,8 +3114,8 @@ export const MESSAGE_REGISTRY = {
       "zh": "转发地址不能为空"
     },
     "forward_placeholder": {
-      "en": "forward@example.com",
-      "zh": "forward@example.com"
+      "en": "forward{'@'}example.com",
+      "zh": "forward{'@'}example.com"
     },
     "forwarding_rule_warning": {
       "en": "Each rule will run independently. Forward address needs to be a verified address.",
@@ -3060,6 +3224,298 @@ export const MESSAGE_REGISTRY = {
       "zh": "查询"
     }
   },
+  "views.admin.DomainSettings": {
+    "action": {
+      "en": "Action",
+      "zh": "操作"
+    },
+    "addAnyway": {
+      "en": "Add anyway",
+      "zh": "仍要添加"
+    },
+    "addDomain": {
+      "en": "Add Domain",
+      "zh": "添加域名"
+    },
+    "addFailed": {
+      "en": "Failed to add",
+      "zh": "添加失败"
+    },
+    "checkingDns": {
+      "en": "Querying DNS (MX / TXT)…",
+      "zh": "正在查询 DNS（MX / TXT）…"
+    },
+    "confirmAdd": {
+      "en": "Confirm Add",
+      "zh": "确认添加"
+    },
+    "confirmAddPrefix": {
+      "en": "The domain",
+      "zh": "将把"
+    },
+    "confirmAddSuffix": {
+      "en": "will be added to the site domain list (receive is enabled by default, send follows the current environment variable state).",
+      "zh": "加入站点域名列表（收信默认开启，发信跟随当前环境变量状态）。"
+    },
+    "createdAt": {
+      "en": "Added At",
+      "zh": "添加时间"
+    },
+    "delete": {
+      "en": "Delete",
+      "zh": "删除"
+    },
+    "deleteConfirm": {
+      "en": "Are you sure to delete {name}? This domain will no longer be managed by the switches on this page.",
+      "zh": "确认删除 {name}？该域名将不再受本页开关管理。"
+    },
+    "deleteFailed": {
+      "en": "Failed to delete",
+      "zh": "删除失败"
+    },
+    "dnsCheckFailed": {
+      "en": "DNS check failed",
+      "zh": "DNS 检测失败"
+    },
+    "done": {
+      "en": "Done",
+      "zh": "完成"
+    },
+    "domain": {
+      "en": "Domain",
+      "zh": "域名"
+    },
+    "domainAdded": {
+      "en": "Domain added",
+      "zh": "域名已添加"
+    },
+    "domainDeleted": {
+      "en": "Domain deleted",
+      "zh": "域名已删除"
+    },
+    "domainInputPlaceholder": {
+      "en": "Enter a domain, e.g. example.com",
+      "zh": "输入域名，例如 example.com"
+    },
+    "domainList": {
+      "en": "Domain List",
+      "zh": "域名列表"
+    },
+    "domainNote": {
+      "en": "Please enter the full domain to connect (lowercase). It must already be hosted on Cloudflare, with Email Routing enabled in the CF console (subdomains do not inherit the parent domain's Email Routing and must be connected separately).",
+      "zh": "请输入要接入的完整域名（小写）。前提：该域名已托管在 Cloudflare，且已在 CF 控制台开启 Email Routing（子域名不会继承主域的 Email Routing，需单独接入）。"
+    },
+    "emptyDomains": {
+      "en": "No managed domains yet",
+      "zh": "暂无已纳管域名"
+    },
+    "envHint": {
+      "en": "wrangler.toml still has unmanaged domains: {domains}. They still run on environment variables; add them in the input above to manage them.",
+      "zh": "wrangler.toml 中还有未纳管的域名：{domains}，它们仍按环境变量运行，可在上方输入框添加纳管。"
+    },
+    "examplePlaceholder": {
+      "en": "e.g. example.com",
+      "zh": "例如 example.com"
+    },
+    "guideStep1Middle": {
+      "en": "→",
+      "zh": "→"
+    },
+    "guideStep1Prefix": {
+      "en": "Sign in to the Cloudflare console and open your domain →",
+      "zh": "登录 Cloudflare 控制台，进入目标域名 →"
+    },
+    "guideStep1Suffix": {
+      "en": ", connect the domain you want to use and enable Email Routing (the domain must already be hosted on Cloudflare).",
+      "zh": "，把要使用的域名接入并开启 Email Routing（域名需已托管在 Cloudflare）。"
+    },
+    "guideStep2": {
+      "en": "Once enabled, Cloudflare automatically writes MX, TXT and other DNS records; wait for them to appear and take effect.",
+      "zh": "开启后 Cloudflare 会自动写入 MX、TXT 等 DNS 记录，等待这些 DNS 记录出现并生效。"
+    },
+    "guideStep3Prefix": {
+      "en": "In the Email Routing routing rules, set the mail destination to \"Send to Worker\" and choose the Worker",
+      "zh": "在 Email Routing 的路由规则中，把邮件的目标设为「Send to Worker」，选择"
+    },
+    "guideStep3Suffix": {
+      "en": "associated with this project.",
+      "zh": "对应的 Worker。"
+    },
+    "guideStep4": {
+      "en": "Enable the Catch-all address (or add a routing rule) and point it to the same Worker, so mail to any recipient reaches this system.",
+      "zh": "开启 Catch-all 地址（或添加一条路由规则）并同样指向该 Worker，确保任意收件人的邮件都会进入本系统。"
+    },
+    "guideStep5": {
+      "en": "Go back to \"Domain List\" above, type the domain exactly as in Cloudflare (lowercase), then click \"Add Domain\".",
+      "zh": "回到本页上方的「域名列表」，在输入框录入与 Cloudflare 中完全一致的域名（小写），点击「添加域名」。"
+    },
+    "guideStep6": {
+      "en": "Turn on the \"Receive\" switch for the domain, and turn on the \"Send\" switch when you need to send mail from it (sending also requires one of RESEND_TOKEN, SMTP_CONFIG or SEND_MAIL in wrangler.toml).",
+      "zh": "打开该域名的「收信」开关；需要从该域名发信时再打开「发信」开关（发信还需在 wrangler.toml 配置 RESEND_TOKEN、SMTP_CONFIG 或 SEND_MAIL 中的任一通道）。"
+    },
+    "invalidDomainFormat": {
+      "en": "Invalid domain format",
+      "zh": "域名格式不正确"
+    },
+    "loadFailed": {
+      "en": "Failed to load",
+      "zh": "加载失败"
+    },
+    "mxRecordTitle": {
+      "en": "MX records ({count})",
+      "zh": "MX 记录（{count}）"
+    },
+    "nextStep": {
+      "en": "Next",
+      "zh": "下一步"
+    },
+    "noMxRecords": {
+      "en": "No MX record",
+      "zh": "无 MX 记录"
+    },
+    "pageDesc": {
+      "en": "Manage the domains this site uses to receive and send mail: each domain has its own \"Receive\" and \"Send\" switches, and the switches on this page override the wrangler.toml environment variables (DOMAINS / SEND_MAIL_DOMAINS).",
+      "zh": "管理站点的收信 / 发信域名：每个域名可单独开关「收信」与「发信」，本页的开关优先于 wrangler.toml 环境变量（DOMAINS / SEND_MAIL_DOMAINS）。"
+    },
+    "pageTitle": {
+      "en": "Site Domains",
+      "zh": "站点域名"
+    },
+    "pleaseInputDomain": {
+      "en": "Please input a domain",
+      "zh": "请输入域名"
+    },
+    "postAddStep1Prefix": {
+      "en": "Go back to the CF console → Email Routing → Routing Rules and set the mail destination to",
+      "zh": "回到 CF 控制台 → Email Routing → 路由规则，把邮件目标设为"
+    },
+    "postAddStep1Suffix": {
+      "en": ", then choose the Worker of this project.",
+      "zh": "，选择本项目对应的 Worker。"
+    },
+    "postAddStep2": {
+      "en": "Enable the Catch-all address (or add a routing rule) and point it to the same Worker, so mail to any recipient reaches this system.",
+      "zh": "开启 Catch-all 地址（或添加路由规则）并同样指向该 Worker，确保任意收件人的邮件都会进入本系统。"
+    },
+    "postAddStep3Prefix": {
+      "en": "Subdomains (such as random-prefix domains) do not inherit the parent domain rules: connect the subdomain separately in Email Routing, or configure a wildcard MX pointing to route1/2/3.mx.cloudflare.net in DNS (",
+      "zh": "子域名（如随机前缀域名）不会继承主域规则：需在 Email Routing 中为子域单独接入，或在 DNS 中为子域配置指向 route1/2/3.mx.cloudflare.net 的通配 MX（"
+    },
+    "postAddStep3Suffix": {
+      "en": ").",
+      "zh": "）。"
+    },
+    "postAddStep4": {
+      "en": "Go back to the domain list and turn on the \"Receive\" switch; turn on the \"Send\" switch when you need to send mail (sending also requires one of RESEND_TOKEN, SMTP_CONFIG or SEND_MAIL to be configured).",
+      "zh": "回到域名列表打开「收信」开关；需要发信时再打开「发信」开关（发信还需配置 RESEND_TOKEN、SMTP_CONFIG 或 SEND_MAIL 任一通道）。"
+    },
+    "prevStep": {
+      "en": "Previous",
+      "zh": "上一步"
+    },
+    "receive": {
+      "en": "Receive",
+      "zh": "收信"
+    },
+    "recheck": {
+      "en": "Re-check",
+      "zh": "重新检测"
+    },
+    "routingGuideTitle": {
+      "en": "Cloudflare Email Routing Setup Steps",
+      "zh": "Cloudflare Email Routing 配置步骤"
+    },
+    "saveFailed": {
+      "en": "Failed to save",
+      "zh": "保存失败"
+    },
+    "send": {
+      "en": "Send",
+      "zh": "发信"
+    },
+    "setupWizard": {
+      "en": "Setup Wizard",
+      "zh": "接入向导"
+    },
+    "spfFound": {
+      "en": "v=spf1 record found",
+      "zh": "已找到 v=spf1 记录"
+    },
+    "spfNotFound": {
+      "en": "v=spf1 record not found (recommended before sending mail)",
+      "zh": "未找到 v=spf1 记录（发信前建议补齐）"
+    },
+    "spfRecordTitle": {
+      "en": "SPF (TXT)",
+      "zh": "SPF（TXT）"
+    },
+    "statusMissing": {
+      "en": "No Cloudflare Email Routing MX record was found. First enable Email Routing for the target domain in the CF console (it writes route1/2/3.mx.cloudflare.net automatically), wait for it to take effect, then re-check; you may also add the domain now and finish the DNS setup later.",
+      "zh": "未检测到 Cloudflare Email Routing 的 MX 记录。请先在 CF 控制台为目标域名开启 Email Routing（会自动写入 route1/2/3.mx.cloudflare.net），生效后再重新检测；也可以先添加域名，稍后补齐 DNS。"
+    },
+    "statusPartial": {
+      "en": "Partially ready: some route*.mx.cloudflare.net records were found; DNS may still be taking effect. You can hit \"Re-check\" later.",
+      "zh": "部分就绪：已找到部分 route*.mx.cloudflare.net 记录，DNS 可能仍在生效中，稍后可点「重新检测」。"
+    },
+    "statusReady": {
+      "en": "Check passed: the route1/2/3 MX records of Cloudflare Email Routing were found and the receiving path is ready.",
+      "zh": "检测通过：已找到 Cloudflare Email Routing 的 route1/2/3 MX 记录，收信链路就绪。"
+    },
+    "stepDnsCheck": {
+      "en": "DNS Auto Check",
+      "zh": "DNS 自动检测"
+    },
+    "stepDomain": {
+      "en": "Enter Domain",
+      "zh": "输入域名"
+    },
+    "wizardAdded": {
+      "en": "Added {name}.",
+      "zh": "已添加 {name}。"
+    },
+    "wizardTitle": {
+      "en": "Domain Setup Wizard",
+      "zh": "域名接入向导"
+    }
+  },
+  "views.admin.AboutManual": {
+    "footNote": {
+      "en": "If the docs and the implementation disagree, the backend code and the wrangler.toml comments take precedence; please tell the administrator about any mistakes or missing bits.",
+      "zh": "文案与实现不一致时，以后端代码与 wrangler.toml 注释为准；发现错漏请告知管理员补充。"
+    },
+    "pageDesc": {
+      "en": "The complete operation manual, from deployment and domain setup to the security model. Sections are collapsed; click a title to expand.",
+      "zh": "从部署、域名接入到安全模型的完整操作手册，按章节折叠，点击标题展开。"
+    },
+    "pageTitle": {
+      "en": "About · System Manual",
+      "zh": "关于 · 系统说明书"
+    },
+    "secDeploy": {
+      "en": "Deployment & Upgrade",
+      "zh": "部署与升级"
+    },
+    "secDomain": {
+      "en": "Domains & Inbound Setup (Cloudflare Email Routing)",
+      "zh": "域名与收信接入（Cloudflare Email Routing）"
+    },
+    "secNavigation": {
+      "en": "Admin Navigation",
+      "zh": "后台功能导航"
+    },
+    "secOverview": {
+      "en": "System Overview",
+      "zh": "系统概览"
+    },
+    "secSecurity": {
+      "en": "Security Model",
+      "zh": "安全模型"
+    },
+    "secTroubleshoot": {
+      "en": "Troubleshooting",
+      "zh": "排障速查"
+    }
+  },
   "views.admin.Maintenance": {
     "addCustomSql": {
       "en": "Add Custom SQL",
@@ -3085,6 +3541,14 @@ export const MESSAGE_REGISTRY = {
       "en": "Cleanup success",
       "zh": "清理成功"
     },
+    "cronNotePrefix": {
+      "en": "Auto cleanup only runs after a Cron Trigger is configured in the Cloudflare dashboard. The current schedule is",
+      "zh": "自动清理需要在 Cloudflare 后台配置 Cron Trigger 才会自动执行，当前计划为"
+    },
+    "cronNoteSuffix": {
+      "en": " (daily at 00:00 UTC). Without a Cron Trigger, use \"Cleanup now\" on any row below to run it manually.",
+      "zh": "（每日 00:00 UTC）；未配置 Cron Trigger 时，可使用下方各行的「立即清理」手动执行。"
+    },
     "customSqlCleanup": {
       "en": "Custom SQL Cleanup",
       "zh": "自定义 SQL 清理"
@@ -3105,6 +3569,10 @@ export const MESSAGE_REGISTRY = {
       "en": "Cleanup the inactive address before n days",
       "zh": "清理 n 天前的未活跃地址"
     },
+    "invalid": {
+      "en": "Invalid",
+      "zh": "无效"
+    },
     "mailBoxLabel": {
       "en": "Cleanup the inbox before n days",
       "zh": "清理 n 天前的收件箱"
@@ -3112,6 +3580,14 @@ export const MESSAGE_REGISTRY = {
     "mailUnknowLabel": {
       "en": "Cleanup the unknow mail before n days",
       "zh": "清理 n 天前的无收件人邮件"
+    },
+    "pageDesc": {
+      "en": "Manually clean up historical mails, addresses and sent records, or schedule daily auto cleanup. Tasks that cannot take effect are marked with a grey \"Invalid\" label.",
+      "zh": "手动清理历史邮件、地址与发件记录，或配置每日自动清理任务；不会自动生效的清理任务会以灰色「无效」标出。"
+    },
+    "pageTitle": {
+      "en": "Data Cleanup",
+      "zh": "数据清理"
     },
     "save": {
       "en": "Save",

@@ -114,38 +114,15 @@ for i in $(seq 1 30); do
   sleep 1
 done
 
-echo "==> Initializing database"
-curl -sf -X POST "$WORKER_URL/admin/db_initialize" > /dev/null
-curl -sf -X POST "$WORKER_URL/admin/db_migration" > /dev/null
-echo "    Database initialized"
-
-if [ -n "${WORKER_URL_SUBDOMAIN:-}" ]; then
-  echo "==> Initializing subdomain worker database"
-  curl -sf -X POST "$WORKER_URL_SUBDOMAIN/admin/db_initialize" > /dev/null
-  curl -sf -X POST "$WORKER_URL_SUBDOMAIN/admin/db_migration" > /dev/null
-  echo "    Subdomain worker database initialized"
-fi
-
-if [ -n "${WORKER_URL_ENV_OFF:-}" ]; then
-  echo "==> Initializing env-off worker database"
-  curl -sf -X POST "$WORKER_URL_ENV_OFF/admin/db_initialize" > /dev/null
-  curl -sf -X POST "$WORKER_URL_ENV_OFF/admin/db_migration" > /dev/null
-  echo "    Env-off database initialized"
-fi
-
-if [ -n "${WORKER_GZIP_URL:-}" ]; then
-  echo "==> Initializing gzip worker database"
-  curl -sf -X POST "$WORKER_GZIP_URL/admin/db_initialize" > /dev/null
-  curl -sf -X POST "$WORKER_GZIP_URL/admin/db_migration" > /dev/null
-  echo "    Gzip worker database initialized"
-fi
-
-if [ -n "${WORKER_URL_SITE_PASSWORD:-}" ]; then
-  echo "==> Initializing site-password worker database"
-  curl --connect-timeout 5 --max-time 10 -sf -H "x-custom-auth: e2e-site-pass" -H "x-admin-auth: e2e-admin-pass" -X POST "$WORKER_URL_SITE_PASSWORD/admin/db_initialize" > /dev/null
-  curl --connect-timeout 5 --max-time 10 -sf -H "x-custom-auth: e2e-site-pass" -H "x-admin-auth: e2e-admin-pass" -X POST "$WORKER_URL_SITE_PASSWORD/admin/db_migration" > /dev/null
-  echo "    Site-password worker database initialized"
-fi
+echo "==> Provisioning admin gate + database"
+# P0-B4: /admin/* is gated (cookie + x-gate-tab), so the old bare
+# `curl /admin/db_initialize` calls would 404. gate-setup.mjs bootstraps the
+# tables via /__test, registers one shared gate session in every worker and
+# verifies it through the real /admin/db_migration route; it prints the
+# session for the runner to export (storageState + x-gate-tab).
+export GATE_STATE_FILE="$(cd "$(dirname "$0")/.." && pwd)/.gate-state.json"
+export GATE_SESSION=$(node "$(dirname "$0")/gate-setup.mjs")
+echo "    Gate session provisioned"
 
 echo "==> Running Playwright tests"
 npm run test:unit

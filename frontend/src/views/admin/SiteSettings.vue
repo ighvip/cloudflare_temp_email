@@ -61,7 +61,8 @@ const editingContent = ref('')
 const load = async () => {
     loading.value = true
     try {
-        const res = await api.fetch(`/admin/config/${STORAGE_KEY}`)
+        // local n-spin is the feedback — skip the app-wide overlay
+        const res = await api.fetch(`/admin/config/${STORAGE_KEY}`, { showLoading: false })
         if (res?.value) {
             const parsed = JSON.parse(res.value)
             Object.assign(form.value, {
@@ -88,7 +89,7 @@ const load = async () => {
         console.warn('load site settings failed', error)
     }
     try {
-        const res = await api.fetch(`/admin/config/${ANNOUNCEMENTS_KEY}`)
+        const res = await api.fetch(`/admin/config/${ANNOUNCEMENTS_KEY}`, { showLoading: false })
         if (res?.value) {
             const parsed = JSON.parse(res.value)
             if (Array.isArray(parsed)) announcements.value = parsed
@@ -105,6 +106,8 @@ const saveSettings = async () => {
     try {
         await api.fetch('/admin/config', {
             method: 'POST',
+            // button :loading="saving" is the feedback — no app-wide overlay
+            showLoading: false,
             body: {
                 key: STORAGE_KEY,
                 value: JSON.stringify({

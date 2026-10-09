@@ -34,9 +34,38 @@ const interceptResponse = async (path, response) => {
     return response;
 };
 
+// Global n-spin overlay lifecycle.
+//
+// Reference-counted with a short hold-off window so that:
+//  - overlapping requests stay covered until the LAST one finishes
+//    (previously the first response hid the overlay early), and
+//  - back-to-back chained requests (save → refresh settings) render as ONE
+//    continuous overlay instead of flashing twice ("two save indicators").
+let loadingPending = 0;
+let loadingHideTimer = null;
+const LOADING_MERGE_MS = 200;
+
+const beginLoading = () => {
+    loadingPending += 1;
+    if (loadingHideTimer !== null) {
+        clearTimeout(loadingHideTimer);
+        loadingHideTimer = null;
+    }
+    loading.value = true;
+};
+
+const endLoading = () => {
+    loadingPending = Math.max(0, loadingPending - 1);
+    if (loadingPending > 0 || loadingHideTimer !== null) return;
+    loadingHideTimer = setTimeout(() => {
+        loadingHideTimer = null;
+        if (loadingPending === 0) loading.value = false;
+    }, LOADING_MERGE_MS);
+};
+
 const apiFetch = async (path, options = {}) => {
     const showLoading = options.showLoading !== false;
-    if (showLoading) loading.value = true;
+    if (showLoading) beginLoading();
     try {
         // Get browser fingerprint for request tracking
         const fingerprint = await getFingerprint();
@@ -100,7 +129,7 @@ const apiFetch = async (path, options = {}) => {
         }
         throw error;
     } finally {
-        if (showLoading) loading.value = false;
+        if (showLoading) endLoading();
     }
 }
 

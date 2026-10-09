@@ -109,18 +109,13 @@ onMounted(async () => {
 <template>
     <div class="maintenance-page">
         <div class="page-head">
-            <h2>数据清理</h2>
-            <p>
-                手动清理历史邮件、地址与发件记录，或配置每日自动清理任务；
-                不会自动生效的清理任务会以灰色「无效」标出。
-            </p>
+            <h2>{{ t('pageTitle') }}</h2>
+            <p>{{ t('pageDesc') }}</p>
         </div>
 
-        <n-card :bordered="false" embedded title="自动清理" style="margin-bottom: 12px;">
+        <n-card :bordered="false" embedded :title="t('autoCleanup')" style="margin-bottom: 12px;">
             <div class="cron-note">
-                自动清理需要在 Cloudflare 后台配置 Cron Trigger 才会自动执行，当前计划为
-                <code>0 0 * * *</code>（每日 00:00 UTC）；未配置 Cron Trigger 时，
-                可使用下方各行的「立即清理」手动执行。
+                {{ t('cronNotePrefix') }} <code>0 0 * * *</code>{{ t('cronNoteSuffix') }}
             </div>
             <n-flex justify="end" style="margin-top: 12px;">
                 <n-button @click="save" type="primary" :loading="loading">
@@ -145,7 +140,7 @@ onMounted(async () => {
                                 </n-button>
                             </n-form-item-row>
                             <span v-if="basicInvalid('enableMailsAutoCleanup', 'cleanMailsDays')"
-                                class="invalid-pill">无效</span>
+                                class="invalid-pill">{{ t('invalid') }}</span>
                         </div>
                         <div class="task-row"
                             :class="{ 'is-invalid': basicInvalid('enableUnknowMailsAutoCleanup', 'cleanUnknowMailsDays') }">
@@ -163,7 +158,7 @@ onMounted(async () => {
                                 </n-button>
                             </n-form-item-row>
                             <span v-if="basicInvalid('enableUnknowMailsAutoCleanup', 'cleanUnknowMailsDays')"
-                                class="invalid-pill">无效</span>
+                                class="invalid-pill">{{ t('invalid') }}</span>
                         </div>
                         <div class="task-row"
                             :class="{ 'is-invalid': basicInvalid('enableSendBoxAutoCleanup', 'cleanSendBoxDays') }">
@@ -180,7 +175,7 @@ onMounted(async () => {
                                 </n-button>
                             </n-form-item-row>
                             <span v-if="basicInvalid('enableSendBoxAutoCleanup', 'cleanSendBoxDays')"
-                                class="invalid-pill">无效</span>
+                                class="invalid-pill">{{ t('invalid') }}</span>
                         </div>
                         <div class="task-row"
                             :class="{ 'is-invalid': basicInvalid('enableAddressAutoCleanup', 'cleanAddressDays') }">
@@ -197,7 +192,7 @@ onMounted(async () => {
                                 </n-button>
                             </n-form-item-row>
                             <span v-if="basicInvalid('enableAddressAutoCleanup', 'cleanAddressDays')"
-                                class="invalid-pill">无效</span>
+                                class="invalid-pill">{{ t('invalid') }}</span>
                         </div>
                         <div class="task-row"
                             :class="{ 'is-invalid': basicInvalid('enableInactiveAddressAutoCleanup', 'cleanInactiveAddressDays') }">
@@ -215,7 +210,7 @@ onMounted(async () => {
                                 </n-button>
                             </n-form-item-row>
                             <span v-if="basicInvalid('enableInactiveAddressAutoCleanup', 'cleanInactiveAddressDays')"
-                                class="invalid-pill">无效</span>
+                                class="invalid-pill">{{ t('invalid') }}</span>
                         </div>
                         <div class="task-row"
                             :class="{ 'is-invalid': basicInvalid('enableUnboundAddressAutoCleanup', 'cleanUnboundAddressDays') }">
@@ -233,7 +228,7 @@ onMounted(async () => {
                                 </n-button>
                             </n-form-item-row>
                             <span v-if="basicInvalid('enableUnboundAddressAutoCleanup', 'cleanUnboundAddressDays')"
-                                class="invalid-pill">无效</span>
+                                class="invalid-pill">{{ t('invalid') }}</span>
                         </div>
                         <div class="task-row"
                             :class="{ 'is-invalid': basicInvalid('enableEmptyAddressAutoCleanup', 'cleanEmptyAddressDays') }">
@@ -251,7 +246,7 @@ onMounted(async () => {
                                 </n-button>
                             </n-form-item-row>
                             <span v-if="basicInvalid('enableEmptyAddressAutoCleanup', 'cleanEmptyAddressDays')"
-                                class="invalid-pill">无效</span>
+                                class="invalid-pill">{{ t('invalid') }}</span>
                         </div>
                     </n-form>
                 </n-tab-pane>
@@ -269,7 +264,7 @@ onMounted(async () => {
                                     </n-checkbox>
                                     <n-input v-model:value="item.name" :placeholder="t('sqlNamePlaceholder')"
                                         style="width: 200px;" />
-                                    <span v-if="isInvalidTask(item)" class="invalid-pill">无效</span>
+                                    <span v-if="isInvalidTask(item)" class="invalid-pill">{{ t('invalid') }}</span>
                                     <n-button @click="removeCustomSql(index)" type="error" quaternary>
                                         <template #icon>
                                             <n-icon :component="DeleteFilled" />

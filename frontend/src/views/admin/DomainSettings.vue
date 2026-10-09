@@ -1,9 +1,11 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useMessage } from 'naive-ui'
+import { useScopedI18n } from '../../i18n/app'
 import { api } from '../../api'
 
 const message = useMessage()
+const { t } = useScopedI18n('views.admin.DomainSettings')
 const loading = ref(false)
 const saving = ref(false)
 const domains = ref([])
@@ -24,9 +26,10 @@ const applyPayload = (res) => {
 const load = async () => {
     loading.value = true
     try {
-        applyPayload(await api.fetch('/admin/domains'))
+        // local n-spin is the feedback — skip the app-wide overlay
+        applyPayload(await api.fetch('/admin/domains', { showLoading: false }))
     } catch (error) {
-        message.error(error.message || '加载失败')
+        message.error(error.message || t('loadFailed'))
     } finally {
         loading.value = false
     }
@@ -35,7 +38,7 @@ const load = async () => {
 const addDomain = async () => {
     const name = newDomain.value.trim().toLowerCase()
     if (!name) {
-        message.warning('请输入域名')
+        message.warning(t('pleaseInputDomain'))
         return
     }
     saving.value = true
@@ -43,12 +46,14 @@ const addDomain = async () => {
         const res = await api.fetch('/admin/domains', {
             method: 'POST',
             body: { name },
+            // button :loading="saving" is the feedback — no app-wide overlay
+            showLoading: false,
         })
         applyPayload(res)
         newDomain.value = ''
-        message.success('域名已添加')
+        message.success(t('domainAdded'))
     } catch (error) {
-        message.error(error.message || '添加失败')
+        message.error(error.message || t('addFailed'))
     } finally {
         saving.value = false
     }
@@ -62,7 +67,7 @@ const patchDomain = async (row, patch) => {
         })
         applyPayload(res)
     } catch (error) {
-        message.error(error.message || '保存失败')
+        message.error(error.message || t('saveFailed'))
         // 回滚显示，让开关回到服务端的真实状态
         await load()
     }
@@ -75,9 +80,9 @@ const removeDomain = async (row) => {
     try {
         const res = await api.fetch(`/admin/domains/${row.name}`, { method: 'DELETE' })
         applyPayload(res)
-        message.success('域名已删除')
+        message.success(t('domainDeleted'))
     } catch (error) {
-        message.error(error.message || '删除失败')
+        message.error(error.message || t('deleteFailed'))
     }
 }
 
@@ -113,10 +118,11 @@ const runDnsCheck = async (name) => {
     wizError.value = ''
     try {
         const query = new URLSearchParams({ name })
-        wizResult.value = await api.fetch(`/admin/domains/dns_check?${query.toString()}`)
+        wizResult.value = await api.fetch(`/admin/domains/dns_check?${query.toString()}`,
+            { showLoading: false })
     } catch (error) {
         wizResult.value = null
-        wizError.value = error.message || 'DNS 检测失败'
+        wizError.value = error.message || t('dnsCheckFailed')
     } finally {
         wizChecking.value = false
     }
@@ -125,7 +131,7 @@ const runDnsCheck = async (name) => {
 const wizNextFromDomain = async () => {
     const name = wizDomain.value.trim().toLowerCase()
     if (!DOMAIN_RE.test(name)) {
-        message.warning('域名格式不正确')
+        message.warning(t('invalidDomainFormat'))
         return
     }
     wizStep.value = 2
@@ -139,12 +145,14 @@ const wizConfirmAdd = async () => {
         const res = await api.fetch('/admin/domains', {
             method: 'POST',
             body: { name },
+            // button :loading="wizAdding" is the feedback — no app-wide overlay
+            showLoading: false,
         })
         applyPayload(res)
         wizAdded.value = true
         wizStep.value = 3
     } catch (error) {
-        message.error(error.message || '添加失败')
+        message.error(error.message || t('addFailed'))
     } finally {
         wizAdding.value = false
     }
@@ -165,33 +173,30 @@ onMounted(load)
 <template>
     <div class="domain-settings">
         <div class="page-head">
-            <h2>站点域名</h2>
-            <p>
-                管理站点的收信 / 发信域名：每个域名可单独开关「收信」与「发信」，
-                本页的开关优先于 wrangler.toml 环境变量（DOMAINS / SEND_MAIL_DOMAINS）。
-            </p>
+            <h2>{{ t('pageTitle') }}</h2>
+            <p>{{ t('pageDesc') }}</p>
         </div>
 
-        <n-card :bordered="false" embedded title="域名列表" style="margin-bottom: 12px;">
+        <n-card :bordered="false" embedded :title="t('domainList')" style="margin-bottom: 12px;">
             <n-spin :show="loading">
                 <div class="add-row">
-                    <n-input v-model:value="newDomain" placeholder="输入域名，例如 example.com"
+                    <n-input v-model:value="newDomain" :placeholder="t('domainInputPlaceholder')"
                         style="max-width: 320px;" @keyup.enter="addDomain" />
-                    <n-button type="primary" :loading="saving" @click="addDomain">添加域名</n-button>
-                    <n-button secondary @click="openWizard">接入向导</n-button>
+                    <n-button type="primary" :loading="saving" @click="addDomain">{{ t('addDomain') }}</n-button>
+                    <n-button secondary @click="openWizard">{{ t('setupWizard') }}</n-button>
                 </div>
 
-                <n-empty v-if="!domains.length" description="暂无已纳管域名" style="margin-top: 16px;" />
+                <n-empty v-if="!domains.length" :description="t('emptyDomains')" style="margin-top: 16px;" />
 
                 <div v-else class="table-wrap">
                     <n-table :bordered="false" :single-line="false" style="margin-top: 12px;">
                         <thead>
                             <tr>
-                                <th>域名</th>
-                                <th class="col-switch">收信</th>
-                                <th class="col-switch">发信</th>
-                                <th class="col-time">添加时间</th>
-                                <th class="col-action">操作</th>
+                                <th>{{ t('domain') }}</th>
+                                <th class="col-switch">{{ t('receive') }}</th>
+                                <th class="col-switch">{{ t('send') }}</th>
+                                <th class="col-time">{{ t('createdAt') }}</th>
+                                <th class="col-action">{{ t('action') }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -214,9 +219,9 @@ onMounted(load)
                                 <td>
                                     <n-popconfirm @positive-click="removeDomain(row)">
                                         <template #trigger>
-                                            <n-button size="tiny" type="error" secondary>删除</n-button>
+                                            <n-button size="tiny" type="error" secondary>{{ t('delete') }}</n-button>
                                         </template>
-                                        确认删除 {{ row.name }}？该域名将不再受本页开关管理。
+                                        {{ t('deleteConfirm', { name: row.name }) }}
                                     </n-popconfirm>
                                 </td>
                             </tr>
@@ -225,62 +230,54 @@ onMounted(load)
                 </div>
 
                 <p v-if="envOnlyDomains.length" class="env-hint">
-                    wrangler.toml 中还有未纳管的域名：{{ envOnlyDomains.join('、') }}，
-                    它们仍按环境变量运行，可在上方输入框添加纳管。
+                    {{ t('envHint', { domains: envOnlyDomains.join('、') }) }}
                 </p>
             </n-spin>
         </n-card>
 
-        <n-card :bordered="false" embedded title="Cloudflare Email Routing 配置步骤">
+        <n-card :bordered="false" embedded :title="t('routingGuideTitle')">
             <ol class="guide-list">
                 <li>
-                    登录 Cloudflare 控制台，进入目标域名 → <strong>Email</strong> →
-                    <strong>Email Routing</strong>，把要使用的域名接入并开启 Email Routing
-                    （域名需已托管在 Cloudflare）。
+                    {{ t('guideStep1Prefix') }} <strong>Email</strong> {{ t('guideStep1Middle') }} <strong>Email Routing</strong>{{ t('guideStep1Suffix') }}
                 </li>
                 <li>
-                    开启后 Cloudflare 会自动写入 MX、TXT 等 DNS 记录，等待这些 DNS 记录出现并生效。
+                    {{ t('guideStep2') }}
                 </li>
                 <li>
-                    在 Email Routing 的路由规则中，把邮件的目标设为「Send to Worker」，
-                    选择 <code>temp-mail.your-worker.workers.dev</code> 对应的 Worker。
+                    {{ t('guideStep3Prefix') }} <code>temp-mail.your-worker.workers.dev</code> {{ t('guideStep3Suffix') }}
                 </li>
                 <li>
-                    开启 Catch-all 地址（或添加一条路由规则）并同样指向该 Worker，
-                    确保任意收件人的邮件都会进入本系统。
+                    {{ t('guideStep4') }}
                 </li>
                 <li>
-                    回到本页上方的「域名列表」，在输入框录入与 Cloudflare 中完全一致的域名（小写），
-                    点击「添加域名」。
+                    {{ t('guideStep5') }}
                 </li>
                 <li>
-                    打开该域名的「收信」开关；需要从该域名发信时再打开「发信」开关
-                    （发信还需在 wrangler.toml 配置 RESEND_TOKEN、SMTP_CONFIG 或 SEND_MAIL 中的任一通道）。
+                    {{ t('guideStep6') }}
                 </li>
             </ol>
         </n-card>
 
         <!-- 问题6 批次2: 接入向导 — 输入域名 → DNS 自动检测 → 确认添加 -->
-        <n-modal v-model:show="showWizard" preset="card" title="域名接入向导"
+        <n-modal v-model:show="showWizard" preset="card" :title="t('wizardTitle')"
             style="max-width: 640px;" :mask-closable="!wizAdding" @after-leave="wizAdded && load()">
             <n-steps :current="wizStep" size="small" style="margin-bottom: 16px;">
-                <n-step title="输入域名" />
-                <n-step title="DNS 自动检测" />
-                <n-step title="完成" />
+                <n-step :title="t('stepDomain')" />
+                <n-step :title="t('stepDnsCheck')" />
+                <n-step :title="t('done')" />
             </n-steps>
 
             <!-- 步骤 1: 输入域名 -->
             <div v-if="wizStep === 1">
-                <n-form-item label="域名" :show-feedback="false" style="margin-bottom: 8px;">
-                    <n-input v-model:value="wizDomain" placeholder="例如 example.com"
+                <n-form-item :label="t('domain')" :show-feedback="false" style="margin-bottom: 8px;">
+                    <n-input v-model:value="wizDomain" :placeholder="t('examplePlaceholder')"
                         @keyup.enter="wizNextFromDomain" />
                 </n-form-item>
                 <p class="wiz-note">
-                    请输入要接入的完整域名（小写）。前提：该域名已托管在 Cloudflare，
-                    且已在 CF 控制台开启 Email Routing（子域名不会继承主域的 Email Routing，需单独接入）。
+                    {{ t('domainNote') }}
                 </p>
                 <div class="wiz-actions">
-                    <n-button size="small" type="primary" @click="wizNextFromDomain">下一步</n-button>
+                    <n-button size="small" type="primary" @click="wizNextFromDomain">{{ t('nextStep') }}</n-button>
                 </div>
             </div>
 
@@ -289,11 +286,11 @@ onMounted(load)
                 <div class="wiz-check-head">
                     <span class="wiz-domain">{{ wizDomain }}</span>
                     <n-button size="small" secondary :loading="wizChecking" @click="runDnsCheck(wizDomain)">
-                        重新检测
+                        {{ t('recheck') }}
                     </n-button>
                 </div>
 
-                <div v-if="wizChecking && !wizResult" class="wiz-muted">正在查询 DNS（MX / TXT）…</div>
+                <div v-if="wizChecking && !wizResult" class="wiz-muted">{{ t('checkingDns') }}</div>
 
                 <div v-else-if="wizError" class="wiz-muted">
                     {{ wizError }}
@@ -302,21 +299,19 @@ onMounted(load)
                 <template v-else-if="wizResult">
                     <div class="wiz-status" :class="`wiz-status--${wizStatus}`">
                         <template v-if="wizStatus === 'ready'">
-                            检测通过：已找到 Cloudflare Email Routing 的 route1/2/3 MX 记录，收信链路就绪。
+                            {{ t('statusReady') }}
                         </template>
                         <template v-else-if="wizStatus === 'partial'">
-                            部分就绪：已找到部分 route*.mx.cloudflare.net 记录，DNS 可能仍在生效中，稍后可点「重新检测」。
+                            {{ t('statusPartial') }}
                         </template>
                         <template v-else>
-                            未检测到 Cloudflare Email Routing 的 MX 记录。请先在 CF 控制台为目标域名开启
-                            Email Routing（会自动写入 route1/2/3.mx.cloudflare.net），生效后再重新检测；
-                            也可以先添加域名，稍后补齐 DNS。
+                            {{ t('statusMissing') }}
                         </template>
                     </div>
 
                     <div class="wiz-record-block">
-                        <div class="wiz-record-title">MX 记录（{{ wizResult.mx.length }}）</div>
-                        <div v-if="!wizResult.mx.length" class="wiz-muted">无 MX 记录</div>
+                        <div class="wiz-record-title">{{ t('mxRecordTitle', { count: wizResult.mx.length }) }}</div>
+                        <div v-if="!wizResult.mx.length" class="wiz-muted">{{ t('noMxRecords') }}</div>
                         <div v-for="(host, index) in wizResult.mx" :key="`mx-${index}`" class="wiz-record"
                             :class="{ 'wiz-record--ok': wizResult.routeMx.includes(host) }">
                             <span class="wiz-record-mark">{{ wizResult.routeMx.includes(host) ? '✓' : '·' }}</span>
@@ -325,20 +320,20 @@ onMounted(load)
                     </div>
 
                     <div class="wiz-record-block">
-                        <div class="wiz-record-title">SPF（TXT）</div>
+                        <div class="wiz-record-title">{{ t('spfRecordTitle') }}</div>
                         <div class="wiz-record" :class="{ 'wiz-record--ok': wizResult.spf }">
                             <span class="wiz-record-mark">{{ wizResult.spf ? '✓' : '·' }}</span>
                             <span class="wiz-record-data">
-                                {{ wizResult.spf ? '已找到 v=spf1 记录' : '未找到 v=spf1 记录（发信前建议补齐）' }}
+                                {{ wizResult.spf ? t('spfFound') : t('spfNotFound') }}
                             </span>
                         </div>
                     </div>
                 </template>
 
                 <div class="wiz-actions">
-                    <n-button size="small" secondary @click="wizStep = 1">上一步</n-button>
+                    <n-button size="small" secondary @click="wizStep = 1">{{ t('prevStep') }}</n-button>
                     <n-button size="small" type="primary" :loading="wizChecking" @click="wizStep = 3">
-                        {{ wizStatus === 'ready' ? '下一步' : '仍要添加' }}
+                        {{ wizStatus === 'ready' ? t('nextStep') : t('addAnyway') }}
                     </n-button>
                 </div>
             </div>
@@ -347,38 +342,34 @@ onMounted(load)
             <div v-else>
                 <template v-if="!wizAdded">
                     <p class="wiz-note" style="margin-bottom: 12px;">
-                        将把 <strong>{{ wizDomain }}</strong> 加入站点域名列表（收信默认开启，发信跟随当前环境变量状态）。
+                        {{ t('confirmAddPrefix') }} <strong>{{ wizDomain }}</strong> {{ t('confirmAddSuffix') }}
                     </p>
                     <div class="wiz-actions">
-                        <n-button size="small" secondary @click="wizStep = 2">上一步</n-button>
+                        <n-button size="small" secondary @click="wizStep = 2">{{ t('prevStep') }}</n-button>
                         <n-button size="small" type="primary" :loading="wizAdding" @click="wizConfirmAdd">
-                            确认添加
+                            {{ t('confirmAdd') }}
                         </n-button>
                     </div>
                 </template>
 
                 <template v-else>
-                    <div class="wiz-status wiz-status--ready">已添加 {{ wizDomain }}。</div>
+                    <div class="wiz-status wiz-status--ready">{{ t('wizardAdded', { name: wizDomain }) }}</div>
                     <ol class="guide-list" style="margin-top: 10px;">
                         <li>
-                            回到 CF 控制台 → Email Routing → 路由规则，把邮件目标设为
-                            <strong>Send to Worker</strong>，选择本项目对应的 Worker。
+                            {{ t('postAddStep1Prefix') }} <strong>Send to Worker</strong>{{ t('postAddStep1Suffix') }}
                         </li>
                         <li>
-                            开启 Catch-all 地址（或添加路由规则）并同样指向该 Worker，
-                            确保任意收件人的邮件都会进入本系统。
+                            {{ t('postAddStep2') }}
                         </li>
                         <li>
-                            子域名（如随机前缀域名）不会继承主域规则：需在 Email Routing 中为子域单独接入，
-                            或在 DNS 中为子域配置指向 route1/2/3.mx.cloudflare.net 的通配 MX（<code>*</code>）。
+                            {{ t('postAddStep3Prefix') }}<code>*</code>{{ t('postAddStep3Suffix') }}
                         </li>
                         <li>
-                            回到域名列表打开「收信」开关；需要发信时再打开「发信」开关
-                            （发信还需配置 RESEND_TOKEN、SMTP_CONFIG 或 SEND_MAIL 任一通道）。
+                            {{ t('postAddStep4') }}
                         </li>
                     </ol>
                     <div class="wiz-actions">
-                        <n-button size="small" type="primary" @click="closeWizard">完成</n-button>
+                        <n-button size="small" type="primary" @click="closeWizard">{{ t('done') }}</n-button>
                     </div>
                 </template>
             </div>

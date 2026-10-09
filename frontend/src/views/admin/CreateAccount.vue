@@ -113,6 +113,7 @@ const onTogglePrefix = async (enabled) => {
         await api.fetch('/admin/config', {
             method: 'POST',
             body: { key: PREFIX_ENABLED_KEY, value: JSON.stringify(enabled) },
+            showLoading: false,
         })
     } catch (error) {
         enablePrefix.value = previous
@@ -122,7 +123,7 @@ const onTogglePrefix = async (enabled) => {
     // keep the in-memory site prefix in sync so the input prefills after re-enabling
     try {
         if (enabled) {
-            const settings = await api.fetch('/open_api/settings')
+            const settings = await api.fetch('/open_api/settings', { showLoading: false })
             openSettings.value.prefix = settings.prefix || ''
             if (!prefixInput.value && openSettings.value.prefix) {
                 prefixInput.value = openSettings.value.prefix
@@ -138,7 +139,7 @@ const onTogglePrefix = async (enabled) => {
 onMounted(async () => {
     // restore the persisted site-wide prefix switch (default: on)
     try {
-        const res = await api.fetch(`/admin/config/${PREFIX_ENABLED_KEY}`)
+        const res = await api.fetch(`/admin/config/${PREFIX_ENABLED_KEY}`, { showLoading: false })
         if (typeof res?.value === 'string' && res.value !== '') {
             enablePrefix.value = res.value !== 'false'
         }

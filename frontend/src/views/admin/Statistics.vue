@@ -212,20 +212,20 @@ onUnmounted(() => {
 
 <template>
     <div>
-        <n-card :bordered="false" embedded title="服务器状态">
+        <n-card :bordered="false" embedded :title="t('serverStatusTitle')">
             <n-space align="center" :size="[24, 12]">
                 <n-tag :type="serverStatus.ok && serverStatus.db ? 'success' : (serverStatus.checked ? 'error' : 'default')" size="large">
-                    {{ serverStatus.ok && serverStatus.db ? '运行正常' : (serverStatus.checked ? '异常' : '检测中…') }}
+                    {{ serverStatus.ok && serverStatus.db ? t('statusOk') : (serverStatus.checked ? t('statusError') : t('statusChecking')) }}
                 </n-tag>
-                <n-text depth="3">数据库：{{ serverStatus.db ? '在线' : '—' }}</n-text>
-                <n-text depth="3">响应延迟：{{ serverStatus.latencyMs !== null ? `${serverStatus.latencyMs} ms` : '—' }}</n-text>
-                <n-text depth="3">版本：{{ serverStatus.version || '—' }}</n-text>
-                <n-text depth="3">检查于 {{ serverStatus.time ? new Date(serverStatus.time).toLocaleTimeString() : '—' }}（每 30 秒自动刷新）</n-text>
+                <n-text depth="3">{{ t('dbStatus', { status: serverStatus.db ? t('dbOnline') : '—' }) }}</n-text>
+                <n-text depth="3">{{ t('latencyStatus', { ms: serverStatus.latencyMs !== null ? `${serverStatus.latencyMs} ms` : '—' }) }}</n-text>
+                <n-text depth="3">{{ t('versionStatus', { version: serverStatus.version || '—' }) }}</n-text>
+                <n-text depth="3">{{ t('statusCheckedAt', { time: serverStatus.time ? new Date(serverStatus.time).toLocaleTimeString() : '—' }) }}</n-text>
                 <n-button size="small" secondary :loading="serverStatus.loading" @click="refreshStatus">
                     <template #icon>
                         <n-icon :component="RefreshOutlined" />
                     </template>
-                    刷新
+                    {{ t('refresh') }}
                 </n-button>
             </n-space>
         </n-card>
@@ -280,12 +280,12 @@ onUnmounted(() => {
             <!-- a. 每域名收信 — horizontal bars, solid black fill -->
             <section class="chart-card">
                 <div class="chart-head">
-                    <span class="chart-title">每域名收信</span>
-                    <span class="chart-badge">TOP 10 · 30 天</span>
+                    <span class="chart-title">{{ t('domainChartTitle') }}</span>
+                    <span class="chart-badge">{{ t('domainChartBadge') }}</span>
                 </div>
                 <div class="chart-value-row">
                     <span class="chart-value">{{ domainTotal }}</span>
-                    <span class="chart-unit">封 · 合计</span>
+                    <span class="chart-unit">{{ t('chartUnitMails') }}</span>
                 </div>
                 <div class="hbars">
                     <div v-for="row in domainRows" :key="row.domain" class="hbar" :title="`${row.domain}: ${row.count}`">
@@ -295,19 +295,19 @@ onUnmounted(() => {
                         </span>
                         <span class="hbar-value">{{ row.count }}</span>
                     </div>
-                    <div v-if="!domainRows.length" class="chart-empty">暂无数据</div>
+                    <div v-if="!domainRows.length" class="chart-empty">{{ t('emptyData') }}</div>
                 </div>
             </section>
 
             <!-- b. 来源分布 — sender-domain top 10 (raw_mails.source), honest dimension -->
             <section class="chart-card">
                 <div class="chart-head">
-                    <span class="chart-title">来源分布</span>
-                    <span class="chart-badge">发件域名 · 30 天</span>
+                    <span class="chart-title">{{ t('sourceChartTitle') }}</span>
+                    <span class="chart-badge">{{ t('sourceChartBadge') }}</span>
                 </div>
                 <div class="chart-value-row">
                     <span class="chart-value">{{ sourceTotal }}</span>
-                    <span class="chart-unit">封 · 合计</span>
+                    <span class="chart-unit">{{ t('chartUnitMails') }}</span>
                 </div>
                 <div class="hbars">
                     <div v-for="row in sourceRows" :key="row.domain" class="hbar" :title="`${row.domain}: ${row.count}`">
@@ -317,22 +317,22 @@ onUnmounted(() => {
                         </span>
                         <span class="hbar-value">{{ row.count }}</span>
                     </div>
-                    <div v-if="!sourceRows.length" class="chart-empty">暂无数据</div>
+                    <div v-if="!sourceRows.length" class="chart-empty">{{ t('emptyData') }}</div>
                 </div>
             </section>
 
             <!-- c. 每日发送趋势 — stepped SVG line + hairline grid -->
             <section class="chart-card">
                 <div class="chart-head">
-                    <span class="chart-title">每日发送趋势</span>
-                    <span class="chart-badge">近 14 天</span>
+                    <span class="chart-title">{{ t('sendTrendLabel') }}</span>
+                    <span class="chart-badge">{{ t('dailyBadge') }}</span>
                 </div>
                 <div class="chart-value-row">
                     <span class="chart-value">{{ seriesSum(sendDays) }}</span>
-                    <span class="chart-unit">封 · 合计</span>
-                    <span class="chart-today">今日 {{ todayOf(sendDays) }}</span>
+                    <span class="chart-unit">{{ t('chartUnitMails') }}</span>
+                    <span class="chart-today">{{ t('todayCount', { count: todayOf(sendDays) }) }}</span>
                 </div>
-                <div class="plot" role="img" aria-label="每日发送趋势">
+                <div class="plot" role="img" :aria-label="t('sendTrendLabel')">
                     <svg class="plot-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
                         <line v-for="gy in [0.5, 25, 50, 75, 99.5]" :key="gy" class="plot-grid" x1="0" x2="100"
                             :y1="gy" :y2="gy" vector-effect="non-scaling-stroke" />
@@ -348,21 +348,21 @@ onUnmounted(() => {
                     <span>{{ sendDays[Math.floor(sendDays.length / 2)]?.label }}</span>
                     <span>{{ sendDays[sendDays.length - 1]?.label }}</span>
                 </div>
-                <div class="chart-foot">日界线 {{ statistics.timezone }}（站点时区）· 峰值 {{ seriesMax(sendDays) }}</div>
+                <div class="chart-foot">{{ t('chartFoot', { timezone: statistics.timezone, max: seriesMax(sendDays) }) }}</div>
             </section>
 
             <!-- d. 注册趋势 — same stepped line style, daily new addresses -->
             <section class="chart-card">
                 <div class="chart-head">
-                    <span class="chart-title">注册趋势</span>
-                    <span class="chart-badge">近 14 天</span>
+                    <span class="chart-title">{{ t('registerTrendLabel') }}</span>
+                    <span class="chart-badge">{{ t('dailyBadge') }}</span>
                 </div>
                 <div class="chart-value-row">
                     <span class="chart-value">{{ seriesSum(registerDays) }}</span>
-                    <span class="chart-unit">个 · 合计</span>
-                    <span class="chart-today">今日 {{ todayOf(registerDays) }}</span>
+                    <span class="chart-unit">{{ t('chartUnitCount') }}</span>
+                    <span class="chart-today">{{ t('todayCount', { count: todayOf(registerDays) }) }}</span>
                 </div>
-                <div class="plot" role="img" aria-label="注册趋势">
+                <div class="plot" role="img" :aria-label="t('registerTrendLabel')">
                     <svg class="plot-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
                         <line v-for="gy in [0.5, 25, 50, 75, 99.5]" :key="gy" class="plot-grid" x1="0" x2="100"
                             :y1="gy" :y2="gy" vector-effect="non-scaling-stroke" />
@@ -380,40 +380,40 @@ onUnmounted(() => {
                     <span>{{ registerDays[Math.floor(registerDays.length / 2)]?.label }}</span>
                     <span>{{ registerDays[registerDays.length - 1]?.label }}</span>
                 </div>
-                <div class="chart-foot">日界线 {{ statistics.timezone }}（站点时区）· 峰值 {{ seriesMax(registerDays) }}</div>
+                <div class="chart-foot">{{ t('chartFoot', { timezone: statistics.timezone, max: seriesMax(registerDays) }) }}</div>
             </section>
 
             <!-- e. 未知收件人邮件数 — big number + tiny sparkline -->
             <section class="chart-card">
                 <div class="chart-head">
-                    <span class="chart-title">未知收件人邮件数</span>
-                    <span class="chart-badge">走势 · 14 天</span>
+                    <span class="chart-title">{{ t('sparkChartTitle') }}</span>
+                    <span class="chart-badge">{{ t('sparkBadge') }}</span>
                 </div>
                 <div class="chart-value-row">
                     <span class="chart-value chart-value-big">{{ statistics.unknownMailCount }}</span>
-                    <span class="chart-unit">封</span>
+                    <span class="chart-unit">{{ t('chartUnitSingle') }}</span>
                 </div>
-                <div class="spark" role="img" aria-label="未知收件人邮件走势">
+                <div class="spark" role="img" :aria-label="t('sparkLabel')">
                     <svg class="spark-svg" viewBox="0 0 120 40" preserveAspectRatio="none" aria-hidden="true">
                         <line class="plot-grid" x1="0" y1="39.5" x2="120" y2="39.5" vector-effect="non-scaling-stroke" />
                         <polyline class="plot-line" :points="sparkPoints" fill="none" vector-effect="non-scaling-stroke" />
                     </svg>
                 </div>
-                <div class="chart-foot">总数为全量；走势为近 14 天按日新增（与「未知邮件」列表同口径）</div>
+                <div class="chart-foot">{{ t('sparkFootNote') }}</div>
             </section>
         </div>
 
         <!-- ---- secondary: low-frequency metrics + security audit ---- -->
         <n-card :bordered="false" embedded class="secondary">
             <n-collapse :trigger-areas="['main', 'arrow']">
-                <n-collapse-item title="低频指标" name="low">
+                <n-collapse-item :title="t('lowFrequencyMetrics')" name="low">
                     <div class="low-grid">
-                        <n-statistic label="24 小时收信" :value="statistics.mailCount24h" />
-                        <n-statistic label="7 天收信" :value="statistics.mailCount7days" />
-                        <n-statistic label="未读邮件" :value="statistics.unreadMailCount" />
-                        <n-statistic label="数据库大小" :value="formatSize(statistics.databaseSize)" />
+                        <n-statistic :label="t('receive24hLabel')" :value="statistics.mailCount24h" />
+                        <n-statistic :label="t('receive7dLabel')" :value="statistics.mailCount7days" />
+                        <n-statistic :label="t('unreadMailLabel')" :value="statistics.unreadMailCount" />
+                        <n-statistic :label="t('databaseSizeLabel')" :value="formatSize(statistics.databaseSize)" />
                     </div>
-                    <div class="plot plot-tall" role="img" aria-label="最近 14 天收信趋势">
+                    <div class="plot plot-tall" role="img" :aria-label="t('receiveTrendLabel')">
                         <svg class="plot-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
                             <line v-for="gy in [0.5, 25, 50, 75, 99.5]" :key="gy" class="plot-grid" x1="0" x2="100"
                                 :y1="gy" :y2="gy" vector-effect="non-scaling-stroke" />
@@ -431,23 +431,23 @@ onUnmounted(() => {
                         <span>{{ receiveDays[Math.floor(receiveDays.length / 2)]?.label }}</span>
                         <span>{{ receiveDays[receiveDays.length - 1]?.label }}</span>
                     </div>
-                    <n-text depth="3" class="sub-note">最近 14 天收信趋势 · 日界线 {{ statistics.timezone }}</n-text>
+                    <n-text depth="3" class="sub-note">{{ t('receiveTrendNote', { timezone: statistics.timezone }) }}</n-text>
                     <div v-if="statistics.topAddresses.length" class="top-addresses">
-                        <n-text depth="3" style="display: block; margin-bottom: 8px">热门地址 TOP 5</n-text>
+                        <n-text depth="3" style="display: block; margin-bottom: 8px">{{ t('topAddresses') }}</n-text>
                         <n-space :size="8">
                             <n-tag v-for="a in statistics.topAddresses" :key="a.address" :bordered="false" size="small">
-                                {{ a.address }} · {{ a.count }} 封
+                                {{ t('topAddressesTag', { address: a.address, count: a.count }) }}
                             </n-tag>
                         </n-space>
                     </div>
                 </n-collapse-item>
-                <n-collapse-item title="安全审计" name="security">
+                <n-collapse-item :title="t('securityAudit')" name="security">
                     <div class="low-grid">
-                        <n-statistic label="登录锁定数" :value="statistics.security?.lockedKeys ?? '—'" />
-                        <n-statistic label="24 小时内失败尝试" :value="statistics.security?.failedAttempts24h ?? '—'" />
-                        <n-statistic label="在线管理会话" :value="statistics.security?.activeSessions ?? '—'" />
+                        <n-statistic :label="t('securityLockedLabel')" :value="statistics.security?.lockedKeys ?? '—'" />
+                        <n-statistic :label="t('securityFailedLabel')" :value="statistics.security?.failedAttempts24h ?? '—'" />
+                        <n-statistic :label="t('securitySessionsLabel')" :value="statistics.security?.activeSessions ?? '—'" />
                     </div>
-                    <n-text depth="3" class="sub-note">来自登录风控计数与管理面板会话表，失败记录 24 小时后自动清理</n-text>
+                    <n-text depth="3" class="sub-note">{{ t('securityNote') }}</n-text>
                 </n-collapse-item>
             </n-collapse>
         </n-card>

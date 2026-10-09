@@ -352,7 +352,11 @@ for (const { base, disabled } of [
           enableInactiveAddressAutoCleanup: true, cleanInactiveAddressDays: 1,
           enableAddressAutoCleanup: true, cleanAddressDays: 1,
         } });
-        await call(request, '/__scheduled');
+        // scheduled() only runs the cleanup chain on the daily cron
+        // (src/scheduled.ts CLEANUP_CRON = '0 0 * * *'); the test-scheduled
+        // middleware takes the cron from the ?cron= query parameter, defaulting
+        // to "" (the uptime-probe branch).
+        await call(request, '/__scheduled?cron=0%200%20*%20*%20*');
         expect(await relatedCounts(request, mailbox, user)).toEqual(disabled ? [1, 1, 1, 1, 1, 1] : [0, 0, 0, 0, 0, 0]);
         expect(await addressRow(request, created)).toBeUndefined();
       } finally {
