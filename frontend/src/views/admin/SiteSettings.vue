@@ -377,20 +377,47 @@ onMounted(load)
 </template>
 
 <style scoped>
+/* single left axis for the whole page — .main carries a legacy
+   text-align:center which otherwise centers titles, card headers,
+   feedback hints, button rows and input content on different axes
+   (same fix pattern as the other admin pages) */
+.site-settings {
+    text-align: left;
+}
+
 .site-settings .page-head {
     margin-bottom: 12px;
+    text-align: left;
 }
 
 .site-settings .page-head h2 {
     font-size: 16px;
     font-weight: 700;
     margin-bottom: 4px;
+    text-align: left;
 }
 
 .site-settings .page-head p {
     font-size: 12.5px;
     opacity: 0.6;
     line-height: 1.6;
+    text-align: left;
+}
+
+.site-settings :deep(.n-card-header),
+.site-settings :deep(.n-card-header__main) {
+    text-align: left;
+}
+
+/* naive's empty state flex-centers itself (not inheritable) — pin the
+   icon/description to the page's left axis */
+.site-settings :deep(.n-empty) {
+    align-items: flex-start;
+    text-align: left;
+}
+
+.site-settings :deep(.n-empty__extra) {
+    text-align: left;
 }
 
 .form-hint {

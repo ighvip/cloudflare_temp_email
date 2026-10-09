@@ -425,6 +425,18 @@ onMounted(load)
     text-align: left;
 }
 
+/* naive's empty state flex-centers itself (not inheritable) — keep the
+   icon/description on the page's left axis instead of a stranded
+   centered island between left-aligned rows */
+.domain-settings :deep(.n-empty) {
+    align-items: flex-start;
+    text-align: left;
+}
+
+.domain-settings :deep(.n-empty__extra) {
+    text-align: left;
+}
+
 .add-row {
     display: flex;
     align-items: center;
