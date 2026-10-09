@@ -445,9 +445,30 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-/* 增加 tab 项之间的间距，避免文字挤压 */
-:deep(.n-tabs-tab) {
-  padding: 10px 28px !important;
+/* ---- 紧凑两级菜单（B 方案）----
+   旧的全局 `10px 28px` 同时撑大了 L1 卡片页签和所有嵌套的 L2 子菜单
+   （L2 行可被拉到 1000px+ 造成“分散”观感）。按 nav 类型拆分：
+   L1 card：6×14 内边距 / 13px / 6px 圆角；L2 bar：5×12 / 12.5px。
+   激活项加粗（白底黑描边由 App.vue 的全站卡片规则提供）。 */
+/* 6×14 (not 6×16): L1 content (≈627px) + logout suffix (104px) must fit
+   the nav without clipping 关于's right border at ~900-940px windows
+   (6×16 misses by ~5px at 932px and triggers edge scroll). */
+.admin-l1-tabs :deep(.n-tabs-nav--card-type .n-tabs-tab) {
+  padding: 6px 14px !important;
+  font-size: 13px !important;
+  border-radius: 6px !important;
+}
+
+.admin-l1-tabs :deep(.n-tabs-nav--bar-type .n-tabs-tab) {
+  padding: 5px 12px !important;
+  font-size: 12.5px !important;
+}
+
+/* naive's card-active chain (.n-tabs .n-tabs-nav.n-tabs-nav--card-type
+   .n-tabs-tab.n-tabs-tab--active, 0-5-0) sets font-weight from
+   --n-tab-font-weight-active (400) and outranks this rule — force it. */
+.admin-l1-tabs :deep(.n-tabs-tab.n-tabs-tab--active) {
+  font-weight: 600 !important;
 }
 
 /* 一级菜单（card 型）：naive-ui 对 card 忽略 justify-content prop，且其

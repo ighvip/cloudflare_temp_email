@@ -25,11 +25,12 @@ const theme = computed(() => isDark.value ? darkTheme : null)
 // ---- 问题15: one monochrome design system for every page ----
 // naive's green/blue/orange defaults are replaced once, here: black
 // primary (inverted white in dark theme), gray secondary accents and
-// #e5484d as the site's only alert color. Cards and dialogs also get
-// the homepage's 12px corner radius (form controls keep naive's 3px,
-// exactly like the homepage's own buttons and inputs).
+// #e5484d as the site's only alert color. Cards and dialogs keep the
+// homepage's 12px corner radius; buttons and form controls (and every
+// other control keyed off common.borderRadius) share the site's 6px.
 const lightThemeOverrides = {
     common: {
+        borderRadius: '6px',
         primaryColor: '#1a1a1a',
         primaryColorHover: '#333333',
         primaryColorPressed: '#000000',
@@ -57,6 +58,7 @@ const lightThemeOverrides = {
 
 const darkThemeOverrides = {
     common: {
+        borderRadius: '6px',
         primaryColor: '#eeeeee',
         primaryColorHover: '#dddddd',
         primaryColorPressed: '#cccccc',
@@ -209,31 +211,248 @@ onMounted(async () => {
 
 /* ---- 问题15: the homepage's monochrome card tabs, now site-wide ----
    naive only flips the active label color (its own background is
-   transparent); the panel's solid black/white segment look needs
-   explicit rules. The #app prefix keeps these above naive's deep
-   BEM chains. Values mirror views/Index.vue exactly. */
-#app .n-tabs.n-tabs--card-type .n-tabs-tab {
+   transparent); these rules give card tabs the site's monochrome look.
+   Selectors scope to the card-type NAV (not the whole .n-tabs root):
+   the admin page nests bar-type sub-menus inside the L1 card tabs, and
+   a root-scoped descendant selector used to repaint those nested L2
+   tabs as solid black/grey blocks too. The #app prefix keeps these
+   above naive's deep BEM chains. Values mirror views/Index.vue. */
+#app .n-tabs-nav--card-type .n-tabs-tab {
   color: inherit;
   background-color: rgba(128, 128, 128, 0.07);
   border-color: rgba(128, 128, 128, 0.20);
 }
 
-#app .n-tabs.n-tabs--card-type .n-tabs-tab:not(.n-tabs-tab--active):hover {
+#app .n-tabs-nav--card-type .n-tabs-tab:not(.n-tabs-tab--active):hover {
   background-color: rgba(128, 128, 128, 0.14);
 }
 
-#app .n-tabs.n-tabs--card-type .n-tabs-tab.n-tabs-tab--active,
-#app .n-tabs.n-tabs--card-type .n-tabs-tab.n-tabs-tab--active:hover {
-  color: #fff;
-  background-color: #1a1a1a;
+/* active = white card + black outline (replaces the solid black block) */
+#app .n-tabs-nav--card-type .n-tabs-tab.n-tabs-tab--active,
+#app .n-tabs-nav--card-type .n-tabs-tab.n-tabs-tab--active:hover {
+  color: #1a1a1a;
+  background-color: #fff;
   border-color: #1a1a1a;
 }
 
-html.dark #app .n-tabs.n-tabs--card-type .n-tabs-tab.n-tabs-tab--active,
-html.dark #app .n-tabs.n-tabs--card-type .n-tabs-tab.n-tabs-tab--active:hover {
+html.dark #app .n-tabs-nav--card-type .n-tabs-tab.n-tabs-tab--active,
+html.dark #app .n-tabs-nav--card-type .n-tabs-tab.n-tabs-tab--active:hover {
   color: #111;
   background-color: #eee;
-  border-color: #eee;
+  border-color: #111;
+}
+
+/* prefix/suffix (admin logout button, homepage "simple mode" button)
+   were once pinned absolutely to the row edges for perfect centering —
+   but then they OVERLAPPED the tab strip whenever the group reached the
+   edges (logout covering 关于, simple-mode covering 收件箱). Reverted to
+   naive's in-flow layout: they reserve their own width, can never cover
+   a tab, and the group centers in the remaining space (a few px of
+   skew, invisible in practice). */
+
+/* ---- 问题16: site-wide button language — transparent fill + thin
+   outline + 6px corners (radius comes from common.borderRadius above).
+   naive paints bg/text from --n-color/--n-text-color on the root and
+   the outline from --n-border on the .n-button__border overlay, so
+   overriding the custom properties restyles every shape (solid /
+   secondary / tertiary / quaternary) and every state (hover, pressed,
+   focus, disabled) at once. !important beats the inline vars naive
+   writes on each button; [style*="--n-border: none"] excludes naive
+   `text` buttons (header nav, mail-list pager …) which stay borderless
+   by design. NOT scoped to #app: modals, dialogs and dropdown menus
+   teleport to <body>, and their buttons must follow the same rules. */
+.n-button:not([style*="--n-border: none"]):not([style*="--n-border:none"]) {
+  /* normal: grey outline + dark grey label, soft tint on hover */
+  --n-color: transparent !important;
+  --n-color-hover: rgba(128, 128, 128, 0.10) !important;
+  --n-color-pressed: rgba(128, 128, 128, 0.16) !important;
+  --n-color-focus: rgba(128, 128, 128, 0.10) !important;
+  --n-color-disabled: transparent !important;
+  --n-border: 1px solid rgba(128, 128, 128, 0.45) !important;
+  --n-border-hover: 1px solid rgba(128, 128, 128, 0.75) !important;
+  --n-border-pressed: 1px solid rgba(128, 128, 128, 0.75) !important;
+  --n-border-focus: 1px solid #1a1a1a !important;
+  --n-border-disabled: 1px solid rgba(128, 128, 128, 0.30) !important;
+  --n-text-color: #333639 !important;
+  --n-text-color-hover: #1a1a1a !important;
+  --n-text-color-pressed: #1a1a1a !important;
+  --n-text-color-focus: #1a1a1a !important;
+  --n-text-color-disabled: rgba(128, 128, 128, 0.85) !important;
+}
+
+/* primary: black outline, bold label, hover inverts to solid black
+   with white text */
+.n-button--primary-type:not([style*="--n-border: none"]):not([style*="--n-border:none"]) {
+  --n-color-hover: #1a1a1a !important;
+  --n-color-pressed: #000000 !important;
+  --n-color-focus: #1a1a1a !important;
+  --n-border: 1px solid #1a1a1a !important;
+  --n-border-hover: 1px solid #1a1a1a !important;
+  --n-border-pressed: 1px solid #000000 !important;
+  --n-border-focus: 1px solid #1a1a1a !important;
+  --n-text-color: #1a1a1a !important;
+  --n-text-color-hover: #ffffff !important;
+  --n-text-color-pressed: #ffffff !important;
+  --n-text-color-focus: #ffffff !important;
+  font-weight: 600;
+}
+
+/* success mirrors the black accent (site successColor is #1a1a1a) */
+.n-button--success-type:not([style*="--n-border: none"]):not([style*="--n-border:none"]) {
+  --n-color-hover: #1a1a1a !important;
+  --n-color-pressed: #000000 !important;
+  --n-color-focus: #1a1a1a !important;
+  --n-border: 1px solid #1a1a1a !important;
+  --n-border-hover: 1px solid #1a1a1a !important;
+  --n-border-pressed: 1px solid #000000 !important;
+  --n-border-focus: 1px solid #1a1a1a !important;
+  --n-text-color: #1a1a1a !important;
+  --n-text-color-hover: #ffffff !important;
+  --n-text-color-pressed: #ffffff !important;
+  --n-text-color-focus: #ffffff !important;
+  font-weight: 600;
+}
+
+/* danger: the site's only red — outline + label, hover fills red */
+.n-button--error-type:not([style*="--n-border: none"]):not([style*="--n-border:none"]) {
+  --n-color-hover: #e5484d !important;
+  --n-color-pressed: #c93a40 !important;
+  --n-color-focus: #e5484d !important;
+  --n-border: 1px solid #e5484d !important;
+  --n-border-hover: 1px solid #e5484d !important;
+  --n-border-pressed: 1px solid #c93a40 !important;
+  --n-border-focus: 1px solid #e5484d !important;
+  --n-text-color: #e5484d !important;
+  --n-text-color-hover: #ffffff !important;
+  --n-text-color-pressed: #ffffff !important;
+  --n-text-color-focus: #ffffff !important;
+}
+
+/* secondary/tertiary buttons never render naive's .n-button__border
+   overlay (showBorder = false), so for them the outline is painted on
+   the button root itself. naive emits a class ONLY for `secondary`
+   (Button.js line 366) — `tertiary` has no marker class at all, so it
+   is identified by the exact --n-color tint naive gives it from
+   buttonColor2 (verified in the live DOM: rgba(46, 51, 56, .05);
+   secondary-default shares that tint and wants the same grey outline,
+   so one marker selector covers both). quaternary stays borderless by
+   design (its --n-color is #0000). */
+.n-button--secondary.n-button--default-type,
+.n-button--secondary.n-button--info-type,
+.n-button--secondary.n-button--warning-type,
+.n-button[style*="--n-color: rgba(46, 51, 56, .05)"] {
+  border: 1px solid rgba(128, 128, 128, 0.45) !important;
+}
+
+.n-button--secondary.n-button--default-type:hover,
+.n-button--secondary.n-button--info-type:hover,
+.n-button--secondary.n-button--warning-type:hover,
+.n-button[style*="--n-color: rgba(46, 51, 56, .05)"]:hover {
+  border-color: rgba(128, 128, 128, 0.75) !important;
+}
+
+.n-button--primary-type.n-button--secondary,
+.n-button--success-type.n-button--secondary,
+.n-button--primary-type[style*="--n-color: rgba(46, 51, 56, .05)"],
+.n-button--success-type[style*="--n-color: rgba(46, 51, 56, .05)"],
+.n-button--primary-type.n-button--secondary:hover,
+.n-button--success-type.n-button--secondary:hover,
+.n-button--primary-type[style*="--n-color: rgba(46, 51, 56, .05)"]:hover,
+.n-button--success-type[style*="--n-color: rgba(46, 51, 56, .05)"]:hover {
+  border: 1px solid #1a1a1a !important;
+}
+
+.n-button--error-type.n-button--secondary,
+.n-button--error-type.n-button--secondary:hover,
+.n-button--error-type[style*="--n-color: rgba(46, 51, 56, .05)"],
+.n-button--error-type[style*="--n-color: rgba(46, 51, 56, .05)"]:hover {
+  border: 1px solid #e5484d !important;
+}
+
+/* warning/info ride the grey accent — the base rule above already
+   gives them the plain outlined look, no extra override needed. */
+
+/* dark theme: bright outlines mirror the light rules */
+html.dark .n-button:not([style*="--n-border: none"]):not([style*="--n-border:none"]) {
+  --n-color: transparent !important;
+  --n-color-hover: rgba(238, 238, 238, 0.12) !important;
+  --n-color-pressed: rgba(238, 238, 238, 0.18) !important;
+  --n-color-focus: rgba(238, 238, 238, 0.12) !important;
+  --n-color-disabled: transparent !important;
+  --n-border: 1px solid rgba(238, 238, 238, 0.40) !important;
+  --n-border-hover: 1px solid rgba(238, 238, 238, 0.75) !important;
+  --n-border-pressed: 1px solid rgba(238, 238, 238, 0.75) !important;
+  --n-border-focus: 1px solid #eeeeee !important;
+  --n-border-disabled: 1px solid rgba(238, 238, 238, 0.25) !important;
+  --n-text-color: #dddddd !important;
+  --n-text-color-hover: #ffffff !important;
+  --n-text-color-pressed: #ffffff !important;
+  --n-text-color-focus: #ffffff !important;
+  --n-text-color-disabled: rgba(238, 238, 238, 0.45) !important;
+}
+
+html.dark .n-button--primary-type:not([style*="--n-border: none"]):not([style*="--n-border:none"]),
+html.dark .n-button--success-type:not([style*="--n-border: none"]):not([style*="--n-border:none"]) {
+  --n-color-hover: #eeeeee !important;
+  --n-color-pressed: #dddddd !important;
+  --n-color-focus: #eeeeee !important;
+  --n-border: 1px solid #eeeeee !important;
+  --n-border-hover: 1px solid #eeeeee !important;
+  --n-border-pressed: 1px solid #cccccc !important;
+  --n-border-focus: 1px solid #eeeeee !important;
+  --n-text-color: #eeeeee !important;
+  --n-text-color-hover: #111111 !important;
+  --n-text-color-pressed: #111111 !important;
+  --n-text-color-focus: #111111 !important;
+  font-weight: 600;
+}
+
+html.dark .n-button--error-type:not([style*="--n-border: none"]):not([style*="--n-border:none"]) {
+  --n-color-hover: #e5484d !important;
+  --n-color-pressed: #c93a40 !important;
+  --n-color-focus: #e5484d !important;
+  --n-border: 1px solid #e5484d !important;
+  --n-border-hover: 1px solid #e5484d !important;
+  --n-border-pressed: 1px solid #c93a40 !important;
+  --n-border-focus: 1px solid #e5484d !important;
+  --n-text-color: #e5484d !important;
+  --n-text-color-hover: #ffffff !important;
+  --n-text-color-pressed: #ffffff !important;
+  --n-text-color-focus: #ffffff !important;
+}
+
+/* dark root outlines for secondary/tertiary (mirrors the light set);
+   tertiary's dark marker tint is buttonColor2 = rgba(255, 255, 255, .08) */
+html.dark .n-button--secondary.n-button--default-type,
+html.dark .n-button--secondary.n-button--info-type,
+html.dark .n-button--secondary.n-button--warning-type,
+html.dark .n-button[style*="--n-color: rgba(255, 255, 255, .08)"] {
+  border: 1px solid rgba(238, 238, 238, 0.40) !important;
+}
+
+html.dark .n-button--secondary.n-button--default-type:hover,
+html.dark .n-button--secondary.n-button--info-type:hover,
+html.dark .n-button--secondary.n-button--warning-type:hover,
+html.dark .n-button[style*="--n-color: rgba(255, 255, 255, .08)"]:hover {
+  border-color: rgba(238, 238, 238, 0.75) !important;
+}
+
+html.dark .n-button--primary-type.n-button--secondary,
+html.dark .n-button--success-type.n-button--secondary,
+html.dark .n-button--primary-type[style*="--n-color: rgba(255, 255, 255, .08)"],
+html.dark .n-button--success-type[style*="--n-color: rgba(255, 255, 255, .08)"],
+html.dark .n-button--primary-type.n-button--secondary:hover,
+html.dark .n-button--success-type.n-button--secondary:hover,
+html.dark .n-button--primary-type[style*="--n-color: rgba(255, 255, 255, .08)"]:hover,
+html.dark .n-button--success-type[style*="--n-color: rgba(255, 255, 255, .08)"]:hover {
+  border: 1px solid #eeeeee !important;
+}
+
+html.dark .n-button--error-type.n-button--secondary,
+html.dark .n-button--error-type.n-button--secondary:hover,
+html.dark .n-button--error-type[style*="--n-color: rgba(255, 255, 255, .08)"],
+html.dark .n-button--error-type[style*="--n-color: rgba(255, 255, 255, .08)"]:hover {
+  border: 1px solid #e5484d !important;
 }
 
 /* the alert bar / active label follow the same monochrome accent

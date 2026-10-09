@@ -119,28 +119,7 @@ const testSettings = async (webhookSettings: any) => {
     background-color: rgba(128, 128, 128, 0.04);
 }
 
-/* the save button is this page's single primary action — solid black */
-.webhook-page :deep(.n-button--primary-type) {
-    color: #fff;
-    background-color: #1a1a1a;
-    border-color: #1a1a1a;
-}
-
-.webhook-page :deep(.n-button--primary-type:not(:disabled):hover) {
-    color: #fff;
-    background-color: #333;
-    border-color: #333;
-}
-
-:global(html.dark .webhook-page .n-button--primary-type) {
-    color: #111;
-    background-color: #eeeeee;
-    border-color: #eeeeee;
-}
-
-:global(html.dark .webhook-page .n-button--primary-type:not(:disabled):hover) {
-    color: #111;
-    background-color: #dddddd;
-    border-color: #dddddd;
-}
+/* the save button is this page's single primary action — it follows the
+   site-wide outlined language now (App.vue 问题16); the old page-local
+   solid-black override was removed. */
 </style>

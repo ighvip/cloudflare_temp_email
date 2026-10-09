@@ -669,58 +669,39 @@ onMounted(() => {
 }
 
 /* card-type tabs (the mailbox operations inside the panel): monochrome
-   segment look — active = solid black/white, inactive = gray tint.
-   This also removes naive's green accent from the active tab. NOTE: naive
-   uses deep BEM chains like `.n-tabs .n-tabs-nav.n-tabs-nav--card-type .n-tabs-tab...`
+   look — inactive = gray tint, active = white card + black outline.
+   Selectors scope to the card-type NAV so nested sub-menus keep naive's
+   native look (mirrors the site-wide rules in App.vue). NOTE: naive uses
+   deep BEM chains like `.n-tabs .n-tabs-nav.n-tabs-nav--card-type .n-tabs-tab...`
    (0,5,0) — selectors here must be at least as deep to win. */
-.action-panel :deep(.n-tabs.n-tabs--card-type .n-tabs-tab) {
+.action-panel :deep(.n-tabs-nav--card-type .n-tabs-tab) {
     color: inherit;
     background-color: rgba(128, 128, 128, 0.07);
     border-color: rgba(128, 128, 128, 0.20);
 }
 
-.action-panel :deep(.n-tabs.n-tabs--card-type .n-tabs-tab:not(.n-tabs-tab--active):hover) {
+.action-panel :deep(.n-tabs-nav--card-type .n-tabs-tab:not(.n-tabs-tab--active):hover) {
     background-color: rgba(128, 128, 128, 0.14);
 }
 
-.action-panel :deep(.n-tabs.n-tabs--card-type .n-tabs-tab.n-tabs-tab--active),
-.action-panel :deep(.n-tabs.n-tabs--card-type .n-tabs-tab.n-tabs-tab--active:hover) {
-    color: #fff;
-    background-color: #1a1a1a;
+.action-panel :deep(.n-tabs-nav--card-type .n-tabs-tab.n-tabs-tab--active),
+.action-panel :deep(.n-tabs-nav--card-type .n-tabs-tab.n-tabs-tab--active:hover) {
+    color: #1a1a1a;
+    background-color: #fff;
     border-color: #1a1a1a;
 }
 
-:global(html.dark .action-panel .n-tabs.n-tabs--card-type .n-tabs-tab.n-tabs-tab--active),
-:global(html.dark .action-panel .n-tabs.n-tabs--card-type .n-tabs-tab.n-tabs-tab--active:hover) {
+:global(html.dark .action-panel .n-tabs-nav--card-type .n-tabs-tab.n-tabs-tab--active),
+:global(html.dark .action-panel .n-tabs-nav--card-type .n-tabs-tab.n-tabs-tab--active:hover) {
     color: #111;
     background-color: #eee;
-    border-color: #eee;
+    border-color: #111;
 }
 
-/* primary action buttons become solid black with white text */
-.action-panel :deep(.n-button--primary-type) {
-    color: #fff;
-    background-color: #1a1a1a;
-    border-color: #1a1a1a;
-}
-
-.action-panel :deep(.n-button--primary-type:not(:disabled):hover) {
-    color: #fff;
-    background-color: #333;
-    border-color: #333;
-}
-
-:global(html.dark .action-panel .n-button--primary-type) {
-    color: #111;
-    background-color: #eee;
-    border-color: #eee;
-}
-
-:global(html.dark .action-panel .n-button--primary-type:not(:disabled):hover) {
-    color: #111;
-    background-color: #ddd;
-    border-color: #ddd;
-}
+/* primary action buttons: transparent + black outline + bold label,
+   hover inverts to solid black — the site-wide rule in App.vue (问题16),
+   the old page-local solid-black override was removed so every page
+   shares one language. */
 
 /* input focus ring: black instead of the green primary */
 .action-panel :deep(.n-input--focus .n-input__state-border) {

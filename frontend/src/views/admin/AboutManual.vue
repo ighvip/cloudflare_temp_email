@@ -239,7 +239,7 @@ const version = computed(() => openSettings.value.version || '')
 .manual {
     max-width: 860px;
     margin: 0 auto;
-    text-align: center;
+    text-align: left;
 }
 
 .page-head {
@@ -269,7 +269,7 @@ const version = computed(() => openSettings.value.version || '')
 .manual-head {
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     gap: 10px;
     width: 100%;
     padding: 12px 14px;
@@ -277,7 +277,7 @@ const version = computed(() => openSettings.value.version || '')
     background: transparent;
     color: inherit;
     font: inherit;
-    text-align: center;
+    text-align: left;
     cursor: pointer;
 }
 
