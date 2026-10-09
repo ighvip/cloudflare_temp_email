@@ -234,6 +234,7 @@ const version = computed(() => openSettings.value.version || '')
 <style scoped>
 .manual {
     max-width: 860px;
+    text-align: left;
 }
 
 .page-head {

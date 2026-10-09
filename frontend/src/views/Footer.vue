@@ -19,8 +19,8 @@ const showPrefix = computed(() => !copyrightText.value || !isFullCopyrightLine.v
 <template>
     <div>
         <n-divider class="footer-divider" />
-        <div style="text-align: center; padding: 20px">
-            <n-space justify="center">
+        <div style="text-align: left; padding: 20px">
+            <n-space justify="start">
                 <n-text depth="3" v-if="showPrefix">
                     {{ t('copyright') }} © 2023-{{ new Date().getFullYear() }}
                 </n-text>
