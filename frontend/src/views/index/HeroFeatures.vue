@@ -41,7 +41,7 @@ const features = computed(() => [
 .feature-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 12px;
+    gap: 8px;
     text-align: left;
 }
 
@@ -61,7 +61,7 @@ const features = computed(() => [
     display: flex;
     align-items: flex-start;
     gap: 12px;
-    padding: 14px;
+    padding: 9px;
     border: 1px solid rgba(128, 128, 128, 0.16);
     border-radius: 12px;
     background: rgba(128, 128, 128, 0.04);

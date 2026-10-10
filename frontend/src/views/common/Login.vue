@@ -294,7 +294,8 @@ onMounted(async () => {
                         </template>
                         {{ loginAndBindTag }}
                     </n-button>
-                    <n-button v-if="showNewAddressTab" @click="tabValue = 'register'" block secondary strong>
+                    <n-button v-if="showNewAddressTab" @click="tabValue = 'register'" block secondary strong
+                        class="cta-breathe">
                         <template #icon>
                             <n-icon :component="NewLabelOutlined" />
                         </template>
@@ -355,7 +356,8 @@ onMounted(async () => {
                             </div>
                         </n-form-item-row>
                         <Turnstile v-model:value="cfToken" />
-                        <n-button type="primary" block secondary strong @click="newEmail" :loading="loading"
+                        <n-button type="primary" block secondary strong class="cta-breathe"
+                            @click="newEmail" :loading="loading"
                             :disabled="subdomainMode === 'custom' && !customSubdomain.trim()">
                             <template #icon>
                                 <n-icon :component="NewLabelOutlined" />

@@ -1,7 +1,8 @@
 <script setup>
-import { defineAsyncComponent, onMounted, watch, computed } from 'vue'
+import { defineAsyncComponent, onMounted, watch, computed, ref } from 'vue'
 import { useScopedI18n } from '@/i18n/app'
 import { useRoute, useRouter } from 'vue-router'
+import { useStorage } from '@vueuse/core'
 
 import { useGlobalState } from '../store'
 import { api } from '../api'
@@ -81,8 +82,64 @@ const quickSteps = computed(() => [1, 2, 3].map((n) => ({
   desc: t(`qs${n}Desc`),
 })))
 
+// decorative wave bars for the first-run breathing strip — heights form a
+// wave silhouette, each bar bounces on its own period + phase (--h/--d/--dl)
+// heights are capped at 72px so the strip keeps the viewport budget on
+// typical laptops (the wave silhouette matters, the exact amplitude doesn't)
+const waveBars = [
+  { h: '26px', d: '1.0s', dl: '0s' },
+  { h: '34px', d: '1.3s', dl: '.1s' },
+  { h: '44px', d: '1.1s', dl: '.2s' },
+  { h: '56px', d: '1.5s', dl: '.05s' },
+  { h: '64px', d: '1.2s', dl: '.15s' },
+  { h: '72px', d: '1.4s', dl: '.25s' },
+  { h: '50px', d: '1.0s', dl: '.1s' },
+  { h: '36px', d: '1.6s', dl: '.2s' },
+  { h: '44px', d: '1.2s', dl: '0s' },
+  { h: '60px', d: '1.3s', dl: '.15s' },
+  { h: '52px', d: '1.1s', dl: '.05s' },
+  { h: '38px', d: '1.4s', dl: '.2s' },
+]
+
 const showQuickStart = computed(() =>
   settings.value.fetched && !settings.value.address && !userJwt.value && !isTelegram.value)
+
+// ---- modular card row: grip-reorder (persisted) + stats summary collapse ----
+const homeCardOrder = useStorage('homeCardOrder', ['stats', 'uptime'])
+// sanitize whatever is in storage: exactly the two known cards, no dupes
+const cardOrder = computed(() => {
+  const valid = homeCardOrder.value.filter((key) => key === 'stats' || key === 'uptime')
+  for (const key of ['stats', 'uptime']) if (!valid.includes(key)) valid.push(key)
+  return valid.slice(0, 2)
+})
+// default collapsed: the row shows only "today receive · today send"
+const statsCollapsed = useStorage('statsCollapsed', true)
+
+const dragOverIndex = ref(-1)
+let dragFromIndex = -1
+const onCardDragStart = (index, event) => {
+  dragFromIndex = index
+  event.dataTransfer.effectAllowed = 'move'
+  // Firefox refuses to start a drag without payload
+  event.dataTransfer.setData('text/plain', cardOrder.value[index])
+}
+const onCardDragOver = (index) => { dragOverIndex.value = index }
+const onCardDragEnd = () => {
+  dragFromIndex = -1
+  dragOverIndex.value = -1
+}
+const onCardDrop = (index) => {
+  dragOverIndex.value = -1
+  if (dragFromIndex < 0 || dragFromIndex === index) {
+    dragFromIndex = -1
+    return
+  }
+  const next = [...cardOrder.value]
+  const [moved] = next.splice(dragFromIndex, 1)
+  next.splice(index, 0, moved)
+  homeCardOrder.value = next
+  dragFromIndex = -1
+}
 
 // curated FAQ links jump straight to the matching help section
 const faqLinks = computed(() => [
@@ -182,7 +239,7 @@ onMounted(() => {
               <span class="kicker-text">{{ t('heroKicker') }}</span>
             </div>
             <h1 class="hero-title">
-              <span class="seg seg-1">{{ t('heroTitleA') }}</span><span class="seg seg-2">{{ t('heroTitleB') }}</span><span class="seg seg-3">{{ t('heroTitleC') }}</span>
+              <span class="seg" style="--d: 0.1s"><span>{{ t('heroTitleA') }}</span></span><span class="seg" style="--d: 0.18s"><span>{{ t('heroTitleB') }}</span></span><span class="seg seg-3" style="--d: 0.26s"><span>{{ t('heroTitleC') }}</span></span>
             </h1>
             <p class="hero-sub">{{ introText }}</p>
           </div>
@@ -190,8 +247,17 @@ onMounted(() => {
           <HeroFeatures />
 
           <div class="hero-cards">
-            <StatsCard />
-            <UptimeCard />
+            <div v-for="(cardKey, cardIndex) in cardOrder" :key="cardKey" class="hero-card-slot"
+              :class="{ 'is-dragover': dragOverIndex === cardIndex }"
+              @dragover.prevent="onCardDragOver(cardIndex)"
+              @drop.prevent="onCardDrop(cardIndex)">
+              <StatsCard v-if="cardKey === 'stats'" :draggable="!isMobile"
+                :collapsed="statsCollapsed"
+                @dragstart="onCardDragStart(cardIndex, $event)" @dragend="onCardDragEnd"
+                @toggle-collapse="statsCollapsed = !statsCollapsed" />
+              <UptimeCard v-else :draggable="!isMobile"
+                @dragstart="onCardDragStart(cardIndex, $event)" @dragend="onCardDragEnd" />
+            </div>
           </div>
         </section>
 
@@ -281,10 +347,28 @@ onMounted(() => {
 
             <div v-if="showQuickStart" class="panel-qs">
               <div class="panel-qs-label">{{ t('quickStartLabel') }}</div>
-              <div v-for="(step, stepIndex) in quickSteps" :key="stepIndex" class="qs-row">
+              <div v-for="(step, stepIndex) in quickSteps" :key="stepIndex" class="qs-row"
+                :style="{ '--i': stepIndex }">
                 <span class="qs-index">{{ stepIndex + 1 }}</span>
                 <span class="qs-text"><b>{{ step.title }}</b>{{ step.desc }}</span>
               </div>
+            </div>
+
+            <!-- first-run breathing strip: wave bars + a flowing mail-step
+                 line (decorative only — hidden on phones, motion-safe) -->
+            <div v-if="showQuickStart" class="wave-zone" aria-hidden="true">
+              <div class="wave">
+                <i v-for="(bar, barIndex) in waveBars" :key="barIndex"
+                  :style="{ '--h': bar.h, '--d': bar.d, '--dl': bar.dl }" />
+              </div>
+              <div class="flow">
+                <span class="f-label">{{ t('flowStep1') }}</span>
+                <span class="f-line" />
+                <span class="f-label">{{ t('flowStep2') }}</span>
+                <span class="f-line" />
+                <span class="f-label">{{ t('flowStep3') }}</span>
+              </div>
+              <div class="wave-tag">INBOX · 7D · AUTO-DELETE</div>
             </div>
 
             <div class="panel-fine">
@@ -310,7 +394,7 @@ onMounted(() => {
 
 <style scoped>
 .home-layout {
-    padding-bottom: 12px;
+    padding-bottom: 4px;
 }
 
 .hero {
@@ -318,7 +402,7 @@ onMounted(() => {
     display: grid;
     grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
     gap: 24px;
-    padding: 12px 4px 4px;
+    padding: 10px 4px 0;
 }
 
 /* subtle tech-grid backdrop, works in both light and dark themes */
@@ -348,9 +432,9 @@ onMounted(() => {
    the FAQ banner stays the last content block on the page. */
 .hero-right {
     position: absolute;
-    top: 12px;
+    top: 10px;
     right: 4px;
-    bottom: 4px;
+    bottom: 0;
     width: calc((100% - 32px) / 2.15);
     z-index: 1;
     min-width: 0;
@@ -359,8 +443,10 @@ onMounted(() => {
 }
 
 /* ---- left column ---- */
+/* vertical budget tightened: the page must fit the viewport without a
+   browser scrollbar on a typical laptop window */
 .hero-head {
-    padding: 10px 2px 18px;
+    padding: 6px 2px 4px;
 }
 
 /* kicker: category label, its square wipes in first */
@@ -368,7 +454,7 @@ onMounted(() => {
     display: flex;
     align-items: center;
     gap: 9px;
-    margin-bottom: 14px;
+    margin-bottom: 8px;
     font-size: 12px;
     font-weight: 600;
     letter-spacing: 2.5px;
@@ -388,8 +474,6 @@ onMounted(() => {
     animation: hero-fade-in 0.5s 0.15s ease both;
 }
 
-/* headline: three segments rise in sequence; the last segment gets a
-   marker-sweep highlight plus a subtle recurring shimmer */
 .hero-title {
     margin: 0;
     font-size: clamp(26px, 3vw, 38px);
@@ -397,25 +481,46 @@ onMounted(() => {
     letter-spacing: -0.5px;
 }
 
+/* headline: dual-layer segments — the outer box clips, the inner span
+   rises from below its own line box (masked wipe, sharp reveal edge).
+   The last segment also carries an in-glyph shimmer: a gray band travels
+   through the gradient-clipped text forever (theme-safe via currentColor) */
 .hero-title .seg {
     display: inline-block;
-    animation: hero-fade-up 0.55s cubic-bezier(0.2, 0.7, 0.3, 1) both;
-}
-
-.hero-title .seg-1 {
-    animation-delay: 0.10s;
-}
-
-.hero-title .seg-2 {
-    animation-delay: 0.18s;
-}
-
-.hero-title .seg-3 {
-    position: relative;
     overflow: hidden;
-    animation-delay: 0.26s;
+    vertical-align: bottom;
+    /* descender room inside the clip box (en locale: y/g/p) — the extra
+       padding is pulled back so layout is unchanged */
+    padding-bottom: 0.14em;
+    margin-bottom: -0.14em;
 }
 
+.hero-title .seg > span {
+    display: inline-block;
+    animation: hero-rise 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+    animation-delay: var(--d, 0s);
+}
+
+.seg-3 {
+    position: relative;
+}
+
+.seg-3 > span {
+    background-image: linear-gradient(90deg,
+            currentColor 0%, currentColor 42%,
+            rgba(128, 128, 128, 0.45) 50%,
+            currentColor 58%, currentColor 100%);
+    background-size: 300% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation:
+        hero-rise 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) both,
+        hero-shimmer-text 4s linear 1.2s infinite;
+    animation-delay: var(--d, 0s), calc(var(--d, 0s) + 0.6s);
+}
+
+/* the marker highlight behind the last segment (house signature) */
 .seg-3::before {
     content: '';
     position: absolute;
@@ -427,18 +532,8 @@ onMounted(() => {
     animation: hero-wipe 0.45s 0.75s cubic-bezier(0.2, 0.7, 0.3, 1) both;
 }
 
-.seg-3::after {
-    content: '';
-    position: absolute;
-    inset: 6% 0 2%;
-    z-index: -1;
-    background: linear-gradient(105deg, transparent 42%, rgba(255, 255, 255, 0.55) 50%, transparent 58%);
-    transform: translateX(-130%);
-    animation: hero-shimmer 6s 1.6s ease-in-out infinite;
-}
-
 .hero-sub {
-    margin: 12px 0 0;
+    margin: 8px 0 0;
     max-width: 46em;
     font-size: 15px;
     line-height: 1.75;
@@ -462,35 +557,23 @@ onMounted(() => {
     to { transform: scaleX(1); }
 }
 
+/* the masked rise: text slides up from under its own clip box */
+@keyframes hero-rise {
+    from { opacity: 0; transform: translateY(105%); }
+    to { opacity: 1; transform: none; }
+}
+
+/* the in-glyph shimmer: the gray band of the 300%-wide gradient sweeps
+   through the clipped text (200% -> -100% covers one full band pass) */
+@keyframes hero-shimmer-text {
+    from { background-position: 200% 0; }
+    to { background-position: -100% 0; }
+}
+
 /* the subtitle keeps its muted 0.75 opacity after the fade */
 @keyframes hero-sub-in {
     from { opacity: 0; }
     to { opacity: 0.75; }
-}
-
-@keyframes hero-shimmer {
-    0% { transform: translateX(-130%); }
-    8% { transform: translateX(130%); }
-    100% { transform: translateX(130%); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .kicker-sq,
-    .kicker-text,
-    .hero-title .seg,
-    .hero-sub {
-        animation: none;
-    }
-
-    .seg-3::before {
-        animation: none;
-        transform: scaleX(1);
-    }
-
-    .seg-3::after {
-        animation: none;
-        display: none;
-    }
 }
 
 /* stats + uptime cards sit side by side — two equal columns */
@@ -498,8 +581,23 @@ onMounted(() => {
     display: grid;
     grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
     gap: 16px;
-    margin-top: 18px;
-    align-items: stretch;
+    margin-top: 10px;
+    /* natural heights: the collapsed stats card stays short, the two cards
+       top-align instead of stretching to equal height */
+    align-items: start;
+}
+
+/* one grid cell per card: the drop target for grip reordering */
+.hero-card-slot {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    border-radius: 12px;
+}
+
+.hero-card-slot.is-dragover {
+    outline: 1px dashed rgba(128, 128, 128, 0.5);
+    outline-offset: 3px;
 }
 
 @media (max-width: 992px) {
@@ -511,6 +609,10 @@ onMounted(() => {
 /* ---- right column: independent operations panel ---- */
 .action-panel {
     position: relative;
+    /* flex column in every state: the tabs (has-address) or the wave strip
+       (first-run) absorb the leftover hero height, fine print pins bottom */
+    display: flex;
+    flex-direction: column;
     /* always fill the pinned hero height — the panel border lands exactly on
        the left column's bottom in every state (guest tabs included, which
        otherwise end hundreds of pixels short) */
@@ -736,13 +838,21 @@ onMounted(() => {
     font-weight: 700;
     letter-spacing: 1.2px;
     opacity: 0.55;
+    animation: hero-fade-up 0.5s ease 0.35s both;
 }
 
 .qs-row {
     display: flex;
     align-items: flex-start;
     gap: 9px;
-    padding: 3px 0;
+    padding: 7px 0;
+    /* entrance stagger: each step fades up 60ms after the previous */
+    animation: hero-fade-up 0.5s ease both;
+    animation-delay: calc(0.4s + var(--i, 0) * 0.06s);
+}
+
+.qs-row + .qs-row {
+    border-top: 1px dashed rgba(128, 128, 128, 0.28);
 }
 
 .qs-index {
@@ -777,8 +887,157 @@ onMounted(() => {
     font-weight: 700;
 }
 
+/* ---- first-run breathing strip: wave bars + flowing mail-step line ---- */
+.wave-zone {
+    position: relative;
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 120px;
+    margin: 2px 0;
+    padding: 10px 12px;
+    border: 1px solid rgba(128, 128, 128, 0.16);
+    border-radius: 12px;
+    overflow: hidden;
+    animation: hero-fade-in 0.55s ease 0.7s both;
+}
+
+/* dotted backdrop fading out toward the edges (theme-neutral gray) */
+.wave-zone::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(rgba(128, 128, 128, 0.3) 1px, transparent 1.4px);
+    background-size: 14px 14px;
+    -webkit-mask-image: radial-gradient(ellipse 75% 65% at 50% 50%, #000 40%, transparent);
+    mask-image: radial-gradient(ellipse 75% 65% at 50% 50%, #000 40%, transparent);
+    pointer-events: none;
+}
+
+.wave {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 104px;
+}
+
+.wave i {
+    width: 5px;
+    height: var(--h, 40px);
+    border-radius: 3px;
+    background: currentColor;
+    opacity: 0.85;
+    animation: wave-bounce var(--d, 1.2s) ease-in-out var(--dl, 0s) infinite;
+}
+
+@keyframes wave-bounce {
+    0%, 100% { transform: scaleY(0.3); }
+    50% { transform: scaleY(1); }
+}
+
+.flow {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    max-width: 260px;
+}
+
+.f-label {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    opacity: 0.6;
+}
+
+.f-line {
+    position: relative;
+    flex: 1 1 auto;
+    height: 1px;
+    margin: 0 8px;
+    background: rgba(128, 128, 128, 0.3);
+    overflow: hidden;
+}
+
+/* a dash segment runs the line; the second line starts a lap later */
+.f-line::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 26%;
+    height: 100%;
+    background: currentColor;
+    animation: flow-run 2.4s linear infinite;
+}
+
+.f-line:last-of-type::after {
+    animation-delay: 1.2s;
+}
+
+@keyframes flow-run {
+    from { left: -26%; }
+    to { left: 100%; }
+}
+
+.wave-tag {
+    position: relative;
+    z-index: 1;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    white-space: nowrap;
+    opacity: 0.55;
+}
+
+/* primary create CTA: a breathing outline ring + a light sweep across the
+   label on hover (the button inverts to solid, so the sweep reads on fill) */
+.action-panel :deep(.cta-breathe) {
+    position: relative;
+    overflow: hidden;
+    animation: cta-breathe 2.4s ease-in-out infinite;
+}
+
+@keyframes cta-breathe {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(29, 29, 31, 0.22); }
+    50% { box-shadow: 0 0 0 7px rgba(29, 29, 31, 0); }
+}
+
+:global(html.dark .action-panel .cta-breathe) {
+    animation-name: cta-breathe-dark;
+}
+
+@keyframes cta-breathe-dark {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(238, 238, 238, 0.22); }
+    50% { box-shadow: 0 0 0 7px rgba(238, 238, 238, 0); }
+}
+
+.action-panel :deep(.cta-breathe)::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 40%;
+    background: linear-gradient(105deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+    transform: translateX(-130%) skewX(-12deg);
+    pointer-events: none;
+}
+
+.action-panel :deep(.cta-breathe:hover)::after {
+    transform: translateX(260%) skewX(-12deg);
+    transition: transform 0.7s ease;
+}
+
 .panel-fine {
-    margin-top: 14px;
+    margin-top: auto;
     padding-top: 11px;
     border-top: 1px solid rgba(128, 128, 128, 0.14);
     font-size: 12px;
@@ -793,8 +1052,8 @@ onMounted(() => {
     align-items: center;
     flex-wrap: wrap;
     gap: 10px 18px;
-    margin-top: 18px;
-    padding: 13px 16px;
+    margin-top: 10px;
+    padding: 9px 16px;
     border: 1px solid rgba(128, 128, 128, 0.16);
     border-radius: 12px;
     background: rgba(128, 128, 128, 0.04);
@@ -871,6 +1130,48 @@ onMounted(() => {
        page) never outgrows the viewport — content scrolls inside the tab */
     .hero-right.has-address .action-panel :deep(.n-tab-pane) {
         max-height: 72vh;
+    }
+
+    /* the breathing strip is a desktop-width luxury */
+    .wave-zone {
+        display: none;
+    }
+}
+
+/* motion guards live at the END of the sheet: same-specificity rules
+   later in the file would otherwise beat them */
+@media (prefers-reduced-motion: reduce) {
+    .kicker-sq,
+    .kicker-text,
+    .hero-title .seg > span,
+    .hero-sub,
+    .panel-qs-label,
+    .qs-row,
+    .wave-zone {
+        animation: none;
+    }
+
+    .seg-3::before {
+        animation: none;
+        transform: scaleX(1);
+    }
+
+    /* the wave bars freeze as a static silhouette, the flow dash hides */
+    .wave i {
+        animation: none;
+    }
+
+    .f-line::after {
+        animation: none;
+        display: none;
+    }
+
+    .action-panel :deep(.cta-breathe) {
+        animation: none;
+    }
+
+    .action-panel :deep(.cta-breathe)::after {
+        display: none;
     }
 }
 </style>

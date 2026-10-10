@@ -543,6 +543,18 @@ export const MESSAGE_REGISTRY = {
       "en": "QUICK START",
       "zh": "快速开始"
     },
+    "flowStep1": {
+      "en": "Create",
+      "zh": "创建"
+    },
+    "flowStep2": {
+      "en": "Paste",
+      "zh": "粘贴"
+    },
+    "flowStep3": {
+      "en": "Get code",
+      "zh": "收码"
+    },
     "qs1Title": {
       "en": "Create an address",
       "zh": "创建邮箱"
@@ -1866,6 +1878,18 @@ export const MESSAGE_REGISTRY = {
     "statsRowSend": {
       "en": "SEND",
       "zh": "发信"
+    },
+    "expandStats": {
+      "en": "Expand stats",
+      "zh": "展开统计"
+    },
+    "collapseStats": {
+      "en": "Collapse stats",
+      "zh": "收起统计"
+    },
+    "cardDragLabel": {
+      "en": "Drag to reorder",
+      "zh": "拖动排序"
     },
     "statsUpdatedAt": {
       "en": "Updated at {time} (auto refresh every minute)",
@@ -3701,6 +3725,10 @@ export const MESSAGE_REGISTRY = {
       "en": "Announcements",
       "zh": "公告管理"
     },
+    "announcementMarqueeLabel": {
+      "en": "Scrolling ticker",
+      "zh": "公告滚动"
+    },
     "announcementPlaceholder": {
       "en": "Type the announcement (line breaks supported); it appears right of the homepage title after publishing",
       "zh": "输入公告内容，支持换行；发布后显示在首页顶部标题右侧"
@@ -4556,6 +4584,10 @@ export const MESSAGE_REGISTRY = {
     "title": {
       "en": "Service Status",
       "zh": "服务状态"
+    },
+    "cardDragLabel": {
+      "en": "Drag to reorder",
+      "zh": "拖动排序"
     },
     "badgeUp": {
       "en": "All services up",

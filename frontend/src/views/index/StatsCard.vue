@@ -11,6 +11,14 @@ import { useSiteHealth } from './useSiteHealth'
  */
 const { t } = useScopedI18n('views.index.HomeInfo')
 
+// modular card row: the parent owns drag order + collapse state,
+// this card only renders its own grip / toggle / summary line
+defineProps({
+    draggable: { type: Boolean, default: false },
+    collapsed: { type: Boolean, default: false },
+})
+const emit = defineEmits(['dragstart', 'dragend', 'toggle-collapse'])
+
 const { stats, statsError, statsUpdatedAt, fetchStats, start, stop } = useSiteHealth()
 
 onMounted(start)
@@ -57,14 +65,39 @@ const formatCount = (value) => {
 </script>
 
 <template>
-    <div class="stats-card">
+    <div class="stats-card" :class="{ 'is-refreshing': refreshing, 'is-collapsed': collapsed }">
         <div class="stats-head">
+            <span v-if="draggable" class="card-grip" draggable="true"
+                :title="t('cardDragLabel')" @dragstart="emit('dragstart', $event)"
+                @dragend="emit('dragend')">⠿</span>
             <span class="stats-led" :class="{ 'stats-led-error': statsError }" />
             <span class="stats-title">{{ t('statsTitle') }}</span>
             <span class="stats-badge">{{ modeBadge }}</span>
+            <button class="stats-toggle" type="button"
+                :aria-label="collapsed ? t('expandStats') : t('collapseStats')"
+                :aria-expanded="String(!collapsed)" @click="emit('toggle-collapse')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+                    :class="{ 'is-collapsed': collapsed }">
+                    <path d="M6 9l6 6 6-6" />
+                </svg>
+            </button>
         </div>
 
-        <div class="stats-grid">
+        <!-- collapsed: one-line summary of TODAY receive / send only -->
+        <div v-if="collapsed" class="stats-summary">
+            <span class="stats-summary-item">
+                <span class="stats-summary-label">{{ statItems[0].label }}</span>
+                <b class="stats-summary-value">{{ formatCount(statItems[0].value) }}</b>
+            </span>
+            <span class="stats-summary-sep" aria-hidden="true" />
+            <span class="stats-summary-item">
+                <span class="stats-summary-label">{{ sendItems[0].label }}</span>
+                <b class="stats-summary-value">{{ formatCount(sendItems[0].value) }}</b>
+            </span>
+        </div>
+
+        <div v-else class="stats-grid">
             <div class="stats-line">
                 <span class="stats-line-tag">{{ t('statsRowReceive') }}</span>
                 <div class="stats-row">
@@ -134,6 +167,23 @@ const formatCount = (value) => {
     50% { opacity: 0.45; }
 }
 
+/* probing: the LED stutters fast while the refresh request is in flight
+   (mirrors the uptime card's probing state) */
+.stats-card.is-refreshing .stats-led {
+    animation: stats-led-fast 0.4s steps(2) infinite;
+}
+
+@keyframes stats-led-fast {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.25; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .stats-card.is-refreshing .stats-led {
+        animation: none;
+    }
+}
+
 .stats-title {
     font-size: 13px;
     font-weight: 600;
@@ -151,6 +201,96 @@ const formatCount = (value) => {
     letter-spacing: 0.6px;
     text-transform: uppercase;
     white-space: nowrap;
+}
+
+/* drag grip in the card head (hidden <768px — touch doesn't drag) */
+.card-grip {
+    flex: 0 0 auto;
+    font-size: 12px;
+    line-height: 1;
+    opacity: 0.3;
+    cursor: grab;
+    user-select: none;
+    transition: opacity 0.15s ease;
+}
+
+.card-grip:hover {
+    opacity: 0.65;
+}
+
+.card-grip:active {
+    cursor: grabbing;
+}
+
+@media (max-width: 768px) {
+    .card-grip {
+        display: none;
+    }
+}
+
+/* expand / collapse chevron, far right of the head */
+.stats-toggle {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    opacity: 0.55;
+    cursor: pointer;
+    transition: opacity 0.15s ease;
+}
+
+.stats-toggle:hover {
+    opacity: 1;
+}
+
+.stats-toggle svg {
+    width: 12px;
+    height: 12px;
+    display: block;
+    transition: transform 0.2s ease;
+}
+
+.stats-toggle svg.is-collapsed {
+    transform: rotate(-90deg);
+}
+
+/* collapsed: a single "today receive N · today send M" line */
+.stats-summary {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1 1 auto;
+    padding: 6px 0 2px;
+}
+
+.stats-summary-item {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 6px;
+}
+
+.stats-summary-label {
+    font-size: 11px;
+    opacity: 0.6;
+    letter-spacing: 0.4px;
+}
+
+.stats-summary-value {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.stats-summary-sep {
+    width: 1px;
+    height: 14px;
+    background: rgba(128, 128, 128, 0.28);
 }
 
 /* 问题18-①: two stacked lines (receive / send), four cells each */

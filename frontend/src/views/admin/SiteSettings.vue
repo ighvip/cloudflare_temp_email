@@ -57,6 +57,8 @@ const form = ref({
 })
 
 const announcements = ref([])
+// header marquee switch — defaults on, persisted via generic /admin/config
+const announcementMarquee = ref(true)
 const newAnnouncement = ref('')
 const editingIndex = ref(-1)
 const editingContent = ref('')
@@ -99,6 +101,15 @@ const load = async () => {
         }
     } catch (error) {
         console.warn('load announcements failed', error)
+    }
+    try {
+        const res = await api.fetch('/admin/config/announcement-marquee', { showLoading: false })
+        if (res?.value !== undefined && res?.value !== null) {
+            announcementMarquee.value = res.value !== 'false'
+        }
+    } catch (error) {
+        // first time there may be no saved value yet (defaults to on)
+        console.warn('load announcement marquee failed', error)
     } finally {
         loading.value = false
     }
@@ -151,6 +162,23 @@ const persistAnnouncements = async () => {
             value: JSON.stringify(announcements.value),
         },
     })
+}
+
+const persistMarquee = async () => {
+    try {
+        await api.fetch('/admin/config', {
+            method: 'POST',
+            // button state is the feedback — no app-wide overlay
+            showLoading: false,
+            body: {
+                key: 'announcement-marquee',
+                value: String(announcementMarquee.value),
+            },
+        })
+        message.success(t('saveSuccess'))
+    } catch (error) {
+        message.error(error.message || t('saveFailed'))
+    }
 }
 
 const addAnnouncement = async () => {
@@ -332,6 +360,11 @@ onMounted(load)
                 </n-button>
             </div>
 
+            <div class="announcement-marquee-row">
+                <span class="announcement-marquee-label">{{ t('announcementMarqueeLabel') }}</span>
+                <n-switch v-model:value="announcementMarquee" size="small" @update:value="persistMarquee" />
+            </div>
+
             <n-empty v-if="!announcements.length" :description="t('noAnnouncements')" style="margin-top: 16px;" />
 
             <n-list v-else :show-divider="false" style="margin-top: 12px;">
@@ -427,6 +460,19 @@ onMounted(load)
 
 .announcement-form {
     max-width: 760px;
+}
+
+/* marquee switch row sits between the composer and the list */
+.announcement-marquee-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.announcement-marquee-label {
+    font-size: 13px;
+    opacity: 0.85;
 }
 
 .announcement-row {

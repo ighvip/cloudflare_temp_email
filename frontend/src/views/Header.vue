@@ -264,18 +264,31 @@ let announcementTimer = null;
 // sweep duration follows the measured width (~45px/s)
 const announcementViewport = ref(null);
 const announcementOverflow = ref(false);
-const announcementDuration = ref('12s');
+// admin toggle (default ON): the ticker runs forever like the reference,
+// not only when the copy happens to overflow the viewport
+const announcementMarquee = computed(() => openSettings.value?.announcementMarquee !== false);
+// scrolling = forced by the admin toggle OR by a measured overflow
+const announcementScrolling = computed(() => announcementOverflow.value || announcementMarquee.value);
+const announcementDuration = ref('22s');
+// dual-copy strip: each copy carries the trailing gap, so one marquee
+// cycle (-50%) equals exactly copy + gap = half the strip width
+const ANNOUNCEMENT_GAP = 56; // keep in sync with .header-announcement-copy
 const measureAnnouncement = () => {
     const el = announcementViewport.value;
     if (!el) {
         announcementOverflow.value = false;
         return;
     }
-    const overflows = el.scrollWidth > el.clientWidth + 2;
+    const cycle = el.scrollWidth / 2;
+    const overflows = cycle - ANNOUNCEMENT_GAP > el.clientWidth + 2;
     announcementOverflow.value = overflows;
+    // overflowing copy gets a readable pace (~45px/s); otherwise the
+    // reference's fixed 22s per loop
     if (overflows) {
-        const seconds = Math.min(60, Math.max(6, (el.clientWidth + el.scrollWidth) / 45));
+        const seconds = Math.min(60, Math.max(6, cycle / 45));
         announcementDuration.value = `${seconds.toFixed(1)}s`;
+    } else {
+        announcementDuration.value = '22s';
     }
 };
 watch(currentAnnouncement, async () => {
@@ -335,9 +348,13 @@ onUnmounted(() => {
                             <span class="header-announcement-tag">{{ t('announcementTag') }}</span>
                             <!-- 问题1: overflow scrolls right-to-left instead of being cut off -->
                             <span ref="announcementViewport" class="header-announcement-viewport">
+                                <!-- dual copy + -50% travel = seamless loop, no empty gap
+                                     between cycles (single copy used to sweep through void) -->
                                 <span class="header-announcement-text"
-                                    :class="{ 'is-scrolling': announcementOverflow }"
-                                    :style="{ animationDuration: announcementDuration }">{{ currentAnnouncement }}</span>
+                                    :class="{ 'is-scrolling': announcementScrolling }"
+                                    :style="{ animationDuration: announcementDuration }"><span
+                                        class="header-announcement-copy">{{ currentAnnouncement }}</span><span
+                                            class="header-announcement-copy" aria-hidden="true">{{ currentAnnouncement }}</span></span>
                             </span>
                             <span v-if="announcementList.length > 1" class="header-announcement-more">
                                 {{ t('announcementMore', { count: announcementList.length }) }}
@@ -361,12 +378,12 @@ onUnmounted(() => {
                         {{ t('menu') }}
                     </n-button>
                     <n-dropdown v-if="!isMobile" :options="languageOptions" @select="changeLocale" trigger="click" class="header-locale-dropdown">
-                        <n-button text size="small" class="header-locale-button" style="padding: 0 10px;">
+                        <n-button text size="small" class="header-locale-button" style="padding: 0 6px;">
                             <template #icon>
                                 <n-icon :component="Language" />
                             </template>
                             {{ currentLocaleLabel }}
-                            <n-icon :component="KeyboardArrowDownOutlined" style="margin-left: 4px;" />
+                            <n-icon :component="KeyboardArrowDownOutlined" style="margin-left: 2px;" />
                         </n-button>
                     </n-dropdown>
                 </n-space>
@@ -387,7 +404,7 @@ onUnmounted(() => {
             </n-drawer-content>
         </n-drawer>
         <n-modal v-model:show="showAllAnnouncements" preset="card" :title="t('announcementTitle')"
-            style="max-width: 560px;">
+            class="header-announcement-modal" style="max-width: 560px;">
             <n-list v-if="announcementList.length" :show-divider="false">
                 <n-list-item v-for="(item, idx) in announcementList" :key="idx">
                     <span class="announcement-modal-item">{{ item }}</span>
@@ -483,7 +500,9 @@ onUnmounted(() => {
     min-width: 0;
 }
 
-/* the site name must never be squeezed out by the clock / announcement */
+/* the site name must never be squeezed out by the clock / announcement —
+   it is the one flex item that refuses to shrink; an absurdly long admin
+   title wraps to a second line instead of being ellipsised away */
 .header-title-row h3 {
     flex: 0 0 auto;
 }
@@ -494,7 +513,16 @@ onUnmounted(() => {
 .header-brand {
     display: flex;
     flex-direction: column;
+    flex: 0 0 auto;
     min-width: 80px;
+    max-width: 46vw;
+}
+
+/* the brand h3 overrides the page-header ellipsis rule: wrap, never clip */
+.header-brand h3 {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
 }
 
 .header-brand h3 {
@@ -562,16 +590,26 @@ onUnmounted(() => {
     gap: 8px;
     min-width: 0;
     padding: 5px 10px;
-    border: 1px solid rgba(240, 160, 32, 0.5);
-    border-radius: 8px;
-    background: rgba(240, 160, 32, 0.10);
+    border: 1px solid rgba(128, 128, 128, 0.32);
+    border-radius: 10px;
+    background: transparent;
+    color: #b06f0a;
     font-size: 12px;
     cursor: pointer;
-    transition: background 0.2s ease;
+    transition: border-color 0.2s ease, background 0.2s ease;
 }
 
 .header-announcement:hover {
-    background: rgba(240, 160, 32, 0.18);
+    border-color: rgba(128, 128, 128, 0.5);
+    background: rgba(128, 128, 128, 0.06);
+}
+
+.header-announcement:hover .header-announcement-tag {
+    filter: brightness(1.08);
+}
+
+:global(html.dark .header-announcement) {
+    color: #dca24a;
 }
 
 /* 问题1: the vertical bar in front of the ticker */
@@ -584,13 +622,14 @@ onUnmounted(() => {
 
 .header-announcement-tag {
     flex: 0 0 auto;
-    padding: 0 6px;
-    border-radius: 4px;
+    padding: 2px 8px;
+    border-radius: 999px;
     background: #f0a020;
     color: #fff;
     font-size: 11px;
-    line-height: 18px;
-    font-weight: 600;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    transition: filter 0.15s ease;
 }
 
 /* 问题1: between 768px and 1100px the full menu owns the header — the
@@ -609,11 +648,23 @@ onUnmounted(() => {
 
 .header-announcement-text {
     flex: 0 0 auto;
+    display: inline-flex;
     white-space: nowrap;
+}
+
+.header-announcement-copy {
+    flex: 0 0 auto;
+    padding-right: 56px;
 }
 
 .header-announcement-text.is-scrolling {
     animation: header-announcement-marquee linear infinite;
+}
+
+/* static state (marquee toggle off, no overflow): the second seamless
+   copy hides — never show the same text jammed twice */
+.header-announcement-text:not(.is-scrolling) .header-announcement-copy:last-child {
+    display: none;
 }
 
 .header-announcement:hover .header-announcement-text.is-scrolling {
@@ -622,12 +673,24 @@ onUnmounted(() => {
 
 @keyframes header-announcement-marquee {
     0% {
-        transform: translateX(100%);
+        transform: translateX(0);
     }
 
     100% {
-        transform: translateX(-100%);
+        transform: translateX(-50%);
     }
+}
+
+/* orange-dot title on the announcements dialog (teleported — global) */
+:global(.header-announcement-modal .n-card-header__main::before) {
+    content: '';
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    margin-right: 8px;
+    border-radius: 50%;
+    background: #f0a020;
+    vertical-align: 1px;
 }
 
 .header-announcement-more {
@@ -669,6 +732,13 @@ onUnmounted(() => {
 .header-extra {
     align-items: center;
     flex-wrap: nowrap;
+}
+
+/* tighter nav: horizontal menu items were padded wide — trim the inline
+   padding so 邮箱 / 用户中心 / 帮助 sit closer together */
+.header-extra :deep(.n-menu-item-content) {
+    padding-left: 10px;
+    padding-right: 10px;
 }
 
 .header-extra :deep(.n-space-item) {

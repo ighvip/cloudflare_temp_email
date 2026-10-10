@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { Context } from 'hono'
 
-import utils, { getJsonSetting, saveSetting } from './utils';
+import utils, { getJsonSetting, getSetting, saveSetting } from './utils';
 import { CONSTANTS } from './constants';
 import { isS3Enabled } from './mails_api/s3_attachment';
 import { isAnySendMailEnabled, getSitePrefix } from './common';
@@ -15,6 +15,8 @@ const api = new Hono<HonoCustomType>
 const SITE_SETTINGS_KEY = CONSTANTS.SITE_SETTINGS_KEY;
 // announcement list, saved via generic /admin/config API as a JSON array
 const ANNOUNCEMENTS_KEY = 'admin-config:announcements';
+// header marquee on/off switch ("true"/"false", default on when absent)
+const ANNOUNCEMENT_MARQUEE_KEY = 'admin-config:announcement-marquee';
 // public stats cache, refreshed at most once per interval
 const PUBLIC_STATS_CACHE_KEY = 'admin-config:public-stats-cache';
 const PUBLIC_STATS_CACHE_TTL_SECONDS = 60;
@@ -168,6 +170,8 @@ api.get('/open_api/settings', async (c) => {
         "title": siteSettings.title || c.env.TITLE,
         "announcement": latestAnnouncement,
         "announcements": enabledAnnouncements.map((item) => item.content),
+        // header ticker: admins may turn the perpetual marquee off (default on)
+        "announcementMarquee": (await getSetting(c, ANNOUNCEMENT_MARQUEE_KEY)) !== 'false',
         // admin-selected default UI language, empty means "follow the browser"
         "defaultLocale": typeof siteSettings.defaultLocale === 'string' ? siteSettings.defaultLocale : "",
         "alwaysShowAnnouncement": utils.getBooleanValue(c.env.ALWAYS_SHOW_ANNOUNCEMENT),

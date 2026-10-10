@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useScopedI18n } from '@/i18n/app'
 import { useSiteHealth } from './useSiteHealth'
 
@@ -10,23 +10,43 @@ import { useSiteHealth } from './useSiteHealth'
  */
 const { t } = useScopedI18n('views.Uptime')
 
+// drag grip rendered in the head when the parent enables reordering
+defineProps({ draggable: { type: Boolean, default: false } })
+const emit = defineEmits(['dragstart', 'dragend'])
+
 const { uptime, uptimeError, uptimeUpdatedAt, fetchUptime, start, stop } = useSiteHealth()
 
+// re-key the bar strips on every data arrival — the strips remount and the
+// CSS entrance cascade replays (the reference achieves the same by
+// rebuilding the DOM with innerHTML: "bars re-appear on refresh")
+const barsVersion = ref(0)
+watch(uptime, () => { barsVersion.value += 1 })
+
 onMounted(start)
-onUnmounted(stop)
 
 // manual ↻ refreshes ONLY this card: showLoading=false keeps the request
 // out of the global n-spin overlay (that was the "whole page refresh" bug)
 const refreshing = ref(false)
+// a one-shot tint flash across the rows when a manual refresh lands
+const flashing = ref(false)
+let flashTimer = null
 const onRefresh = async () => {
     if (refreshing.value) return
     refreshing.value = true
     try {
         await fetchUptime(false)
+        flashing.value = true
+        if (flashTimer) clearTimeout(flashTimer)
+        flashTimer = setTimeout(() => { flashing.value = false }, 500)
     } finally {
         refreshing.value = false
     }
 }
+
+onUnmounted(() => {
+    stop()
+    if (flashTimer) clearTimeout(flashTimer)
+})
 
 const MONITOR_IDS = ['website', 'api', 'database']
 
@@ -89,8 +109,11 @@ const fmtLatency = (value) =>
 </script>
 
 <template>
-    <div class="uptime-card">
+    <div class="uptime-card" :class="{ 'is-refreshing': refreshing }">
         <div class="uptime-head">
+            <span v-if="draggable" class="card-grip" draggable="true"
+                :title="t('cardDragLabel')" @dragstart="emit('dragstart', $event)"
+                @dragend="emit('dragend')">⠿</span>
             <span class="uptime-title">
                 <span class="uptime-led" :class="overallState" />
                 {{ t('title') }}
@@ -98,15 +121,19 @@ const fmtLatency = (value) =>
             <span class="uptime-badge" :class="overallState">{{ overallText }}</span>
         </div>
 
-        <div class="uptime-rows">
+        <div class="uptime-rows" :class="{ 'is-flashing': flashing }">
             <div v-for="row in rows" :key="row.id" class="uptime-row">
                 <div class="uptime-name">
                     <span class="uptime-dot" :class="row.state" />
                     <span class="uptime-name-text">{{ monitorName(row.id) }}</span>
                 </div>
-                <div class="uptime-bars" aria-hidden="true">
-                    <span v-for="(bar, barIndex) in row.bars" :key="barIndex"
-                        class="uptime-bar" :class="`bar-${bar.s}`" :title="barTitle(bar)" />
+                <div class="uptime-bars-wrap">
+                    <div class="uptime-bars" :key="`${row.id}-${barsVersion}`">
+                        <span v-for="(bar, barIndex) in row.bars" :key="barIndex"
+                            class="uptime-bar" :class="`bar-${bar.s}`"
+                            :style="{ '--i': barIndex }" :title="barTitle(bar)" />
+                    </div>
+                    <span class="uptime-scan" aria-hidden="true" />
                 </div>
                 <div class="uptime-stats">
                     <span class="uptime-pct" :title="t('uptimeTip')">{{ fmtUptime(row.uptime24h) }}</span>
@@ -123,7 +150,13 @@ const fmtLatency = (value) =>
             <span v-if="uptime?.version" class="uptime-version">{{ uptime.version }}</span>
             <button class="uptime-refresh" type="button" :class="{ 'is-refreshing': refreshing }"
                 :aria-label="t('refresh')" :disabled="refreshing"
-                @click="onRefresh">↻</button>
+                @click="onRefresh">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+                    <path d="M21 3v6h-6" />
+                </svg>
+            </button>
         </div>
     </div>
 </template>
@@ -133,7 +166,7 @@ const fmtLatency = (value) =>
     display: flex;
     flex-direction: column;
     min-width: 0;
-    padding: 14px 16px;
+    padding: 12px 16px;
     border: 1px solid rgba(128, 128, 128, 0.16);
     border-radius: 12px;
     background: rgba(128, 128, 128, 0.04);
@@ -143,8 +176,33 @@ const fmtLatency = (value) =>
     display: flex;
     align-items: center;
     gap: 8px;
-    padding-bottom: 10px;
+    padding-bottom: 8px;
     border-bottom: 1px solid rgba(128, 128, 128, 0.14);
+}
+
+/* drag grip in the card head (touch devices don't drag — hidden <768px) */
+.card-grip {
+    flex: 0 0 auto;
+    font-size: 12px;
+    line-height: 1;
+    opacity: 0.3;
+    cursor: grab;
+    user-select: none;
+    transition: opacity 0.15s ease;
+}
+
+.card-grip:hover {
+    opacity: 0.65;
+}
+
+.card-grip:active {
+    cursor: grabbing;
+}
+
+@media (max-width: 768px) {
+    .card-grip {
+        display: none;
+    }
 }
 
 .uptime-title {
@@ -167,6 +225,31 @@ const fmtLatency = (value) =>
 
 .uptime-led.up {
     background: currentColor;
+    animation: uptime-led-pulse 2s ease-in-out infinite;
+}
+
+/* probing: the LED stutters fast while the refresh request is in flight */
+.uptime-card.is-refreshing .uptime-led {
+    animation: uptime-led-fast 0.4s steps(2) infinite;
+}
+
+@keyframes uptime-led-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(29, 29, 31, 0.35); }
+    50% { box-shadow: 0 0 0 4px rgba(29, 29, 31, 0); }
+}
+
+:global(html.dark .uptime-led.up) {
+    animation-name: uptime-led-pulse-dark;
+}
+
+@keyframes uptime-led-pulse-dark {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(238, 238, 238, 0.35); }
+    50% { box-shadow: 0 0 0 4px rgba(238, 238, 238, 0); }
+}
+
+@keyframes uptime-led-fast {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.25; }
 }
 
 .uptime-led.down {
@@ -212,6 +295,17 @@ const fmtLatency = (value) =>
     padding: 6px 0;
 }
 
+/* one-shot tint when a manual refresh lands */
+.uptime-rows.is-flashing {
+    animation: uptime-rows-flash 0.5s ease;
+    border-radius: 4px;
+}
+
+@keyframes uptime-rows-flash {
+    0% { background: rgba(128, 128, 128, 0.1); }
+    100% { background: transparent; }
+}
+
 .uptime-row {
     display: flex;
     align-items: center;
@@ -246,8 +340,15 @@ const fmtLatency = (value) =>
 .uptime-dot.up { background: currentColor; }
 .uptime-dot.down { background: #e5484d; }
 
-.uptime-bars {
+.uptime-bars-wrap {
+    position: relative;
     flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    border-radius: 3px;
+}
+
+.uptime-bars {
     display: flex;
     gap: 2px;
     min-width: 0;
@@ -259,10 +360,43 @@ const fmtLatency = (value) =>
     height: 24px;
     border-radius: 3px;
     background: rgba(128, 128, 128, 0.18);
+    /* staggered grow-in: --i cascades the delay 12ms per bar, left (oldest)
+       to right (newest); replays on remount (barsVersion key) */
+    animation: uptime-bar-in 0.4s ease both;
+    animation-delay: calc(var(--i, 0) * 12ms);
+}
+
+@keyframes uptime-bar-in {
+    from { opacity: 0; transform: scaleY(0.4); }
+    to { opacity: 1; transform: none; }
 }
 
 .uptime-bar.bar-up { background: currentColor; }
 .uptime-bar.bar-down { background: #e5484d; }
+
+/* light sweep gliding across the strips (the reference's status-scan) */
+.uptime-scan {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 48px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+    mix-blend-mode: overlay;
+    animation: uptime-scan 3.6s linear infinite;
+    pointer-events: none;
+}
+
+@keyframes uptime-scan {
+    from { transform: translateX(-60px); }
+    to { transform: translateX(calc(100% + 100vw)); }
+}
+
+/* overlay-white is nearly invisible on dark panels — screen it instead */
+:global(html.dark .uptime-scan) {
+    mix-blend-mode: screen;
+    opacity: 0.5;
+}
 
 .uptime-stats {
     flex: 0 0 auto;
@@ -317,24 +451,37 @@ const fmtLatency = (value) =>
 }
 
 .uptime-refresh {
+    position: relative;
     flex: 0 0 auto;
-    width: 22px;
-    height: 22px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
     padding: 0;
     border: 1px solid rgba(128, 128, 128, 0.35);
     border-radius: 6px;
     background: transparent;
     color: inherit;
-    font-size: 13px;
-    line-height: 1;
     opacity: 0.7;
     cursor: pointer;
     transition: opacity 0.15s ease, border-color 0.15s ease;
 }
 
+.uptime-refresh svg {
+    width: 13px;
+    height: 13px;
+    display: block;
+    transition: transform 0.3s ease;
+}
+
 .uptime-refresh:hover {
     opacity: 1;
     border-color: #1a1a1a;
+}
+
+.uptime-refresh:hover svg {
+    transform: rotate(90deg);
 }
 
 :global(html.dark .uptime-refresh:hover) {
@@ -344,15 +491,53 @@ const fmtLatency = (value) =>
 .uptime-refresh.is-refreshing {
     opacity: 1;
     border-color: #1a1a1a;
-    animation: uptime-spin 0.9s linear infinite;
+}
+
+/* loading: the icon spins inside a rotating conic ring around the button */
+.uptime-refresh.is-refreshing svg {
+    animation: uptime-spin 0.8s linear infinite;
+}
+
+.uptime-refresh.is-refreshing::before {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border-radius: 9px;
+    background: conic-gradient(from 0deg, transparent 0 68%, #1a1a1a 82%, transparent 96%);
+    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1px));
+    mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1px));
+    animation: uptime-spin 1s linear infinite;
+    pointer-events: none;
 }
 
 :global(html.dark .uptime-refresh.is-refreshing) {
     border-color: #eee;
 }
 
+:global(html.dark .uptime-refresh.is-refreshing::before) {
+    background: conic-gradient(from 0deg, transparent 0 68%, #eee 82%, transparent 96%);
+}
+
 @keyframes uptime-spin {
     to { transform: rotate(360deg); }
+}
+
+/* loops off under reduced motion; the one-shot entrance cascade, the
+   refresh flash and the loading spin stay (state, not decoration) */
+@media (prefers-reduced-motion: reduce) {
+    .uptime-scan {
+        display: none;
+    }
+
+    .uptime-led,
+    .uptime-led.up,
+    .uptime-card.is-refreshing .uptime-led {
+        animation: none;
+    }
+
+    .uptime-refresh.is-refreshing::before {
+        display: none;
+    }
 }
 
 @media (max-width: 560px) {
