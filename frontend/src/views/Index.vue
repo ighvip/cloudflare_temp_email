@@ -1,5 +1,5 @@
 <script setup>
-import { defineAsyncComponent, onMounted, watch, computed, ref } from 'vue'
+import { defineAsyncComponent, onMounted, onUnmounted, watch, computed, ref } from 'vue'
 import { useScopedI18n } from '@/i18n/app'
 import { useRoute, useRouter } from 'vue-router'
 import { useStorage } from '@vueuse/core'
@@ -115,12 +115,58 @@ const onCardDrop = (index) => {
     dragFromIndex = -1
     return
   }
+  const orderBefore = cardOrder.value[0]
   const next = [...cardOrder.value]
   const [moved] = next.splice(dragFromIndex, 1)
   next.splice(index, 0, moved)
   homeCardOrder.value = next
+  // two cards: any cross-move is a full swap — flip the split ratio so each
+  // card keeps the width it had (rather than inheriting the other slot's)
+  if (next.length === 2 && next[0] !== orderBefore) {
+    heroSplit.value = 1 - heroSplit.value
+  }
   dragFromIndex = -1
 }
+
+// ---- draggable split between the two cards ----
+// The left card's width is a persisted ratio of the row. Dragging the divider
+// trades width between the two cards; the stats card reveals more period
+// columns as it widens (its own ResizeObserver handles that internally).
+const STATS_MIN = 150   // stats floor — room for one period column
+const UPTIME_MIN = 300  // uptime floor — name + a few bars + percentages
+const DIVIDER_W = 16
+const heroSplit = useStorage('heroSplit', 0.45)
+const heroCardsEl = ref(null)
+let resizing = false
+const onSplitStart = (event) => {
+  resizing = true
+  event.preventDefault()
+  window.addEventListener('mousemove', onSplitMove)
+  window.addEventListener('mouseup', onSplitEnd)
+  document.body.style.cursor = 'col-resize'
+  document.body.style.userSelect = 'none'
+}
+const onSplitMove = (event) => {
+  if (!resizing || !heroCardsEl.value) return
+  const rect = heroCardsEl.value.getBoundingClientRect()
+  const avail = rect.width - DIVIDER_W
+  if (avail <= 0) return
+  // clamp floors follow whichever card is in the left slot (reorder-safe)
+  const leftIsStats = cardOrder.value[0] === 'stats'
+  const leftMin = leftIsStats ? STATS_MIN : UPTIME_MIN
+  const rightMin = leftIsStats ? UPTIME_MIN : STATS_MIN
+  let left = event.clientX - rect.left - DIVIDER_W / 2
+  left = Math.max(leftMin, Math.min(avail - rightMin, left))
+  heroSplit.value = left / avail
+}
+const onSplitEnd = () => {
+  resizing = false
+  window.removeEventListener('mousemove', onSplitMove)
+  window.removeEventListener('mouseup', onSplitEnd)
+  document.body.style.cursor = ''
+  document.body.style.userSelect = ''
+}
+onUnmounted(onSplitEnd)
 
 // curated FAQ links jump straight to the matching help section
 const faqLinks = computed(() => [
@@ -227,18 +273,23 @@ onMounted(() => {
 
           <HeroFeatures />
 
-          <div class="hero-cards">
-            <div v-for="(cardKey, cardIndex) in cardOrder" :key="cardKey" class="hero-card-slot"
-              :class="{ 'is-dragover': dragOverIndex === cardIndex }"
-              @dragover.prevent="onCardDragOver(cardIndex)"
-              @drop.prevent="onCardDrop(cardIndex)">
-              <StatsCard v-if="cardKey === 'stats'" :draggable="!isMobile"
-                :collapsed="statsCollapsed"
-                @dragstart="onCardDragStart(cardIndex, $event)" @dragend="onCardDragEnd"
-                @toggle-collapse="statsCollapsed = !statsCollapsed" />
-              <UptimeCard v-else :draggable="!isMobile"
-                @dragstart="onCardDragStart(cardIndex, $event)" @dragend="onCardDragEnd" />
-            </div>
+          <div ref="heroCardsEl" class="hero-cards" :style="{ '--split': heroSplit }">
+            <template v-for="(cardKey, cardIndex) in cardOrder" :key="cardKey">
+              <div class="hero-card-slot"
+                :class="[cardIndex === 0 ? 'slot-left' : 'slot-right',
+                  { 'is-dragover': dragOverIndex === cardIndex }]"
+                @dragover.prevent="onCardDragOver(cardIndex)"
+                @drop.prevent="onCardDrop(cardIndex)">
+                <StatsCard v-if="cardKey === 'stats'" :draggable="!isMobile"
+                  :collapsed="statsCollapsed"
+                  @dragstart="onCardDragStart(cardIndex, $event)" @dragend="onCardDragEnd"
+                  @toggle-collapse="statsCollapsed = !statsCollapsed" />
+                <UptimeCard v-else :draggable="!isMobile"
+                  @dragstart="onCardDragStart(cardIndex, $event)" @dragend="onCardDragEnd" />
+              </div>
+              <div v-if="cardIndex === 0" class="card-divider"
+                @mousedown.prevent="onSplitStart" />
+            </template>
           </div>
         </section>
 
@@ -553,15 +604,13 @@ onMounted(() => {
     to { opacity: 0.75; }
 }
 
-/* stats + uptime cards sit side by side — two equal columns */
+/* stats + uptime cards sit side by side — the left card's width is driven
+   by the persisted split ratio, the right card fills the rest, and a thin
+   divider between them is the drag handle */
 .hero-cards {
-    display: grid;
-    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
-    gap: 16px;
-    margin-top: 10px;
-    /* natural heights: the collapsed stats card stays short, the two cards
-       top-align instead of stretching to equal height */
+    display: flex;
     align-items: start;
+    margin-top: 10px;
 }
 
 /* one grid cell per card: the drop target for grip reordering */
@@ -572,6 +621,43 @@ onMounted(() => {
     border-radius: 12px;
 }
 
+/* left slot width = split ratio of the row (minus the divider) */
+.slot-left {
+    flex: 0 0 calc((100% - 16px) * var(--split, 0.45));
+}
+
+.slot-right {
+    flex: 1 1 0;
+}
+
+/* resize handle between the two cards: a hairline that thickens on hover */
+.card-divider {
+    flex: 0 0 16px;
+    align-self: stretch;
+    position: relative;
+    cursor: col-resize;
+    touch-action: none;
+}
+
+.card-divider::before {
+    content: '';
+    position: absolute;
+    top: 10px;
+    bottom: 10px;
+    left: 50%;
+    width: 1px;
+    transform: translateX(-50%);
+    border-radius: 1px;
+    background: rgba(128, 128, 128, 0.18);
+    transition: background 0.15s ease, width 0.15s ease;
+}
+
+.card-divider:hover::before,
+.card-divider:active::before {
+    width: 2px;
+    background: rgba(128, 128, 128, 0.45);
+}
+
 .hero-card-slot.is-dragover {
     outline: 1px dashed rgba(128, 128, 128, 0.5);
     outline-offset: 3px;
@@ -579,7 +665,18 @@ onMounted(() => {
 
 @media (max-width: 992px) {
     .hero-cards {
-        grid-template-columns: 1fr;
+        flex-direction: column;
+    }
+
+    .slot-left,
+    .slot-right {
+        flex: 1 1 auto;
+        width: 100%;
+    }
+
+    /* single-column stack: no split to drag */
+    .card-divider {
+        display: none;
     }
 }
 

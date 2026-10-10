@@ -13,16 +13,13 @@ const { t } = useScopedI18n('views.index.HomeInfo')
 
 // modular card row: the parent owns drag order + collapse state,
 // this card only renders its own grip / toggle / summary line
-defineProps({
+const props = defineProps({
     draggable: { type: Boolean, default: false },
     collapsed: { type: Boolean, default: false },
 })
 const emit = defineEmits(['dragstart', 'dragend', 'toggle-collapse'])
 
 const { stats, statsError, statsUpdatedAt, fetchStats, start, stop } = useSiteHealth()
-
-onMounted(start)
-onUnmounted(stop)
 
 // manual ↻ refreshes ONLY this card: showLoading=false keeps the request
 // out of the global n-spin overlay (that was the "whole page refresh" bug)
@@ -62,10 +59,41 @@ const formatCount = (value) => {
     if (value >= 1000) return `${(value / 1000).toFixed(1)}k`
     return String(value)
 }
+
+// ---- width-adaptive collapsed view ----
+// The parent's draggable split controls THIS card's width. In the collapsed
+// state we reveal periods one column at a time as the card gets wider
+// (今日 → 本週 → 本月 → 年度), receive + send rows stay stacked (上下排列).
+// The expanded state always shows the full 4-column grid, so the toggle
+// still means "force the full grid" even when the card is narrow.
+const CELL_MIN = 72     // min width one period column needs (label + value)
+const COL_GAP = 16      // column gap used by .stats-adaptive-row
+const cardEl = ref(null)
+const adaptiveCols = ref(1)
+const measureCols = () => {
+    const el = cardEl.value
+    if (!el) return
+    // el.clientWidth includes the card's 16px horizontal padding on each side
+    const avail = el.clientWidth - 32
+    adaptiveCols.value = Math.max(1, Math.min(4,
+        Math.floor((avail + COL_GAP) / (CELL_MIN + COL_GAP))))
+}
+let resizeObserver
+onMounted(() => {
+    start()
+    resizeObserver = new ResizeObserver(measureCols)
+    if (cardEl.value) resizeObserver.observe(cardEl.value)
+    measureCols()
+})
+onUnmounted(() => {
+    stop()
+    if (resizeObserver) resizeObserver.disconnect()
+})
+const visibleCols = computed(() => (props.collapsed ? adaptiveCols.value : 4))
 </script>
 
 <template>
-    <div class="stats-card" :class="{ 'is-refreshing': refreshing, 'is-collapsed': collapsed }">
+    <div ref="cardEl" class="stats-card" :class="{ 'is-refreshing': refreshing, 'is-collapsed': collapsed }">
         <div class="stats-head">
             <span v-if="draggable" class="card-grip" draggable="true"
                 :title="t('cardDragLabel')" @dragstart="emit('dragstart', $event)"
@@ -84,17 +112,21 @@ const formatCount = (value) => {
             </button>
         </div>
 
-        <!-- collapsed: one-line summary of TODAY receive / send only -->
-        <div v-if="collapsed" class="stats-summary">
-            <span class="stats-summary-item">
-                <span class="stats-summary-label">{{ statItems[0].label }}</span>
-                <b class="stats-summary-value">{{ formatCount(statItems[0].value) }}</b>
-            </span>
-            <span class="stats-summary-sep" aria-hidden="true" />
-            <span class="stats-summary-item">
-                <span class="stats-summary-label">{{ sendItems[0].label }}</span>
-                <b class="stats-summary-value">{{ formatCount(sendItems[0].value) }}</b>
-            </span>
+        <!-- collapsed: width-adaptive — receive row on top, send row below
+             (上下排列); period columns revealed by card width -->
+        <div v-if="collapsed" class="stats-adaptive" :style="{ '--cols': String(visibleCols) }">
+            <div class="stats-adaptive-row">
+                <span v-for="item in statItems.slice(0, visibleCols)" :key="item.key" class="sac-cell">
+                    <span class="sac-label">{{ item.label }}</span>
+                    <b class="sac-value">{{ formatCount(item.value) }}</b>
+                </span>
+            </div>
+            <div class="stats-adaptive-row">
+                <span v-for="item in sendItems.slice(0, visibleCols)" :key="item.key" class="sac-cell">
+                    <span class="sac-label">{{ item.label }}</span>
+                    <b class="sac-value">{{ formatCount(item.value) }}</b>
+                </span>
+            </div>
         </div>
 
         <div v-else class="stats-grid">
@@ -260,37 +292,45 @@ const formatCount = (value) => {
     transform: rotate(-90deg);
 }
 
-/* collapsed: a single "today receive N · today send M" line */
-.stats-summary {
+/* collapsed: width-adaptive stacked rows — receive on top, send below.
+   Each row is a grid of period columns (今日→本週→本月→年度) revealed by
+   the card width; a single column is the compact "label value" line. */
+.stats-adaptive {
     display: flex;
-    align-items: center;
-    gap: 12px;
+    flex-direction: column;
+    gap: 6px;
     flex: 1 1 auto;
-    padding: 6px 0 2px;
+    padding: 10px 0 4px;
 }
 
-.stats-summary-item {
-    display: inline-flex;
+.stats-adaptive-row {
+    display: grid;
+    grid-template-columns: repeat(var(--cols, 4), minmax(0, 1fr));
+    gap: 4px 16px;
+}
+
+.sac-cell {
+    display: flex;
     align-items: baseline;
     gap: 6px;
+    min-width: 0;
 }
 
-.stats-summary-label {
+.sac-label {
     font-size: 11px;
     opacity: 0.6;
-    letter-spacing: 0.4px;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-.stats-summary-value {
+.sac-value {
+    flex: 0 0 auto;
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     font-size: 15px;
     font-weight: 700;
-}
-
-.stats-summary-sep {
-    width: 1px;
-    height: 14px;
-    background: rgba(128, 128, 128, 0.28);
+    font-variant-numeric: tabular-nums;
 }
 
 /* 问题18-①: two stacked lines (receive / send), four cells each */
