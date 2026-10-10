@@ -82,25 +82,6 @@ const quickSteps = computed(() => [1, 2, 3].map((n) => ({
   desc: t(`qs${n}Desc`),
 })))
 
-// decorative wave bars for the first-run breathing strip — heights form a
-// wave silhouette, each bar bounces on its own period + phase (--h/--d/--dl)
-// heights are capped at 72px so the strip keeps the viewport budget on
-// typical laptops (the wave silhouette matters, the exact amplitude doesn't)
-const waveBars = [
-  { h: '26px', d: '1.0s', dl: '0s' },
-  { h: '34px', d: '1.3s', dl: '.1s' },
-  { h: '44px', d: '1.1s', dl: '.2s' },
-  { h: '56px', d: '1.5s', dl: '.05s' },
-  { h: '64px', d: '1.2s', dl: '.15s' },
-  { h: '72px', d: '1.4s', dl: '.25s' },
-  { h: '50px', d: '1.0s', dl: '.1s' },
-  { h: '36px', d: '1.6s', dl: '.2s' },
-  { h: '44px', d: '1.2s', dl: '0s' },
-  { h: '60px', d: '1.3s', dl: '.15s' },
-  { h: '52px', d: '1.1s', dl: '.05s' },
-  { h: '38px', d: '1.4s', dl: '.2s' },
-]
-
 const showQuickStart = computed(() =>
   settings.value.fetched && !settings.value.address && !userJwt.value && !isTelegram.value)
 
@@ -354,23 +335,6 @@ onMounted(() => {
               </div>
             </div>
 
-            <!-- first-run breathing strip: wave bars + a flowing mail-step
-                 line (decorative only — hidden on phones, motion-safe) -->
-            <div v-if="showQuickStart" class="wave-zone" aria-hidden="true">
-              <div class="wave">
-                <i v-for="(bar, barIndex) in waveBars" :key="barIndex"
-                  :style="{ '--h': bar.h, '--d': bar.d, '--dl': bar.dl }" />
-              </div>
-              <div class="flow">
-                <span class="f-label">{{ t('flowStep1') }}</span>
-                <span class="f-line" />
-                <span class="f-label">{{ t('flowStep2') }}</span>
-                <span class="f-line" />
-                <span class="f-label">{{ t('flowStep3') }}</span>
-              </div>
-              <div class="wave-tag">INBOX · 7D · AUTO-DELETE</div>
-            </div>
-
             <div class="panel-fine">
               {{ t('finePrint') }}
             </div>
@@ -440,6 +404,19 @@ onMounted(() => {
     min-width: 0;
     display: flex;
     flex-direction: column;
+}
+
+/* first-run (no address): the panel is NOT pinned to the left column and
+   does NOT scroll internally — it takes its natural content height and the
+   grid row grows to the taller column, so the login form is never clipped
+   by an internal scrollbar. The has-address state below keeps the pinned
+   frame (the mailbox tab region scrolls on its own). */
+.hero-right:not(.has-address) {
+    position: relative;
+    top: auto;
+    right: auto;
+    bottom: auto;
+    width: auto;
 }
 
 /* ---- left column ---- */
@@ -609,17 +586,17 @@ onMounted(() => {
 /* ---- right column: independent operations panel ---- */
 .action-panel {
     position: relative;
-    /* flex column in every state: the tabs (has-address) or the wave strip
-       (first-run) absorb the leftover hero height, fine print pins bottom */
+    /* flex column in every state: the tabs (has-address) absorb the leftover
+       hero height, fine print pins bottom */
     display: flex;
     flex-direction: column;
-    /* always fill the pinned hero height — the panel border lands exactly on
-       the left column's bottom in every state (guest tabs included, which
-       otherwise end hundreds of pixels short) */
+    /* has-address fills the pinned hero height — the panel border lands on
+       the left column's bottom; its content is capped + scrolls below */
     flex: 1 1 auto;
     min-height: 0;
-    /* safety bound: panel content can never spill past the hero (e.g. the
-       address-management list) and overlap the FAQ banner — it scrolls */
+    /* safety bound (has-address): panel content can never spill past the
+       hero and overlap the FAQ banner — it scrolls. The first-run state
+       overrides this to none/visible (content-sized, no scrollbar). */
     max-height: 100%;
     overflow-x: hidden;
     overflow-y: auto;
@@ -637,6 +614,14 @@ onMounted(() => {
     display: flex;
     flex-direction: column;
     min-height: 0;
+}
+
+/* first-run: no height cap, no internal scroll — the panel is content-sized
+   (the grid row / left column already sets the page height, so nothing is
+   clipped and there is no scrollbar inside the login panel) */
+.hero-right:not(.has-address) .action-panel {
+    max-height: none;
+    overflow: visible;
 }
 
 .hero-right.has-address .action-panel :deep(.n-tabs) {
@@ -887,116 +872,6 @@ onMounted(() => {
     font-weight: 700;
 }
 
-/* ---- first-run breathing strip: wave bars + flowing mail-step line ---- */
-.wave-zone {
-    position: relative;
-    flex: 1 1 auto;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: space-between;
-    min-height: 120px;
-    margin: 2px 0;
-    padding: 10px 12px;
-    border: 1px solid rgba(128, 128, 128, 0.16);
-    border-radius: 12px;
-    overflow: hidden;
-    animation: hero-fade-in 0.55s ease 0.7s both;
-}
-
-/* dotted backdrop fading out toward the edges (theme-neutral gray) */
-.wave-zone::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background-image: radial-gradient(rgba(128, 128, 128, 0.3) 1px, transparent 1.4px);
-    background-size: 14px 14px;
-    -webkit-mask-image: radial-gradient(ellipse 75% 65% at 50% 50%, #000 40%, transparent);
-    mask-image: radial-gradient(ellipse 75% 65% at 50% 50%, #000 40%, transparent);
-    pointer-events: none;
-}
-
-.wave {
-    position: relative;
-    z-index: 1;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    height: 104px;
-}
-
-.wave i {
-    width: 5px;
-    height: var(--h, 40px);
-    border-radius: 3px;
-    background: currentColor;
-    opacity: 0.85;
-    animation: wave-bounce var(--d, 1.2s) ease-in-out var(--dl, 0s) infinite;
-}
-
-@keyframes wave-bounce {
-    0%, 100% { transform: scaleY(0.3); }
-    50% { transform: scaleY(1); }
-}
-
-.flow {
-    position: relative;
-    z-index: 1;
-    display: flex;
-    align-items: center;
-    width: 100%;
-    max-width: 260px;
-}
-
-.f-label {
-    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    font-size: 10.5px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    white-space: nowrap;
-    opacity: 0.6;
-}
-
-.f-line {
-    position: relative;
-    flex: 1 1 auto;
-    height: 1px;
-    margin: 0 8px;
-    background: rgba(128, 128, 128, 0.3);
-    overflow: hidden;
-}
-
-/* a dash segment runs the line; the second line starts a lap later */
-.f-line::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 26%;
-    height: 100%;
-    background: currentColor;
-    animation: flow-run 2.4s linear infinite;
-}
-
-.f-line:last-of-type::after {
-    animation-delay: 1.2s;
-}
-
-@keyframes flow-run {
-    from { left: -26%; }
-    to { left: 100%; }
-}
-
-.wave-tag {
-    position: relative;
-    z-index: 1;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    font-size: 10px;
-    letter-spacing: 0.18em;
-    white-space: nowrap;
-    opacity: 0.55;
-}
-
 /* primary create CTA: a breathing outline ring + a light sweep across the
    label on hover (the button inverts to solid, so the sweep reads on fill) */
 .action-panel :deep(.cta-breathe) {
@@ -1131,11 +1006,6 @@ onMounted(() => {
     .hero-right.has-address .action-panel :deep(.n-tab-pane) {
         max-height: 72vh;
     }
-
-    /* the breathing strip is a desktop-width luxury */
-    .wave-zone {
-        display: none;
-    }
 }
 
 /* motion guards live at the END of the sheet: same-specificity rules
@@ -1146,24 +1016,13 @@ onMounted(() => {
     .hero-title .seg > span,
     .hero-sub,
     .panel-qs-label,
-    .qs-row,
-    .wave-zone {
+    .qs-row {
         animation: none;
     }
 
     .seg-3::before {
         animation: none;
         transform: scaleX(1);
-    }
-
-    /* the wave bars freeze as a static silhouette, the flow dash hides */
-    .wave i {
-        animation: none;
-    }
-
-    .f-line::after {
-        animation: none;
-        display: none;
     }
 
     .action-panel :deep(.cta-breathe) {
