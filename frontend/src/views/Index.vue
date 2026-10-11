@@ -507,6 +507,10 @@ onMounted(() => {
     font-size: clamp(26px, 3vw, 38px);
     line-height: 1.2;
     letter-spacing: -0.5px;
+    /* query container for the last segment's lift below: the lift is only
+       applied while the headline still fits one line — on ~360px screens it
+       wraps and a lifted segment would collide with the line above */
+    container-type: inline-size;
 }
 
 /* headline: dual-layer segments — the outer box clips, the inner span
@@ -531,6 +535,19 @@ onMounted(() => {
 
 .seg-3 {
     position: relative;
+}
+
+/* 需求: the last segment (「真实邮箱」/ "your real inbox") is lifted by half a
+   character height so it sits a step above the preceding words. The whole
+   seg-3 box rises — clip box and the ::before marker band travel with the
+   text — and because a relative offset is layout-neutral the horizontal
+   gaps and the line box below are untouched. Only applied while the
+   headline is a single line (see container-type on .hero-title): when it
+   wraps on small screens the segment stays flush with the line above. */
+@container (min-width: 340px) {
+    .seg-3 {
+        top: -0.5em;
+    }
 }
 
 .seg-3 > span {

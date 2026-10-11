@@ -168,6 +168,9 @@ const visibleCols = computed(() => (props.collapsed ? adaptiveCols.value : 4))
     flex-direction: column;
     min-width: 0;
     padding: 14px 16px;
+    /* query container for the head rules below: the head must stay a single
+       line at every card width (see @container at the badge) */
+    container-type: inline-size;
     border: 1px solid rgba(128, 128, 128, 0.16);
     border-radius: 12px;
     background: rgba(128, 128, 128, 0.04);
@@ -220,6 +223,13 @@ const visibleCols = computed(() => (props.collapsed ? adaptiveCols.value : 4))
     font-size: 13px;
     font-weight: 600;
     letter-spacing: 0.4px;
+    /* never wrap: without this a narrow card squeezes the title into four
+       stacked lines, the head grows by ~62px and the whole page below (the
+       FAQ banner) jumps while the split is dragged */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
 }
 
 .stats-badge {
@@ -233,6 +243,24 @@ const visibleCols = computed(() => (props.collapsed ? adaptiveCols.value : 4))
     letter-spacing: 0.6px;
     text-transform: uppercase;
     white-space: nowrap;
+}
+
+/* head stays one line at every width: the head's fixed pieces (grip + LED +
+   badge + toggle + gaps ≈ 189px in the widest locale) cannot shrink, so on
+   a narrow card the title would be squeezed and fold — growing the head by
+   62px and pushing the FAQ banner below the hero down/up while dragging.
+   Below the threshold the badge yields instead (the toggle keeps the right
+   edge via the auto margin the badge used to provide). NOTE: this query
+   measures the card's CONTENT box (= card width - 32px padding - 2px border),
+   so ~190px here ≈ a ~224px card. */
+@container (max-width: 190px) {
+    .stats-badge {
+        display: none;
+    }
+
+    .stats-toggle {
+        margin-left: auto;
+    }
 }
 
 /* drag grip in the card head (hidden <768px — touch doesn't drag) */
