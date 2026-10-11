@@ -1,5 +1,5 @@
 <script setup>
-import { defineAsyncComponent, onMounted, onUnmounted, watch, computed, ref } from 'vue'
+import { defineAsyncComponent, onMounted, onUnmounted, watch, computed, ref, nextTick } from 'vue'
 import { useScopedI18n } from '@/i18n/app'
 import { useRoute, useRouter } from 'vue-router'
 import { useStorage } from '@vueuse/core'
@@ -240,6 +240,37 @@ watch(route, () => {
   }
 })
 
+// ---- hero headline: half-char lift gate ----
+// The last segment rises half a character above the rest of the headline.
+// That offset is layout-neutral, but it only looks right while the headline
+// is a single line: once the text wraps (narrow screens, or a longer locale
+// such as ko) the lifted segment would overlap the line above it. Measure
+// the rendered line count and switch the lift off whenever it wraps.
+const heroTitleEl = ref(null)
+const titleWrapped = ref(false)
+const measureHeroTitle = () => {
+  const el = heroTitleEl.value
+  if (!el) return
+  const lineHeight = parseFloat(window.getComputedStyle(el).lineHeight)
+  const lines = lineHeight > 0 ? el.getBoundingClientRect().height / lineHeight : 1
+  titleWrapped.value = lines > 1.5
+}
+
+let heroTitleObserver
+onMounted(() => {
+  measureHeroTitle()
+  if (heroTitleEl.value) {
+    heroTitleObserver = new ResizeObserver(measureHeroTitle)
+    heroTitleObserver.observe(heroTitleEl.value)
+  }
+  // webfont metrics settle later than the first paint
+  if (document.fonts?.ready) document.fonts.ready.then(measureHeroTitle).catch(() => {})
+})
+onUnmounted(() => {
+  heroTitleObserver?.disconnect()
+})
+watch(locale, () => nextTick(measureHeroTitle))
+
 onMounted(() => {
   if (route.query.mail_id) {
     showMailIdQuery.value = true;
@@ -265,7 +296,7 @@ onMounted(() => {
               <span class="kicker-sq" />
               <span class="kicker-text">{{ t('heroKicker') }}</span>
             </div>
-            <h1 class="hero-title">
+            <h1 ref="heroTitleEl" class="hero-title" :class="{ 'is-wrapped': titleWrapped }">
               <span class="seg" style="--d: 0.1s"><span>{{ t('heroTitleA') }}</span></span><span class="seg" style="--d: 0.18s"><span>{{ t('heroTitleB') }}</span></span><span class="seg seg-3" style="--d: 0.26s"><span>{{ t('heroTitleC') }}</span></span>
             </h1>
             <p class="hero-sub">{{ introText }}</p>
@@ -507,10 +538,6 @@ onMounted(() => {
     font-size: clamp(26px, 3vw, 38px);
     line-height: 1.2;
     letter-spacing: -0.5px;
-    /* query container for the last segment's lift below: the lift is only
-       applied while the headline still fits one line — on ~360px screens it
-       wraps and a lifted segment would collide with the line above */
-    container-type: inline-size;
 }
 
 /* headline: dual-layer segments — the outer box clips, the inner span
@@ -542,12 +569,11 @@ onMounted(() => {
    seg-3 box rises — clip box and the ::before marker band travel with the
    text — and because a relative offset is layout-neutral the horizontal
    gaps and the line box below are untouched. Only applied while the
-   headline is a single line (see container-type on .hero-title): when it
-   wraps on small screens the segment stays flush with the line above. */
-@container (min-width: 340px) {
-    .seg-3 {
-        top: -0.5em;
-    }
+   headline is a single line (`.is-wrapped` is toggled in script once the
+   text wraps): on narrow screens or longer locales the segment then stays
+   flush with the line above instead of colliding with it. */
+.hero-title:not(.is-wrapped) .seg-3 {
+    top: -0.5em;
 }
 
 .seg-3 > span {

@@ -21,12 +21,13 @@
 - fix: |AI Extract| In `ai` mode, an address allowlist miss now skips only the Workers AI call and still falls back to local verification-code extraction
 - fix: |Home| Remove the logged-out first-run right panel's internal scrollbar and the clipped wave strip by un-pinning the panel from the left column height
 - fix: |Home| Fix the Stats card title wrapping on narrow widths, which grew the card by ~62px and shoved the FAQ banner below the hero while dragging the split; the title now always stays on one line (ellipsized) and the "public" badge yields on very narrow cards, keeping the card height constant in both collapsed and expanded states
+- fix: |i18n| Replace 100 placeholder strings in the ja locale (the hero title, feature cards, quick start, help page, redeem page and login guide showed "メインタイトル A", "機能 1", "トラブル 1", …) with full Japanese translations
 
 ### Improvements
 
 - feat: |AI Extract| Improve local verification-code rules: also read the mail subject; support codes before keywords (e.g. `116352（动态验证码）`, `ABC123 is your code`), `G-123456` prefixes, grouped / spaced / zero-width-split / full-width codes, and Russian, Spanish, Portuguese, French, German, Italian, Turkish and Hebrew keywords; reject numbers longer than 8 digits, decimals and amounts, times, digits in URLs and email addresses, tracking / order / voucher codes and letters-only words; only accept keyword-less numbers in stricter positions; bound input length and remove regex backtracking risks
 - feat: |Home| Drag-reorder homepage cards with local persistence; Stats card collapsed by default and top-aligned when collapsed; tighten vertical spacing so 1440×760 and 1280×860 viewports render without a page scrollbar
-- feat: |Home| Lift the emphasized last headline segment ("your real inbox") by half a character height together with its marker band — letter gaps, line height and the layout below are untouched; applied only while the headline stays on one line, so wrapped small screens stay flush with the line above
+- feat: |Home| Lift the emphasized last headline segment ("your real inbox") by half a character height together with its marker band — letter gaps, line height and the layout below are untouched; the lift is gated on the headline's actual rendered line count, so wrapped small screens or longer locales (e.g. ko) stay flush with the line above
 
 ## v1.12.0
 
