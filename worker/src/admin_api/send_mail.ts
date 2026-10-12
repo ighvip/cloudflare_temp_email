@@ -83,7 +83,7 @@ export const sendMailByBindingAdmin = async (c: Context<HonoCustomType>) => {
         return c.text(msgs.EnableSendMailForDomainMsg, 400)
     }
     try {
-        await ensureSendMailLimit(c);
+        await ensureSendMailLimit(c, mailDomain);
         await c.env.SEND_MAIL.send({
             from,
             to,
@@ -96,7 +96,7 @@ export const sendMailByBindingAdmin = async (c: Context<HonoCustomType>) => {
             ...(attachments && attachments.length ? { attachments } : {}),
             ...(headers ? { headers } : {}),
         });
-        await increaseSendMailLimitCount(c);
+        await increaseSendMailLimitCount(c, mailDomain);
         await appendSendLog(c, {
             address: fromMail || "",
             reqJson: {

@@ -5,6 +5,7 @@ import { MailDomainSetting } from '../models';
 import {
     getMailDomainSettings,
     isValidMailDomain,
+    MAX_DOMAIN_SEND_LIMIT,
     saveMailDomainSettings,
 } from '../mail_domains';
 import { getDomains, normalizeDomain } from '../utils';
@@ -131,7 +132,13 @@ export default {
         if (!name) {
             return c.text("域名格式不正确", 400);
         }
-        let body: { enabled?: unknown, sendEnabled?: unknown, isDefault?: unknown };
+        let body: {
+            enabled?: unknown,
+            sendEnabled?: unknown,
+            isDefault?: unknown,
+            sendDailyLimit?: unknown,
+            sendMonthlyLimit?: unknown,
+        };
         try {
             body = await c.req.json();
         } catch (e) {
@@ -143,6 +150,20 @@ export default {
             const value = body[key];
             if (value === undefined) continue;
             if (typeof value !== "boolean") {
+                return c.text("参数错误", 400);
+            }
+            updates[key] = value;
+        }
+        // 每域发信限额：null = 继承全局；正整数 = 该域自己的限额
+        for (const key of ["sendDailyLimit", "sendMonthlyLimit"] as const) {
+            const value = body[key];
+            if (value === undefined) continue;
+            if (value === null) {
+                updates[key] = null;
+                continue;
+            }
+            if (typeof value !== "number" || !Number.isInteger(value)
+                || value < 1 || value > MAX_DOMAIN_SEND_LIMIT) {
                 return c.text("参数错误", 400);
             }
             updates[key] = value;

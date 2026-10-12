@@ -224,7 +224,7 @@ export const sendMail = async (
     if (!content) {
         throw new Error(msgs.ContentEmptyMsg)
     }
-    await ensureSendMailLimit(c);
+    await ensureSendMailLimit(c, mailDomain);
 
     // 通道可用性：投递链路按 resend → smtp → SEND_MAIL binding 顺序选择
     const resendEnabled = c.env.RESEND_TOKEN || c.env[
@@ -296,7 +296,7 @@ export const sendMail = async (
         });
         throw e;
     }
-    await increaseSendMailLimitCount(c);
+    await increaseSendMailLimitCount(c, mailDomain);
     await appendSendLog(c, { address, reqJson, channel, status: 'success' });
     // update address updated_at
     updateAddressUpdatedAt(c, address);

@@ -52,6 +52,8 @@ export type MailDomainSetting = {
     sendEnabled: boolean;     // 发信 switch — overrides the env behaviour
     isDefault?: boolean;      // reserved: default domain for the batch-2 wizard
     createdAt?: string;       // ISO timestamp of when it was added here
+    sendDailyLimit?: number | null;   // 每域每日发信限额，null/缺省 = 继承全局
+    sendMonthlyLimit?: number | null; // 每域每月发信限额，null/缺省 = 继承全局
     // reserved placeholders for the batch-2 Email Routing wizard
     // (routeEnabled / catchAll / dnsVerified ...) — unknown fields are
     // preserved verbatim on read+write so batch 2 can add them safely

@@ -23,6 +23,20 @@ export const isValidMailDomain = (value: unknown): value is string => {
         && labels.every((label) => DOMAIN_LABEL_RE.test(label));
 }
 
+// 每域发信限额：只有 [1, MAX_DOMAIN_SEND_LIMIT] 的正整数才算显式配置，
+// 缺省 / null / 非法值一律视为"继承全局"。
+export const MAX_DOMAIN_SEND_LIMIT = 100000;
+
+const normalizeStoredLimit = (value: unknown): number | null => {
+    if (typeof value !== "number" || !Number.isInteger(value)) {
+        return null;
+    }
+    if (value < 1 || value > MAX_DOMAIN_SEND_LIMIT) {
+        return null;
+    }
+    return value;
+}
+
 // normalize one stored record: keep unknown (future wizard) fields verbatim,
 // coerce the known switches to booleans. Invalid names are dropped so a
 // hand-edited record can never poison the LIKE pattern / switch lookups.
@@ -41,6 +55,8 @@ const normalizeStoredDomain = (item: unknown): MailDomainSetting | null => {
         sendEnabled: raw.sendEnabled === true,
         isDefault: raw.isDefault === true,
         createdAt: typeof raw.createdAt === "string" ? raw.createdAt : undefined,
+        sendDailyLimit: normalizeStoredLimit(raw.sendDailyLimit),
+        sendMonthlyLimit: normalizeStoredLimit(raw.sendMonthlyLimit),
     };
 }
 
@@ -131,4 +147,24 @@ export const getSendMailOverride = async (
         return null;
     }
     return stored.sendEnabled === true;
+}
+
+/**
+ * 发信三层开关的第三层（每域限额）：返回该域名显式配置的日/月限额，
+ * null 表示未配置（继承全局）。env-only / 未纳管域名同样返回 null。
+ */
+export const getSendMailLimitOverride = async (
+    c: Context<HonoCustomType>, domain: unknown
+): Promise<{ dailyLimit: number | null, monthlyLimit: number | null }> => {
+    if (!domain) {
+        return { dailyLimit: null, monthlyLimit: null };
+    }
+    const stored = await findStoredDomain(c, domain);
+    if (!stored) {
+        return { dailyLimit: null, monthlyLimit: null };
+    }
+    return {
+        dailyLimit: normalizeStoredLimit(stored.sendDailyLimit),
+        monthlyLimit: normalizeStoredLimit(stored.sendMonthlyLimit),
+    };
 }

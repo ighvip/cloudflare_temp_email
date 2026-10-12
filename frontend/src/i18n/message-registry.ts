@@ -4077,6 +4077,38 @@ export const MESSAGE_REGISTRY = {
       "en": "Invalid domain format",
       "zh": "域名格式不正确"
     },
+    "limitDaily": {
+      "en": "Daily limit",
+      "zh": "每日限额"
+    },
+    "limitDailyShort": {
+      "en": "Day",
+      "zh": "日"
+    },
+    "limitInherit": {
+      "en": "Inherit global",
+      "zh": "继承全局"
+    },
+    "limitInvalid": {
+      "en": "Limit must be a positive integer",
+      "zh": "限额必须是正整数"
+    },
+    "limitMonthly": {
+      "en": "Monthly limit",
+      "zh": "每月限额"
+    },
+    "limitMonthlyShort": {
+      "en": "Mon",
+      "zh": "月"
+    },
+    "limitSaved": {
+      "en": "Limit saved",
+      "zh": "限额已保存"
+    },
+    "limitTip": {
+      "en": "Leave blank to inherit the global limit (a blank global limit means unlimited). Global and per-domain limits both apply, and per-domain counting starts once a limit is saved.",
+      "zh": "留空即继承全局限额（全局留空＝不限额）。全局限额与每域限额同时生效，每域计数从保存限额后开始累计。"
+    },
     "loadFailed": {
       "en": "Failed to load",
       "zh": "加载失败"
@@ -4094,8 +4126,8 @@ export const MESSAGE_REGISTRY = {
       "zh": "无 MX 记录"
     },
     "pageDesc": {
-      "en": "Manage the domains this site uses to receive and send mail: each domain has its own \"Receive\" and \"Send\" switches, and the switches on this page override the wrangler.toml environment variables (DOMAINS / SEND_MAIL_DOMAINS).",
-      "zh": "管理站点的收信 / 发信域名：每个域名可单独开关「收信」与「发信」，本页的开关优先于 wrangler.toml 环境变量（DOMAINS / SEND_MAIL_DOMAINS）。"
+      "en": "Manage the domains this site uses to receive and send mail: each domain has its own \"Receive\" and \"Send\" switches plus optional daily/monthly send limits (blank inherits the global limit); the switches on this page override the wrangler.toml environment variables (DOMAINS / SEND_MAIL_DOMAINS).",
+      "zh": "管理站点的收信 / 发信域名：每个域名可单独开关「收信」与「发信」，并可单独设置发信日 / 月限额（留空继承全局），本页的开关优先于 wrangler.toml 环境变量（DOMAINS / SEND_MAIL_DOMAINS）。"
     },
     "pageTitle": {
       "en": "Site Domains",
@@ -4144,6 +4176,10 @@ export const MESSAGE_REGISTRY = {
     "routingGuideTitle": {
       "en": "Cloudflare Email Routing Setup Steps",
       "zh": "Cloudflare Email Routing 配置步骤"
+    },
+    "save": {
+      "en": "Save",
+      "zh": "保存"
     },
     "saveFailed": {
       "en": "Failed to save",

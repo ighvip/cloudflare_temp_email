@@ -69,15 +69,68 @@ const patchDomain = async (row, patch) => {
             body: patch,
         })
         applyPayload(res)
+        return true
     } catch (error) {
         message.error(error.message || t('saveFailed'))
         // 回滚显示，让开关回到服务端的真实状态
         await load()
+        return false
     }
 }
 
 const onReceiveChange = (row, value) => patchDomain(row, { enabled: value })
 const onSendChange = (row, value) => patchDomain(row, { sendEnabled: value })
+
+// ---- 每域发信限额（null = 继承全局） ----
+const limitRow = ref(null)
+const limitDraft = ref({ daily: null, monthly: null })
+
+const openLimitEditor = (row) => {
+    limitRow.value = row
+    limitDraft.value = {
+        daily: row.sendDailyLimit ?? null,
+        monthly: row.sendMonthlyLimit ?? null,
+    }
+}
+
+const formatLimitPart = (value) => {
+    if (!Number.isInteger(value) || value < 1) return null
+    return String(value)
+}
+
+const limitLabel = (row) => {
+    const parts = []
+    const daily = formatLimitPart(row.sendDailyLimit)
+    const monthly = formatLimitPart(row.sendMonthlyLimit)
+    if (daily) parts.push(`${t('limitDailyShort')} ${daily}`)
+    if (monthly) parts.push(`${t('limitMonthlyShort')} ${monthly}`)
+    return parts.length ? parts.join(' · ') : t('limitInherit')
+}
+
+const saveLimit = async () => {
+    const row = limitRow.value
+    if (!row) return
+    const daily = limitDraft.value.daily ?? null
+    const monthly = limitDraft.value.monthly ?? null
+    if ((daily !== null && !Number.isInteger(daily)) || (monthly !== null && !Number.isInteger(monthly))) {
+        message.warning(t('limitInvalid'))
+        return
+    }
+    const ok = await patchDomain(row, {
+        sendDailyLimit: daily,
+        sendMonthlyLimit: monthly,
+    })
+    if (ok) {
+        message.success(t('limitSaved'))
+        limitRow.value = null
+    }
+}
+
+// 一键恢复继承全局：清空草稿后保存
+const resetLimit = async () => {
+    limitDraft.value = { daily: null, monthly: null }
+    await saveLimit()
+}
 
 const removeDomain = async (row) => {
     try {
@@ -199,6 +252,7 @@ onMounted(load)
                                 <th class="col-switch">{{ t('receive') }}</th>
                                 <th class="col-switch">{{ t('send') }}</th>
                                 <th class="col-channel">{{ t('channel') }}</th>
+                                <th class="col-limit">{{ t('sendLimit') }}</th>
                                 <th class="col-time">{{ t('createdAt') }}</th>
                                 <th class="col-action">{{ t('action') }}</th>
                             </tr>
@@ -227,6 +281,36 @@ onMounted(load)
                                             {{ ch }}
                                         </n-tag>
                                     </div>
+                                </td>
+                                <td>
+                                    <n-popover trigger="click" :show-arrow="false" placement="left"
+                                        @update:show="(show) => show && openLimitEditor(row)">
+                                        <template #trigger>
+                                            <n-button size="tiny" quaternary>{{ limitLabel(row) }}</n-button>
+                                        </template>
+                                        <div class="limit-editor">
+                                            <div class="limit-editor-title">{{ t('sendLimit') }}</div>
+                                            <div class="limit-field">
+                                                <span class="limit-field-label">{{ t('limitDaily') }}</span>
+                                                <n-input-number v-model:value="limitDraft.daily" :min="1" :max="100000"
+                                                    :show-button="false" clearable :placeholder="t('limitInherit')" />
+                                            </div>
+                                            <div class="limit-field">
+                                                <span class="limit-field-label">{{ t('limitMonthly') }}</span>
+                                                <n-input-number v-model:value="limitDraft.monthly" :min="1" :max="100000"
+                                                    :show-button="false" clearable :placeholder="t('limitInherit')" />
+                                            </div>
+                                            <p class="limit-editor-tip">{{ t('limitTip') }}</p>
+                                            <n-flex justify="space-between" :size="8">
+                                                <n-button size="tiny" quaternary @click="resetLimit()">
+                                                    {{ t('limitInherit') }}
+                                                </n-button>
+                                                <n-button size="tiny" type="primary" @click="saveLimit()">
+                                                    {{ t('save') }}
+                                                </n-button>
+                                            </n-flex>
+                                        </div>
+                                    </n-popover>
                                 </td>
                                 <td class="cell-muted">{{ (row.createdAt || '').slice(0, 10) || '-' }}</td>
                                 <td>
@@ -495,6 +579,40 @@ onMounted(load)
 
 .channel-off {
     opacity: 0.3;
+}
+
+.col-limit {
+    width: 150px;
+}
+
+.limit-editor {
+    width: 220px;
+    text-align: left;
+}
+
+.limit-editor-title {
+    font-size: 12.5px;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.limit-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 8px;
+}
+
+.limit-field-label {
+    font-size: 12px;
+    opacity: 0.65;
+}
+
+.limit-editor-tip {
+    font-size: 11.5px;
+    opacity: 0.6;
+    line-height: 1.6;
+    margin-bottom: 8px;
 }
 
 .col-time {

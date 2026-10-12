@@ -3,6 +3,7 @@ import i18n from "../i18n";
 import { SendMailLimitConfig } from "../models";
 import { CONSTANTS } from "../constants";
 import { getJsonObjectValue, getSetting } from "../utils";
+import { getSendMailLimitOverride } from "../mail_domains";
 
 // 默认日/月限额：此前只在前端表单里硬编码（100/3000），现下沉到 worker 作为
 // 单一源头，前端经 /admin/account_settings 读取 sendMailLimitDefaults 回填表单。
@@ -110,17 +111,19 @@ export const getEffectiveSendMailLimitConfig = async (
     };
 }
 
-const getDailyCountKey = (date: Date = new Date()): string => {
+const getDailyCountKey = (date: Date = new Date(), domain?: string): string => {
     const yyyy = date.getUTCFullYear();
     const mm = String(date.getUTCMonth() + 1).padStart(2, "0");
     const dd = String(date.getUTCDate()).padStart(2, "0");
-    return `${CONSTANTS.SEND_MAIL_LIMIT_COUNT_KEY_PREFIX}daily:${yyyy}-${mm}-${dd}`;
+    const suffix = domain ? `:${domain}` : "";
+    return `${CONSTANTS.SEND_MAIL_LIMIT_COUNT_KEY_PREFIX}daily:${yyyy}-${mm}-${dd}${suffix}`;
 }
 
-const getMonthlyCountKey = (date: Date = new Date()): string => {
+const getMonthlyCountKey = (date: Date = new Date(), domain?: string): string => {
     const yyyy = date.getUTCFullYear();
     const mm = String(date.getUTCMonth() + 1).padStart(2, "0");
-    return `${CONSTANTS.SEND_MAIL_LIMIT_COUNT_KEY_PREFIX}monthly:${yyyy}-${mm}`;
+    const suffix = domain ? `:${domain}` : "";
+    return `${CONSTANTS.SEND_MAIL_LIMIT_COUNT_KEY_PREFIX}monthly:${yyyy}-${mm}${suffix}`;
 }
 
 const getCount = async (
@@ -158,14 +161,14 @@ const cleanupSendMailLimitCount = async (
 }
 
 export const ensureSendMailLimit = async (
-    c: Context<HonoCustomType>
+    c: Context<HonoCustomType>,
+    mailDomain?: string
 ): Promise<void> => {
     try {
         const msgs = i18n.getMessagesbyContext(c);
         const config = await getEffectiveSendMailLimitConfig(c);
-        if (!config.dailyEnabled && !config.monthlyEnabled) {
-            return;
-        }
+        const override = await getSendMailLimitOverride(c, mailDomain);
+        // 第一层：全局限额（null/-1 表示不限）
         if (config.dailyEnabled && config.dailyLimit !== null && config.dailyLimit !== -1) {
             const current = await getCount(c, getDailyCountKey());
             if (current >= config.dailyLimit) {
@@ -175,6 +178,19 @@ export const ensureSendMailLimit = async (
         if (config.monthlyEnabled && config.monthlyLimit !== null && config.monthlyLimit !== -1) {
             const current = await getCount(c, getMonthlyCountKey());
             if (current >= config.monthlyLimit) {
+                throw new SendMailLimitError(msgs.ServerSendMailMonthlyLimitMsg);
+            }
+        }
+        // 第二层：每域限额（管理员显式配置时才生效，计数按域名独立）
+        if (mailDomain && override.dailyLimit !== null) {
+            const current = await getCount(c, getDailyCountKey(new Date(), mailDomain));
+            if (current >= override.dailyLimit) {
+                throw new SendMailLimitError(msgs.ServerSendMailDailyLimitMsg);
+            }
+        }
+        if (mailDomain && override.monthlyLimit !== null) {
+            const current = await getCount(c, getMonthlyCountKey(new Date(), mailDomain));
+            if (current >= override.monthlyLimit) {
                 throw new SendMailLimitError(msgs.ServerSendMailMonthlyLimitMsg);
             }
         }
@@ -200,13 +216,12 @@ const increaseCount = async (
 }
 
 export const increaseSendMailLimitCount = async (
-    c: Context<HonoCustomType>
+    c: Context<HonoCustomType>,
+    mailDomain?: string
 ): Promise<void> => {
     try {
         const config = await getEffectiveSendMailLimitConfig(c);
-        if (!config.dailyEnabled && !config.monthlyEnabled) {
-            return;
-        }
+        const override = await getSendMailLimitOverride(c, mailDomain);
         const dailyKey = getDailyCountKey();
         const monthlyKey = getMonthlyCountKey();
         if (config.dailyEnabled) {
@@ -214,6 +229,13 @@ export const increaseSendMailLimitCount = async (
         }
         if (config.monthlyEnabled) {
             await increaseCount(c, monthlyKey);
+        }
+        // 每域计数只在该域显式配置限额时维护（未配置的域名共用全局计数）
+        if (mailDomain && override.dailyLimit !== null) {
+            await increaseCount(c, getDailyCountKey(new Date(), mailDomain));
+        }
+        if (mailDomain && override.monthlyLimit !== null) {
+            await increaseCount(c, getMonthlyCountKey(new Date(), mailDomain));
         }
         await cleanupSendMailLimitCount(c, dailyKey, monthlyKey);
     } catch (error) {
