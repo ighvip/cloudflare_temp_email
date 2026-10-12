@@ -3,7 +3,7 @@ export const CONSTANTS = {
 
     // DB Version
     DB_VERSION_KEY: 'db_version',
-    DB_VERSION: "v0.0.14",
+    DB_VERSION: "v0.0.15",
 
     // DB settings
     ADDRESS_BLOCK_LIST_KEY: 'address_block_list',
@@ -34,4 +34,7 @@ export const CONSTANTS = {
     WEBHOOK_KV_ADMIN_MAIL_SETTINGS_KEY: "temp-mail-webhook-admin-mail-settings",
     SEND_MAIL_LIMIT_COUNT_KEY_PREFIX: "send_mail_limit_count:",
     SEND_MAIL_LIMIT_CONFIG_KEY: "send_mail_limit_config",
+    // 发信全局主开关（D1 settings）— stored "true"/"false"；缺省视为开启
+    // （行为退化为「由 env 通道 + 每域名发信开关共同决定」）
+    SEND_MAIL_ENABLED_KEY: "send_mail_enabled",
 }

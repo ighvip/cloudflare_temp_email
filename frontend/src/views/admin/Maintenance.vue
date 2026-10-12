@@ -15,6 +15,8 @@ const cleanupModel = ref({
     cleanUnknowMailsDays: 30,
     enableSendBoxAutoCleanup: false,
     cleanSendBoxDays: 30,
+    enableSendLogAutoCleanup: false,
+    cleanSendLogDays: 30,
     enableAddressAutoCleanup: false,
     cleanAddressDays: 30,
     enableInactiveAddressAutoCleanup: false,
@@ -175,6 +177,23 @@ onMounted(async () => {
                                 </n-button>
                             </n-form-item-row>
                             <span v-if="basicInvalid('enableSendBoxAutoCleanup', 'cleanSendBoxDays')"
+                                class="invalid-pill">{{ t('invalid') }}</span>
+                        </div>
+                        <div class="task-row"
+                            :class="{ 'is-invalid': basicInvalid('enableSendLogAutoCleanup', 'cleanSendLogDays') }">
+                            <n-form-item-row :label="t('sendLogLabel')">
+                                <n-checkbox v-model:checked="cleanupModel.enableSendLogAutoCleanup">
+                                    {{ t('autoCleanup') }}
+                                </n-checkbox>
+                                <n-input-number v-model:value="cleanupModel.cleanSendLogDays" :placeholder="t('tip')" />
+                                <n-button @click="cleanup('send_log', cleanupModel.cleanSendLogDays)">
+                                    <template #icon>
+                                        <n-icon :component="CleaningServicesFilled" />
+                                    </template>
+                                    {{ t('cleanupNow') }}
+                                </n-button>
+                            </n-form-item-row>
+                            <span v-if="basicInvalid('enableSendLogAutoCleanup', 'cleanSendLogDays')"
                                 class="invalid-pill">{{ t('invalid') }}</span>
                         </div>
                         <div class="task-row"

@@ -19,6 +19,8 @@ const curRow = ref({})
 const showModal = ref(false)
 const senderBalance = ref(0)
 const senderEnabled = ref(false)
+// 余额增量（+/-N），走服务端原子调整接口
+const senderDelta = ref(null)
 
 const addressQuery = ref('')
 
@@ -34,6 +36,33 @@ const updateData = async () => {
       })
     });
     showModal.value = false;
+    message.success(t("success"));
+    await fetchData()
+  } catch (error) {
+    message.error(error.message || "error");
+  }
+}
+
+// 余额 +/-N：服务端原子调整（不做读改写），与上面的绝对赋值互补
+const adjustBalance = async () => {
+  const delta = Number(senderDelta.value)
+  if (!Number.isInteger(delta) || delta === 0) {
+    message.warning(t('balanceInvalid'))
+    return
+  }
+  try {
+    const res = await api.fetch(`/admin/address_sender/balance`, {
+      method: 'POST',
+      body: JSON.stringify({
+        address_id: curRow.value.id,
+        delta
+      })
+    })
+    senderDelta.value = null
+    if (typeof res?.balance === 'number') {
+      senderBalance.value = res.balance
+      curRow.value.balance = res.balance
+    }
     message.success(t("success"));
     await fetchData()
   } catch (error) {
@@ -151,7 +180,15 @@ onMounted(async () => {
         </n-checkbox>
       </n-form-item>
       <n-form-item :show-label="false">
-        <n-input-number v-model:value="senderBalance" :min="0" :max="1000" />
+        <n-input-number v-model:value="senderBalance" :min="0" :max="100000" />
+      </n-form-item>
+      <n-form-item :label="t('balanceAdjust')">
+        <n-flex align="center" :size="8">
+          <n-input-number v-model:value="senderDelta" :min="-100000" :max="100000" :placeholder="t('balanceAdjustTip')" style="min-width: 180px;" />
+          <n-button tertiary type="primary" :loading="loading" @click="adjustBalance()">
+            {{ t('adjust') }}
+          </n-button>
+        </n-flex>
       </n-form-item>
       <template #action>
         <n-button :loading="loading" @click="updateData()" size="small" tertiary type="primary">

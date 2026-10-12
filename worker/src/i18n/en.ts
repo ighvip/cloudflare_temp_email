@@ -91,6 +91,7 @@ const messages: LocaleMessages = {
     EnableSendMailMsg: "Please enable SEND_MAIL first",
     EnableSendMailForDomainMsg: "Please enable SEND_MAIL for this domain first",
     SendMailDisabledForDomainMsg: "Sending is disabled for this domain by the site domain settings",
+    SendMailDisabledMsg: "Sending mail is disabled site-wide",
     InvalidCleanupConfigMsg: "Invalid cleanType or cleanDays",
     InvalidCleanTypeMsg: "Invalid cleanType",
     CleanupFailedMsg: "Cleanup failed. Check your cleanup settings; inactive-address cleanup is unavailable when address activity updates are disabled.",

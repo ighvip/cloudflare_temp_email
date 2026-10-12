@@ -4,6 +4,21 @@ import { SendMailLimitConfig } from "../models";
 import { CONSTANTS } from "../constants";
 import { getJsonObjectValue, getSetting } from "../utils";
 
+// 默认日/月限额：此前只在前端表单里硬编码（100/3000），现下沉到 worker 作为
+// 单一源头，前端经 /admin/account_settings 读取 sendMailLimitDefaults 回填表单。
+// 语义：数据库里没有存储过限额配置时，按以下默认值生效（两个开关都视为开启）；
+// 管理员在面板里显式保存「两个开关都关闭」即为不限额。
+export const DEFAULT_SEND_MAIL_DAILY_LIMIT = 100;
+export const DEFAULT_SEND_MAIL_MONTHLY_LIMIT = 3000;
+
+export const getSendMailLimitDefaults = (): {
+    dailyLimit: number,
+    monthlyLimit: number,
+} => ({
+    dailyLimit: DEFAULT_SEND_MAIL_DAILY_LIMIT,
+    monthlyLimit: DEFAULT_SEND_MAIL_MONTHLY_LIMIT,
+});
+
 class SendMailLimitError extends Error {
     constructor(message: string) {
         super(message);
@@ -78,6 +93,23 @@ export const getSendMailLimitConfig = async (
     ));
 }
 
+// 生效配置 = 存储配置；未存储时回落到默认限额（管理员未配置时也有一层基础防护）。
+// 管理员显式保存「两个开关都关闭」即为不限额：存储配置优先，不回落默认值。
+export const getEffectiveSendMailLimitConfig = async (
+    c: Context<HonoCustomType>
+): Promise<SendMailLimitConfig> => {
+    const stored = await getSendMailLimitConfig(c);
+    if (stored) {
+        return stored;
+    }
+    return {
+        dailyEnabled: true,
+        monthlyEnabled: true,
+        dailyLimit: DEFAULT_SEND_MAIL_DAILY_LIMIT,
+        monthlyLimit: DEFAULT_SEND_MAIL_MONTHLY_LIMIT,
+    };
+}
+
 const getDailyCountKey = (date: Date = new Date()): string => {
     const yyyy = date.getUTCFullYear();
     const mm = String(date.getUTCMonth() + 1).padStart(2, "0");
@@ -130,8 +162,8 @@ export const ensureSendMailLimit = async (
 ): Promise<void> => {
     try {
         const msgs = i18n.getMessagesbyContext(c);
-        const config = await getSendMailLimitConfig(c);
-        if (!config || (!config.dailyEnabled && !config.monthlyEnabled)) {
+        const config = await getEffectiveSendMailLimitConfig(c);
+        if (!config.dailyEnabled && !config.monthlyEnabled) {
             return;
         }
         if (config.dailyEnabled && config.dailyLimit !== null && config.dailyLimit !== -1) {
@@ -171,8 +203,8 @@ export const increaseSendMailLimitCount = async (
     c: Context<HonoCustomType>
 ): Promise<void> => {
     try {
-        const config = await getSendMailLimitConfig(c);
-        if (!config || (!config.dailyEnabled && !config.monthlyEnabled)) {
+        const config = await getEffectiveSendMailLimitConfig(c);
+        if (!config.dailyEnabled && !config.monthlyEnabled) {
             return;
         }
         const dailyKey = getDailyCountKey();

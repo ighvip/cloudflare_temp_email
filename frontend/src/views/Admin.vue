@@ -12,6 +12,7 @@ import Turnstile from '../components/Turnstile.vue'
 import SenderAccess from './admin/SenderAccess.vue'
 import Statistics from "./admin/Statistics.vue"
 import SendBox from './admin/SendBox.vue';
+import SendLog from './admin/SendLog.vue';
 import Account from './admin/Account.vue';
 import CreateAccount from './admin/CreateAccount.vue';
 import AccountSettings from './admin/AccountSettings.vue';
@@ -393,6 +394,9 @@ onUnmounted(() => {
           </n-tab-pane>
           <n-tab-pane name="sendBox" :tab="t('sendBox')">
             <SendBox />
+          </n-tab-pane>
+          <n-tab-pane name="sendLog" :tab="t('sendLog')">
+            <SendLog />
           </n-tab-pane>
           <n-tab-pane name="sendMail" :tab="t('sendMail')">
             <SendMail />

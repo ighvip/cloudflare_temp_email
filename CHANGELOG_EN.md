@@ -14,6 +14,11 @@
 - feat: |AI Extract| Add `AI_EXTRACT_MODE` to explicitly choose local rules only (`local`) or prefer Workers AI (`ai`); defaults to local rules when unset so mail content is never sent to AI. **Upgrade note**: deployments that relied on the Workers AI binding to enable AI extraction automatically must set `AI_EXTRACT_MODE = "ai"`
 - feat: |Home| Announcement marquee on by default (~45px/s), toggleable in admin settings and delivered via `/open_api/settings`
 - feat: |Home| Add a draggable divider between the Stats and Uptime cards with per-card width floors and a locally persisted ratio; the collapsed Stats card reveals period columns (today → week → month → year) adaptively by its own width while the expanded state keeps the full four-column grid
+- feat: |Send| Add a site-wide send master switch (force on / block site-wide / follow environment) stored in the database; "follow environment" keeps the existing "env channel + per-domain switch" resolution, so deployments that never touch it behave exactly as before; "block site-wide" rejects the user send APIs outright (admin sending and system mail such as sign-up verification codes keep working)
+- feat: |Send| Add a send audit log recording sender address, recipient, subject, channel, result and error reason; the admin Mails tab gains a "Send Log" page with address / result filters, single delete, clear all, retention cleanup and auto cleanup
+  - The `send_log` table requires a database migration first: `Admin -> Quick Setup -> Database -> Upgrade Database Schema`, or `POST /admin/db_migration`; without it, log writes only warn and never affect sending
+- feat: |Send| Per-address send balance control: atomically pre-deduct the balance before sending (reject when insufficient) and refund it automatically when sending fails; admins can add or subtract balance right in the "send access" dialog
+- feat: |Send| Move the default daily/monthly send limits (100/3000) into the worker: they now apply when no limit config was ever saved, and turning both switches off in the panel means unlimited; the admin send settings form reads its defaults from the worker
 
 ### Bug Fixes
 
@@ -28,6 +33,7 @@
 - feat: |AI Extract| Improve local verification-code rules: also read the mail subject; support codes before keywords (e.g. `116352（动态验证码）`, `ABC123 is your code`), `G-123456` prefixes, grouped / spaced / zero-width-split / full-width codes, and Russian, Spanish, Portuguese, French, German, Italian, Turkish and Hebrew keywords; reject numbers longer than 8 digits, decimals and amounts, times, digits in URLs and email addresses, tracking / order / voucher codes and letters-only words; only accept keyword-less numbers in stricter positions; bound input length and remove regex backtracking risks
 - feat: |Home| Drag-reorder homepage cards with local persistence; Stats card collapsed by default and top-aligned when collapsed; tighten vertical spacing so 1440×760 and 1280×860 viewports render without a page scrollbar
 - feat: |Home| Lift the emphasized last headline segment ("your real inbox") by half a character height together with its marker band — letter gaps, line height and the layout below are untouched; the lift is gated on the headline's actual rendered line count, so wrapped small screens or longer locales (e.g. ko) stay flush with the line above
+- feat: |Send| Add send log auto cleanup under admin Maintenance (30-day retention by default), wired into the existing scheduled cleanup and the manual "cleanup now" entry
 
 ## v1.12.0
 

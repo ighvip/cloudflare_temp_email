@@ -4,7 +4,7 @@ import { Context } from 'hono'
 import utils, { getJsonSetting, getSetting, saveSetting } from './utils';
 import { CONSTANTS } from './constants';
 import { isS3Enabled } from './mails_api/s3_attachment';
-import { isAnySendMailEnabled, getSitePrefix } from './common';
+import { getSitePrefix, resolveAnySendMailEnabled } from './common';
 import { getWebhookAttachment } from './open_api/webhook_attachment';
 import { getUptimePayload } from './uptime';
 import { getManagedDomains } from './mail_domains';
@@ -97,7 +97,7 @@ const buildRealPublicStats = async (c: Context<HonoCustomType>) => {
     ).bind(dayStart, weekStart, monthStart, yearStart)
         .first<{ today: number | null; week: number | null; month: number | null; year: number | null }>();
     // send feature off => show 0 honestly (问题18-①b, 照实显示 0)
-    const sendEnabled = isAnySendMailEnabled(c);
+    const sendEnabled = await resolveAnySendMailEnabled(c);
     let sendRow = { today: 0, week: 0, month: 0, year: 0 };
     if (sendEnabled) {
         sendRow = await c.env.DB.prepare(
@@ -198,7 +198,7 @@ api.get('/open_api/settings', async (c) => {
         "cfTurnstileSiteKey": c.env.CF_TURNSTILE_SITE_KEY,
         "enableWebhook": utils.getBooleanValue(c.env.ENABLE_WEBHOOK),
         "isS3Enabled": isS3Enabled(c),
-        "enableSendMail": isAnySendMailEnabled(c),
+        "enableSendMail": await resolveAnySendMailEnabled(c),
         "version": CONSTANTS.VERSION,
         "showGithub": !utils.getBooleanValue(c.env.DISABLE_SHOW_GITHUB),
         "showGithubForUser": !utils.getBooleanValue(c.env.DISABLE_SHOW_GITHUB_FOR_USER),
@@ -230,7 +230,7 @@ api.get('/open_api/stats', async (c) => {
     // manual mode: admin typed the numbers in the site settings form
     if (siteSettings.statsMode === 'manual') {
         const manual = siteSettings.statsManual || {};
-        const sendEnabled = isAnySendMailEnabled(c);
+        const sendEnabled = await resolveAnySendMailEnabled(c);
         return c.json({
             mode: 'manual',
             today: Number(manual.today) || 0,

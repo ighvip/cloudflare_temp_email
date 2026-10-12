@@ -58,6 +58,9 @@ export default {
                 subject: "Temp Mail Verify code",
                 content: `Your verify code is ${code}`,
                 is_html: false,
+            }, {
+                // 注册验证码属系统邮件：站点主开关（全站禁发）不应阻断它
+                isSystem: true
             })
         } catch (e) {
             return c.text(`Failed to send verify code: ${(e as Error).message}`, 500)

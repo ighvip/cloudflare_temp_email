@@ -10,7 +10,7 @@ import { api } from '../../../api'
 import AccountSettings from '../AccountSettings.vue'
 
 vi.mock('../../../api', () => ({
-    api: { fetch: vi.fn() },
+    api: { fetch: vi.fn(), getOpenSettings: vi.fn() },
 }))
 
 const SETTINGS = {
@@ -28,6 +28,8 @@ const SETTINGS = {
         ],
     },
     sendMailLimitConfig: { dailyEnabled: true, monthlyEnabled: false, dailyLimit: 100, monthlyLimit: null },
+    sendMailLimitDefaults: { dailyLimit: 100, monthlyLimit: 3000 },
+    sendMailGlobalEnabled: null,
     addressCreationSubdomainMatchStatus: {
         envConfigured: false, envEnabled: true, storedEnabled: true, effectiveEnabled: true,
     },
@@ -103,21 +105,24 @@ describe('admin AccountSettings sections', () => {
         }
     })
 
-    it('collapses and greys the send card when sending is disabled, restores it when enabled', async () => {
+    it('collapses and greys the send settings when sending is disabled, restores them when enabled', async () => {
         const page = await mountPage()
         try {
             const sendCard = page.cards()[3]
+            // the global master switch stays available (it is the way back on);
+            // only the inner send settings are gated
+            expect(sendCard.querySelector('.send-master')).toBeTruthy()
             expect(sendCard.className).toContain('is-off')
             expect(sendCard.textContent).toContain('发信功能未启用')
-            expect(sendCard.querySelectorAll('input')).toHaveLength(0)
-            expect(sendCard.querySelectorAll('button')).toHaveLength(0)
+            expect(sendCard.querySelectorAll('.send-body input')).toHaveLength(0)
+            expect(sendCard.querySelectorAll('.send-body button')).toHaveLength(0)
 
             useGlobalState().openSettings.value.enableSendMail = true
             await nextTick()
             const onCard = page.cards()[3]
             expect(onCard.className).not.toContain('is-off')
             expect(onCard.textContent).not.toContain('发信功能未启用')
-            expect(onCard.querySelectorAll('input').length).toBeGreaterThan(0)
+            expect(onCard.querySelectorAll('.send-body input').length).toBeGreaterThan(0)
         } finally {
             page.unmount()
         }

@@ -18,10 +18,10 @@ const kvEnabled = ref(true)
 
 // ---- 分区保存状态：保存、错误都按分区隔离 ----
 const sectionSaving = ref({
-    receive: false, keyword: false, forward: false, send: false, address: false
+    receive: false, keyword: false, forward: false, send: false, sendGlobal: false, address: false
 })
 const sectionError = ref({
-    receive: '', keyword: '', forward: '', send: '', address: ''
+    receive: '', keyword: '', forward: '', send: '', sendGlobal: '', address: ''
 })
 
 // ---- 收信过滤 ----
@@ -47,14 +47,17 @@ const forwardingDirty = ref(false)
 // ---- 发信 ----
 const verifiedAddressList = ref([])
 const noLimitSendAddressList = ref([])
-const DEFAULT_SEND_MAIL_DAILY_LIMIT = 100
-const DEFAULT_SEND_MAIL_MONTHLY_LIMIT = 3000
+// 默认日/月限额来自 worker（sendMailLimitDefaults），仅在后端缺失时兜底
+const sendMailDailyLimitDefault = ref(100)
+const sendMailMonthlyLimitDefault = ref(3000)
 const sendMailDailyLimitEnabled = ref(false)
 const sendMailMonthlyLimitEnabled = ref(false)
-const sendMailDailyLimit = ref(DEFAULT_SEND_MAIL_DAILY_LIMIT)
-const sendMailMonthlyLimit = ref(DEFAULT_SEND_MAIL_MONTHLY_LIMIT)
+const sendMailDailyLimit = ref(sendMailDailyLimitDefault.value)
+const sendMailMonthlyLimit = ref(sendMailMonthlyLimitDefault.value)
 const dailyLimitError = ref('')
 const monthlyLimitError = ref('')
+// 全局发信主开关：'follow'(跟随环境) | 'on'(强制开启) | 'off'(强制关闭/全站禁发)
+const sendGlobalMode = ref('follow')
 
 // ---- 地址创建 ----
 const ADDRESS_CREATION_SUBDOMAIN_MATCH_MODE = {
@@ -342,17 +345,31 @@ const applyForward = (res) => {
 const applySend = (res) => {
     verifiedAddressList.value = res.verifiedAddressList || []
     noLimitSendAddressList.value = res.noLimitSendAddressList || []
+    const defaults = res.sendMailLimitDefaults
+    if (Number.isInteger(defaults?.dailyLimit)) {
+        sendMailDailyLimitDefault.value = defaults.dailyLimit
+    }
+    if (Number.isInteger(defaults?.monthlyLimit)) {
+        sendMailMonthlyLimitDefault.value = defaults.monthlyLimit
+    }
     const sendMailLimitConfig = res.sendMailLimitConfig
     sendMailDailyLimitEnabled.value = !!sendMailLimitConfig?.dailyEnabled
     sendMailMonthlyLimitEnabled.value = !!sendMailLimitConfig?.monthlyEnabled
     sendMailDailyLimit.value = sendMailDailyLimitEnabled.value
         ? sendMailLimitConfig.dailyLimit
-        : DEFAULT_SEND_MAIL_DAILY_LIMIT
+        : sendMailDailyLimitDefault.value
     sendMailMonthlyLimit.value = sendMailMonthlyLimitEnabled.value
         ? sendMailLimitConfig.monthlyLimit
-        : DEFAULT_SEND_MAIL_MONTHLY_LIMIT
+        : sendMailMonthlyLimitDefault.value
     dailyLimitError.value = ''
     monthlyLimitError.value = ''
+}
+
+const applySendGlobal = (res) => {
+    const globalEnabled = res.sendMailGlobalEnabled
+    sendGlobalMode.value = globalEnabled === true
+        ? 'on'
+        : globalEnabled === false ? 'off' : 'follow'
 }
 
 const applyAddress = (res) => {
@@ -374,6 +391,7 @@ const applySection = (res, section) => {
     if (!section || section === 'keyword') applyKeyword(res)
     if (!section || section === 'forward') applyForward(res)
     if (!section || section === 'send') applySend(res)
+    if (!section || section === 'sendGlobal') applySendGlobal(res)
     if (!section || section === 'address') applyAddress(res)
 }
 
@@ -453,6 +471,22 @@ const saveSendSection = () => {
         noLimitSendAddressList: noLimitSendAddressList.value || [],
         sendMailLimitConfig: getSendMailLimitPayload()
     })
+}
+
+const saveSendGlobalSection = async () => {
+    const value = sendGlobalMode.value === 'on'
+        ? true
+        : sendGlobalMode.value === 'off' ? false : null
+    const ok = await saveSection('sendGlobal', { sendMailGlobalEnabled: value })
+    if (ok) {
+        // 重新拉取 /open_api/settings，让 sendEnabled 门控立刻反映新的生效状态
+        try {
+            await api.getOpenSettings(message)
+        } catch (error) {
+            console.warn('refresh open settings after global send switch failed', error)
+        }
+    }
+    return ok
 }
 
 const saveAddressSection = () => {
@@ -538,7 +572,33 @@ onMounted(async () => {
         <!-- 发信 -->
         <n-card class="section-card" :class="{ 'is-off': !sendEnabled }" :title="t('sendCard')">
             <p class="acc-usage">{{ t('sendUsage') }}</p>
-            <template v-if="sendEnabled">
+
+            <!-- 全局发信主开关：发信被禁用时也要可用（这里是重新开启的入口） -->
+            <div class="send-master">
+                <n-form-item-row :label="t('sendGlobalLabel')">
+                    <n-radio-group v-model:value="sendGlobalMode">
+                        <n-space>
+                            <n-radio value="follow">{{ t('sendGlobalFollowEnv') }}</n-radio>
+                            <n-radio value="on">{{ t('sendGlobalForceEnable') }}</n-radio>
+                            <n-radio value="off">{{ t('sendGlobalForceDisable') }}</n-radio>
+                        </n-space>
+                    </n-radio-group>
+                </n-form-item-row>
+                <p class="acc-note">{{ t('sendGlobalTip') }}</p>
+                <p class="acc-note send-master-status">
+                    {{ sendEnabled ? t('sendGlobalStatusEnabled') : t('sendGlobalStatusDisabled') }}
+                </p>
+                <p v-if="sectionError.sendGlobal" class="acc-error">
+                    {{ t('sectionSaveFailed', { msg: sectionError.sendGlobal }) }}
+                </p>
+                <div class="acc-actions">
+                    <n-button type="primary" :loading="sectionSaving.sendGlobal" @click="saveSendGlobalSection">
+                        {{ t('save') }}
+                    </n-button>
+                </div>
+            </div>
+
+            <div v-if="sendEnabled" class="send-body">
                 <n-form-item-row :label="t('verified_address_list')">
                     <n-select v-model:value="verifiedAddressList" filterable multiple tag
                         :placeholder="t('verified_address_list')">
@@ -590,7 +650,7 @@ onMounted(async () => {
                         {{ t('save') }}
                     </n-button>
                 </div>
-            </template>
+            </div>
             <p v-else class="acc-off-note">{{ t('sendDisabledNote') }}</p>
         </n-card>
 
@@ -669,11 +729,21 @@ onMounted(async () => {
     max-width: 800px;
 }
 
-/* 发信未启用：整卡置灰、不可交互，只留一行说明 */
-.section-card.is-off {
+/* 发信未启用：正文与说明置灰；全局主开关保持可用（重新开启的入口） */
+.section-card.is-off .send-body,
+.section-card.is-off .acc-off-note {
     opacity: 0.6;
-    pointer-events: none;
-    user-select: none;
+}
+
+/* 全局主开关与下方分区之间留一条分隔线 */
+.send-master {
+    padding-bottom: 12px;
+    margin-bottom: 12px;
+    border-bottom: 1px solid rgba(128, 128, 128, 0.18);
+}
+
+.send-master-status {
+    font-weight: 600;
 }
 
 .acc-actions {

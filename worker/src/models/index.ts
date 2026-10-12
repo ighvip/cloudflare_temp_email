@@ -70,6 +70,8 @@ export type CleanupSettings = {
     cleanUnknowMailsDays: number;
     enableSendBoxAutoCleanup: boolean | undefined;
     cleanSendBoxDays: number;
+    enableSendLogAutoCleanup: boolean | undefined;
+    cleanSendLogDays: number;
     enableAddressAutoCleanup: boolean | undefined;
     cleanAddressDays: number;
     enableInactiveAddressAutoCleanup: boolean | undefined;

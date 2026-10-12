@@ -32,6 +32,25 @@ export const getEnabledSendBalance = async (
     return typeof balance === "number" ? balance : null;
 }
 
+// 投递前原子预留（balance = balance - 1 WHERE balance >= 1）失败时回补一个额度。
+// 用于发送链路抛错后的补偿，避免额度被"白扣"。
+export const refundSendBalance = async (
+    c: Context<HonoCustomType>,
+    address: string
+): Promise<void> => {
+    if (!address) {
+        return;
+    }
+    try {
+        await c.env.DB.prepare(
+            `UPDATE address_sender SET balance = balance + 1
+            WHERE address = ? AND enabled = 1`
+        ).bind(address).run();
+    } catch (e) {
+        console.warn(`Failed to refund send balance for ${address}`, e);
+    }
+}
+
 export const getSendBalanceState = async (
     c: Context<HonoCustomType>,
     address: string,

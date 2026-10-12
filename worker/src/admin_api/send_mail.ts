@@ -1,7 +1,7 @@
 import { Context } from "hono";
 import { resolveSendMailBindingEnabled } from "../common";
 import i18n from "../i18n";
-import { sendMail } from "../mails_api/send_mail_api";
+import { sendMail, appendSendLog } from "../mails_api/send_mail_api";
 import { ensureSendMailLimit, increaseSendMailLimitCount } from "../mails_api/send_mail_limit_utils";
 import { getSendMailOverride } from "../mail_domains";
 import { getMailDomain } from "../utils";
@@ -97,8 +97,27 @@ export const sendMailByBindingAdmin = async (c: Context<HonoCustomType>) => {
             ...(headers ? { headers } : {}),
         });
         await increaseSendMailLimitCount(c);
+        await appendSendLog(c, {
+            address: fromMail || "",
+            reqJson: {
+                to_mail: typeof to === "string" ? to : to?.email,
+                subject: typeof subject === "string" ? subject : "",
+            },
+            channel: "binding_admin",
+            status: "success",
+        });
     } catch (e) {
         console.error("Admin raw send_mail failed", e);
+        await appendSendLog(c, {
+            address: fromMail || "",
+            reqJson: {
+                to_mail: typeof to === "string" ? to : to?.email,
+                subject: typeof subject === "string" ? subject : "",
+            },
+            channel: "binding_admin",
+            status: "failed",
+            error: (e as Error)?.message || "",
+        });
         return c.text(getAdminSendMailErrorMessage(msgs, e), 400)
     }
     return c.json({ status: "ok" });

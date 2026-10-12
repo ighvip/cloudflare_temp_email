@@ -8,9 +8,9 @@ import i18n from '../i18n';
 import { CONSTANTS } from '../constants'
 import { getJsonSetting, getDomains, getBooleanValue, getJsonObjectValue, getDomainMapValue, getMailDomain, includesDomain } from '../utils';
 import { GeoData } from '../models'
-import { handleListQuery, resolveSendMailBindingEnabled, updateAddressUpdatedAt } from '../common'
+import { handleListQuery, isGlobalSendMailEnabled, resolveSendMailBindingEnabled, updateAddressUpdatedAt } from '../common'
 import { getSendMailOverride } from '../mail_domains';
-import { getSendBalanceState, requestSendMailAccess } from './send_balance';
+import { getSendBalanceState, refundSendBalance, requestSendMailAccess } from './send_balance';
 import { ensureSendMailLimit, increaseSendMailLimitCount } from './send_mail_limit_utils';
 
 
@@ -129,6 +129,40 @@ const sendMailBySmtp = async (
     )
 }
 
+// 发信审计：每次真正投递（成功 / 失败）写一条 send_log。表缺失（未迁移）时
+// 只告警、不影响发信主流程。
+export const appendSendLog = async (
+    c: Context<HonoCustomType>,
+    entry: {
+        address: string,
+        reqJson: {
+            to_mail?: string,
+            subject?: string,
+        },
+        channel: string,
+        status: 'success' | 'failed',
+        error?: string,
+    }
+): Promise<void> => {
+    try {
+        const reqIp = c.req.raw.headers.get("cf-connecting-ip") || "";
+        await c.env.DB.prepare(
+            `INSERT INTO send_log (address, to_mail, subject, channel, status, error, req_ip)
+            VALUES (?, ?, ?, ?, ?, ?, ?)`
+        ).bind(
+            entry.address || "",
+            entry.reqJson?.to_mail || "",
+            entry.reqJson?.subject || "",
+            entry.channel,
+            entry.status,
+            entry.error || "",
+            reqIp
+        ).run();
+    } catch (e) {
+        console.warn(`Failed to append send_log for ${entry.address}`, e);
+    }
+}
+
 export const sendMail = async (
     c: Context<HonoCustomType>, address: string,
     reqJson: {
@@ -136,12 +170,20 @@ export const sendMail = async (
         subject: string, content: string, is_html: boolean
     },
     options?: {
-        isAdmin?: boolean
+        isAdmin?: boolean,
+        // 系统邮件（如注册验证码）不受站点级主开关影响
+        isSystem?: boolean
     }
 ): Promise<void> => {
     const msgs = i18n.getMessagesbyContext(c);
     if (!address) {
         throw new Error(msgs.AddressNotFoundMsg)
+    }
+    // 三层开关的第一层：站点级 DB 主开关 stored false 时全站停发；
+    // 管理员发送与系统邮件不受影响（禁发不应阻断注册验证码这类内部邮件）。
+    if (!options?.isAdmin && !options?.isSystem
+        && !(await isGlobalSendMailEnabled(c))) {
+        throw new Error(msgs.SendMailDisabledMsg)
     }
     // check domain
     const mailDomain = getMailDomain(address);
@@ -184,58 +226,78 @@ export const sendMail = async (
     }
     await ensureSendMailLimit(c);
 
-    // send to verified address list, do not update balance
+    // 通道可用性：投递链路按 resend → smtp → SEND_MAIL binding 顺序选择
     const resendEnabled = c.env.RESEND_TOKEN || c.env[
         `RESEND_TOKEN_${mailDomain.replace(/\./g, "_").toUpperCase()}`
     ];
-    // send by smtp
     const smtpConfigMap = getJsonObjectValue<Record<string, WorkerMailerOptions>>(c.env.SMTP_CONFIG);
     const smtpConfig = getDomainMapValue(smtpConfigMap, mailDomain);
-    // send by verified address list
-    let sendByVerifiedAddressList = false;
-    if (c.env.SEND_MAIL) {
-        const verifiedAddressList = await getJsonSetting(c, CONSTANTS.VERIFIED_ADDRESS_LIST_KEY) || [];
-        if (verifiedAddressList.includes(to_mail)) {
-            await sendMailToVerifyAddress(c, address, reqJson);
-            sendByVerifiedAddressList = true;
-        }
-    }
     // 问题6: stored switch wins (true allows the binding for that domain),
     // env SEND_MAIL_DOMAINS stays the fallback for unmanaged domains
     const sendMailBindingEnabled = await resolveSendMailBindingEnabled(c, mailDomain);
 
-    // send mail workflow
-    if (sendByVerifiedAddressList) {
-        // do not update balance
+    // 通道判定（供审计日志记录；投递到已验证地址列表时走 binding 但不计费）
+    let channel = "none";
+    if (resendEnabled) {
+        channel = "resend";
+    } else if (smtpConfig) {
+        channel = "smtp";
+    } else if (sendMailBindingEnabled) {
+        channel = "binding";
     }
-    // send by resend
-    else if (resendEnabled) {
-        await sendMailByResend(c, address, reqJson);
-    }
-    else if (smtpConfig) {
-        await sendMailBySmtp(c, address, reqJson, smtpConfig);
-    }
-    else if (sendMailBindingEnabled) {
-        await sendMailByBinding(c, address, reqJson);
-    }
-    else {
-        throw new Error(`${msgs.EnableResendOrSmtpOrSendMailMsg} (${mailDomain})`);
-    }
-    await increaseSendMailLimitCount(c);
-
-    // update balance
-    if (!sendByVerifiedAddressList && sendBalanceState.needCheckBalance) {
-        try {
-            const { success } = await c.env.DB.prepare(
-                `UPDATE address_sender SET balance = balance - 1 where address = ?`
-            ).bind(address).run();
-            if (!success) {
-                console.warn(`Failed to update balance for ${address}`);
-            }
-        } catch (e) {
-            console.warn(`Failed to update balance for ${address}`);
+    let sendByVerifiedAddressList = false;
+    if (c.env.SEND_MAIL) {
+        const verifiedAddressList = await getJsonSetting(c, CONSTANTS.VERIFIED_ADDRESS_LIST_KEY) || [];
+        if (verifiedAddressList.includes(to_mail)) {
+            sendByVerifiedAddressList = true;
+            channel = "binding_verified";
         }
     }
+    if (!sendByVerifiedAddressList && channel === "none") {
+        throw new Error(`${msgs.EnableResendOrSmtpOrSendMailMsg} (${mailDomain})`);
+    }
+
+    // 原子预留：投递前先按 balance >= 1 扣一个额度，避免并发竞态
+    // （旧实现投递后再 balance - 1，两人同时读到 1 会扣成 -1）。投递失败回补。
+    let balanceReserved = false;
+    if (!sendByVerifiedAddressList && sendBalanceState.needCheckBalance) {
+        const { meta } = await c.env.DB.prepare(
+            `UPDATE address_sender SET balance = balance - 1
+            WHERE address = ? AND enabled = 1 AND balance >= 1`
+        ).bind(address).run();
+        if (!meta || meta.changes !== 1) {
+            throw new Error(msgs.NoBalanceMsg)
+        }
+        balanceReserved = true;
+    }
+
+    // send mail workflow
+    try {
+        if (sendByVerifiedAddressList) {
+            // 已验证地址：经 SEND_MAIL binding 投递，不扣额度
+            await sendMailToVerifyAddress(c, address, reqJson);
+        }
+        else if (resendEnabled) {
+            await sendMailByResend(c, address, reqJson);
+        }
+        else if (smtpConfig) {
+            await sendMailBySmtp(c, address, reqJson, smtpConfig);
+        }
+        else {
+            await sendMailByBinding(c, address, reqJson);
+        }
+    } catch (e) {
+        if (balanceReserved) {
+            await refundSendBalance(c, address);
+        }
+        await appendSendLog(c, {
+            address, reqJson, channel, status: 'failed',
+            error: (e as Error)?.message || '',
+        });
+        throw e;
+    }
+    await increaseSendMailLimitCount(c);
+    await appendSendLog(c, { address, reqJson, channel, status: 'success' });
     // update address updated_at
     updateAddressUpdatedAt(c, address);
     // save to sendbox

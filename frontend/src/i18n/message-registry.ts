@@ -897,6 +897,10 @@ export const MESSAGE_REGISTRY = {
       "en": "Send Mail",
       "zh": "发送邮件"
     },
+    "sendLog": {
+      "en": "Send Log",
+      "zh": "发信日志"
+    },
     "senderAccess": {
       "en": "Sender Access Control",
       "zh": "发件权限控制"
@@ -2522,6 +2526,112 @@ export const MESSAGE_REGISTRY = {
       "zh": "版本：{version}"
     }
   },
+  "views.admin.SendLog": {
+    "pageTitle": {
+      "en": "Send Log",
+      "zh": "发信日志"
+    },
+    "pageDesc": {
+      "en": "Audit trail of every outgoing mail attempt — sender, recipient, channel and result.",
+      "zh": "每一封外发邮件的审计记录：发件地址、收件人、通道与结果。"
+    },
+    "address": {
+      "en": "Email Address",
+      "zh": "邮箱地址"
+    },
+    "addressPlaceholder": {
+      "en": "Leave blank to query all addresses",
+      "zh": "留空查询所有地址"
+    },
+    "to": {
+      "en": "Recipient",
+      "zh": "收件人"
+    },
+    "subject": {
+      "en": "Subject",
+      "zh": "主题"
+    },
+    "channel": {
+      "en": "Channel",
+      "zh": "通道"
+    },
+    "status": {
+      "en": "Result",
+      "zh": "结果"
+    },
+    "statusSuccess": {
+      "en": "Success",
+      "zh": "成功"
+    },
+    "statusFailed": {
+      "en": "Failed",
+      "zh": "失败"
+    },
+    "createdAt": {
+      "en": "Time",
+      "zh": "时间"
+    },
+    "error": {
+      "en": "Error",
+      "zh": "错误"
+    },
+    "filterAll": {
+      "en": "All",
+      "zh": "全部"
+    },
+    "query": {
+      "en": "Query",
+      "zh": "查询"
+    },
+    "delete": {
+      "en": "Delete",
+      "zh": "删除"
+    },
+    "deleteTip": {
+      "en": "Are you sure to delete this log?",
+      "zh": "确定删除这条日志吗？"
+    },
+    "clear": {
+      "en": "Clear all",
+      "zh": "清空"
+    },
+    "clearTip": {
+      "en": "Clear all send logs? This cannot be undone.",
+      "zh": "确定清空全部发信日志？此操作不可恢复。"
+    },
+    "clearSuccess": {
+      "en": "Cleared",
+      "zh": "已清空"
+    },
+    "deleteSuccess": {
+      "en": "Deleted",
+      "zh": "已删除"
+    },
+    "emptyTitle": {
+      "en": "No send log matches the current filter",
+      "zh": "暂无符合条件的发信日志"
+    },
+    "itemCount": {
+      "en": "Total",
+      "zh": "总数"
+    },
+    "cleanup": {
+      "en": "Clean old logs",
+      "zh": "清理过期日志"
+    },
+    "cleanupTip": {
+      "en": "Enter the number of days to keep",
+      "zh": "请输入要保留的天数"
+    },
+    "cleanupSuccess": {
+      "en": "Cleanup success",
+      "zh": "清理成功"
+    },
+    "refresh": {
+      "en": "Refresh",
+      "zh": "刷新"
+    }
+  },
   "views.admin.SenderAccess": {
     "action": {
       "en": "Action",
@@ -2534,6 +2644,22 @@ export const MESSAGE_REGISTRY = {
     "balance": {
       "en": "Balance",
       "zh": "余额"
+    },
+    "balanceAdjust": {
+      "en": "Adjust balance (+/-)",
+      "zh": "调整额度（可正可负）"
+    },
+    "balanceAdjustTip": {
+      "en": "Enter a non-zero integer: positive grants, negative deducts.",
+      "zh": "输入非零整数：正数发放、负数回收。"
+    },
+    "balanceInvalid": {
+      "en": "Enter a non-zero integer",
+      "zh": "请输入非零整数"
+    },
+    "adjust": {
+      "en": "Adjust",
+      "zh": "调整"
     },
     "created_at": {
       "en": "Created At",
@@ -3457,6 +3583,34 @@ export const MESSAGE_REGISTRY = {
       "en": "Sending is disabled; these settings are unavailable.",
       "zh": "发信功能未启用，相关设置不可用。"
     },
+    "sendGlobalLabel": {
+      "en": "Global Send Switch",
+      "zh": "全局发信开关"
+    },
+    "sendGlobalTip": {
+      "en": "Site-wide master switch. Force disable stops user sending site-wide (admin sending and system mail such as sign-up verification codes keep working); follow environment keeps the legacy behaviour where the channels and per-domain switches decide.",
+      "zh": "站点级发信总开关。「强制关闭」为全站停用用户发信（管理员发送与系统邮件如注册验证码不受影响）；「跟随环境」保持原有行为，由通道与每域名开关决定。"
+    },
+    "sendGlobalFollowEnv": {
+      "en": "Follow environment",
+      "zh": "跟随环境"
+    },
+    "sendGlobalForceEnable": {
+      "en": "Force enable",
+      "zh": "强制开启"
+    },
+    "sendGlobalForceDisable": {
+      "en": "Force disable (site-wide off)",
+      "zh": "强制关闭（全站禁发）"
+    },
+    "sendGlobalStatusEnabled": {
+      "en": "Effective: sending is available",
+      "zh": "当前生效：可发信"
+    },
+    "sendGlobalStatusDisabled": {
+      "en": "Effective: sending is unavailable",
+      "zh": "当前生效：不可发信"
+    },
     "addressCard": {
       "en": "Address Creation",
       "zh": "地址创建"
@@ -4154,6 +4308,10 @@ export const MESSAGE_REGISTRY = {
     "sendBoxLabel": {
       "en": "Cleanup the sendbox before n days",
       "zh": "清理 n 天前的发件箱"
+    },
+    "sendLogLabel": {
+      "en": "Cleanup the send log before n days",
+      "zh": "清理 n 天前的发信日志"
     },
     "sqlName": {
       "en": "Name",

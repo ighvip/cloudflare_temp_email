@@ -89,6 +89,7 @@ export type LocaleMessages = {
     EnableSendMailMsg: string
     EnableSendMailForDomainMsg: string
     SendMailDisabledForDomainMsg: string
+    SendMailDisabledMsg: string
     InvalidCleanupConfigMsg: string
     InvalidCleanTypeMsg: string
     CleanupFailedMsg: string

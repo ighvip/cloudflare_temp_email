@@ -3,7 +3,7 @@ import { Jwt } from 'hono/utils/jwt'
 import { WorkerMailerOptions } from 'worker-mailer';
 
 import { getBooleanValue, getDomains, getStringArray, getStringValue, getIntValue, getUserRoles, getDefaultDomains, getJsonSetting, getAnotherWorkerList, hashPassword, getJsonObjectValue, getRandomSubdomainDomains, getDomainMapValue, isDomainOrSubdomain, normalizeDomains, trimLower } from './utils';
-import { getSendMailOverride, getManagedDomains } from './mail_domains';
+import { getSendMailOverride, getManagedDomains, getMailDomainSettings } from './mail_domains';
 import { unbindTelegramByAddress } from './telegram_api/common';
 import { CONSTANTS } from './constants';
 import { AddressCreationSettings, AdminWebhookSettings, ExtractResult, WebhookMail, WebhookSettings } from './models';
@@ -146,6 +146,64 @@ export const resolveSendMailBindingEnabled = async (
         return isSendMailBindingEnabled(c, mailDomain);
     }
     return override && !!c.env.SEND_MAIL;
+}
+
+/**
+ * 发信三层开关的第一层：站点级 DB 主开关。`send_mail_enabled` 存储在 D1
+ * settings 表：
+ * - 显式 `false` → 全站 kill switch，任何域名都不能发信；
+ * - 缺省 / `true` → 交给环境通道与每域名开关（resolveSendMailEnabled）决定。
+ * 语义与 isPrefixEnabled 保持一致（stored !== false 即视为开启）。
+ */
+export const isGlobalSendMailEnabled = async (
+    c: Context<HonoCustomType>
+): Promise<boolean> => {
+    try {
+        const stored = await getJsonSetting<boolean>(c, CONSTANTS.SEND_MAIL_ENABLED_KEY);
+        return stored !== false;
+    } catch (error) {
+        console.error("isGlobalSendMailEnabled failed", error);
+        return true;
+    }
+}
+
+/**
+ * 全局「是否任一域名可发信」判定：先查 DB 主开关，再对 env 域名 ∪ 纳管域名
+ * 逐一用 resolveSendMailEnabled 的语义计算（stored 开关优先、env 兜底），
+ * 因此不再像 isAnySendMailEnabled 那样只认 env 域名 / 只看 env 通道。
+ * 供 /open_api/settings、公开统计与后台开关等"feature flag"使用。
+ */
+export const resolveAnySendMailEnabled = async (
+    c: Context<HonoCustomType>
+): Promise<boolean> => {
+    if (!(await isGlobalSendMailEnabled(c))) {
+        return false;
+    }
+    const envDomains = getDomains(c);
+    const stored = await getMailDomainSettings(c);
+    const storedEnabledMap = new Map(
+        stored.map((item) => [item.name, item.sendEnabled === true])
+    );
+    const seen = new Set<string>();
+    for (const rawName of [...envDomains, ...stored.map((item) => item.name)]) {
+        const domain = normalizeDomainValue(rawName);
+        if (!domain || seen.has(domain)) {
+            continue;
+        }
+        seen.add(domain);
+        if (storedEnabledMap.has(domain)) {
+            // stored 开关优先：显式开启即视为该域可发信（与 send 链路一致，
+            // 实际投递仍然需要某个通道就绪）
+            if (storedEnabledMap.get(domain)) {
+                return true;
+            }
+            continue;
+        }
+        if (isSendMailEnabled(c, domain)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 export const generateRandomName = (c: Context<HonoCustomType>): string => {
@@ -631,6 +689,17 @@ export const cleanup = async (
             await c.env.DB.prepare(`
                 DELETE FROM sendbox WHERE id IN (
                     SELECT id FROM sendbox
+                    WHERE created_at < datetime('now', ?)
+                    ORDER BY created_at, id
+                    LIMIT ?
+                )`
+            ).bind(`-${cleanDays} day`, cleanupBatchSize).run();
+            break;
+        case "send_log":
+            // 发信审计日志按 created_at 保留 N 天（与 sendbox 同一清理机制）
+            await c.env.DB.prepare(`
+                DELETE FROM send_log WHERE id IN (
+                    SELECT id FROM send_log
                     WHERE created_at < datetime('now', ?)
                     ORDER BY created_at, id
                     LIMIT ?

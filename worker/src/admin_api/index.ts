@@ -4,6 +4,7 @@ import { getUserRoles } from '../utils'
 import address_api from './address_api'
 import address_sender_api from './address_sender_api'
 import sendbox_api from './sendbox_api'
+import send_log_api from './send_log_api'
 import statistics_api from './statistics_api'
 import account_settings_api from './account_settings_api'
 import cleanup_api from './cleanup_api'
@@ -43,11 +44,17 @@ api.delete('/admin/mails/:id', admin_mail_api.deleteMail)
 // address sender
 api.get('/admin/address_sender', address_sender_api.list)
 api.post('/admin/address_sender', address_sender_api.update)
+api.post('/admin/address_sender/balance', address_sender_api.adjustBalance)
 api.delete('/admin/address_sender/:id', address_sender_api.remove)
 
 // sendbox
 api.get('/admin/sendbox', sendbox_api.list)
 api.delete('/admin/sendbox/:id', sendbox_api.remove)
+
+// send audit log
+api.get('/admin/send_log', send_log_api.list)
+api.delete('/admin/send_log/:id', send_log_api.remove)
+api.post('/admin/send_log/clear', send_log_api.clear)
 
 // statistics
 api.get('/admin/statistics', statistics_api.get)

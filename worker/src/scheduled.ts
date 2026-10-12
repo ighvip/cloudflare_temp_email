@@ -41,6 +41,13 @@ async function runCleanup(env: Bindings) {
             autoCleanupSetting.cleanSendBoxDays
         );
     }
+    if (autoCleanupSetting.enableSendLogAutoCleanup) {
+        await cleanup(
+            { env: env, } as Context<HonoCustomType>,
+            "send_log",
+            autoCleanupSetting.cleanSendLogDays
+        );
+    }
     if (autoCleanupSetting.enableInactiveAddressAutoCleanup) {
         await cleanup(
             { env: env, } as Context<HonoCustomType>,

@@ -5,12 +5,13 @@ import { deleteSetting, getJsonSetting, saveSetting } from '../utils'
 import {
     getAddressCreationSettings,
     getAddressCreationSubdomainMatchStatus,
-    isAnySendMailEnabled
+    resolveAnySendMailEnabled
 } from '../common'
 import { CONSTANTS } from '../constants'
 import {
-    getSendMailLimitConfig,
+    getEffectiveSendMailLimitConfig,
     getSendMailLimitConfigToSave,
+    getSendMailLimitDefaults,
     validateSendMailLimitConfig
 } from '../mails_api/send_mail_limit_utils'
 import { EmailRuleSettings } from '../models'
@@ -78,6 +79,7 @@ const PAYLOAD_KEYS = [
     'emailRuleSettings',
     'addressCreationSettings',
     'sendMailLimitConfig',
+    'sendMailGlobalEnabled',
     'keywordFilterList',
 ];
 
@@ -91,7 +93,14 @@ const get = async (c: Context<HonoCustomType>) => {
         const noLimitSendAddressList = await getJsonSetting(c, CONSTANTS.NO_LIMIT_SEND_ADDRESS_LIST_KEY);
         const addressCreationSettings = await getAddressCreationSettings(c);
         const addressCreationSubdomainMatchStatus = await getAddressCreationSubdomainMatchStatus(c, addressCreationSettings);
-        const sendMailLimitConfig = await getSendMailLimitConfig(c);
+        // 生效配置：未存储过限额配置时返回默认限额（100/3000，两个开关开启），
+        // 这样管理员打开面板就能看到当前真正生效的值，并可直接关掉。
+        const sendMailLimitConfig = await getEffectiveSendMailLimitConfig(c);
+        // 全局发信开关三态：true=强制开启 / false=全站禁发 / null=未设置（跟随 env 与每域开关）
+        const rawGlobalSendEnabled = await getJsonSetting<boolean>(c, CONSTANTS.SEND_MAIL_ENABLED_KEY);
+        const sendMailGlobalEnabled = typeof rawGlobalSendEnabled === 'boolean'
+            ? rawGlobalSendEnabled
+            : null;
         return c.json({
             blockList: blockList || [],
             sendBlockList: sendBlockList || [],
@@ -107,6 +116,9 @@ const get = async (c: Context<HonoCustomType>) => {
                 : {},
             addressCreationSubdomainMatchStatus,
             sendMailLimitConfig,
+            // 默认限额下沉到 worker：前端表单据此回填，不再各自硬编码 100/3000
+            sendMailLimitDefaults: getSendMailLimitDefaults(),
+            sendMailGlobalEnabled,
         })
     } catch (error) {
         console.error(error);
@@ -120,7 +132,7 @@ const save = async (c: Context<HonoCustomType>) => {
     const {
         blockList, sendBlockList, noLimitSendAddressList,
         verifiedAddressList, fromBlockList, emailRuleSettings, addressCreationSettings,
-        sendMailLimitConfig, keywordFilterList
+        sendMailLimitConfig, sendMailGlobalEnabled, keywordFilterList
     } = payload || {};
     const has = (key: string) => Object.prototype.hasOwnProperty.call(payload || {}, key);
     if (!PAYLOAD_KEYS.some((key) => has(key))) {
@@ -158,7 +170,18 @@ const save = async (c: Context<HonoCustomType>) => {
     if (!addressCreationSettingsUpdate) {
         return c.text(msgs.InvalidInputMsg, 400)
     }
-    if (has('verifiedAddressList') && !isAnySendMailEnabled(c) && verifiedAddressList.length > 0) {
+    if (has('sendMailGlobalEnabled')
+        && sendMailGlobalEnabled !== null
+        && typeof sendMailGlobalEnabled !== 'boolean') {
+        return c.text(msgs.InvalidInputMsg, 400)
+    }
+    // 已验证地址列表只在发信确实可用时才允许配置：本次提交带了全局开关就
+    // 以提交值为准（允许一次保存里"开启 + 添加"），null 表示恢复"跟随环境"，
+    // 仍按 env 与每域开关判定；未带该键则读当前生效状态。
+    const sendEnabledForVerifiedList = has('sendMailGlobalEnabled') && sendMailGlobalEnabled !== null
+        ? sendMailGlobalEnabled === true
+        : await resolveAnySendMailEnabled(c);
+    if (has('verifiedAddressList') && !sendEnabledForVerifiedList && verifiedAddressList.length > 0) {
         return c.text(msgs.EnableSendMailMsg, 400)
     }
     if (sendMailLimitConfig && !validateSendMailLimitConfig(sendMailLimitConfig)) {
@@ -204,6 +227,17 @@ const save = async (c: Context<HonoCustomType>) => {
             c, CONSTANTS.SEND_MAIL_LIMIT_CONFIG_KEY,
             JSON.stringify(sendMailLimitConfigToSave)
         )
+    }
+    if (has('sendMailGlobalEnabled')) {
+        if (sendMailGlobalEnabled === null) {
+            // null = 清空覆盖，恢复"未设置"（跟随 env 与每域开关）
+            await deleteSetting(c, CONSTANTS.SEND_MAIL_ENABLED_KEY);
+        } else {
+            await saveSetting(
+                c, CONSTANTS.SEND_MAIL_ENABLED_KEY,
+                JSON.stringify(sendMailGlobalEnabled)
+            )
+        }
     }
     return c.json({ success: true });
 };
