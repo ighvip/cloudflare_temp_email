@@ -495,7 +495,7 @@ export const zhTWMessages = {
   "views.admin.SendMail.draftSaved": "草稿已保存在當前瀏覽器",
   "views.admin.SendMail.edit": "編輯",
   "views.admin.SendMail.notEnabled": "發信功能未啟用",
-  "views.admin.SendMail.notEnabledHint": "該功能當前未啟用。如需使用，請聯繫管理員在 Worker 環境變量中配置 RESEND_API_KEY、SMTP_* 或 SEND_MAIL（至少為一個域名開啟）。",
+  "views.admin.SendMail.notEnabledHint": "該功能當前未啟用。如需使用，請聯繫管理員在 Worker 環境變量中配置 RESEND_TOKEN（或 RESEND_TOKEN_<域名>）、SMTP_CONFIG，或配置 Cloudflare send_email 綁定（SEND_MAIL）並確保至少有一個域名可用發信。",
   "views.admin.SendMail.fromMailEmpty": "發件人地址不能為空",
   "views.admin.SendMail.fromName": "你的名稱和地址，名稱不填寫則使用郵箱地址",
   "views.admin.SendMail.html": "HTML",

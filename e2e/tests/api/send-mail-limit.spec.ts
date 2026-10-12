@@ -3,6 +3,7 @@ import type { APIRequestContext } from '@playwright/test';
 import {
   WORKER_URL,
   WORKER_URL_SEND_MAIL_DOMAIN,
+  TEST_DOMAIN,
   createTestAddress,
   deleteAddress,
   deleteAllMailpitMessages,
@@ -528,5 +529,253 @@ test.describe('Send Mail Limit', () => {
     expect(text).toContain('Server daily send quota has been reached');
 
     await deleteAddress(request, jwt);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Send switches layer 2: the admin domain list.
+//
+// The admin domain list is the per-domain layer of the send switches: a
+// read-only channel report (derived from env only — keys are never stored) and
+// optional per-domain daily/monthly limits. Blank limits inherit the global
+// ones; global and per-domain limits both apply, and per-domain counters are
+// kept separately. Only managed domains can carry per-domain overrides.
+//
+// The e2e worker wires SMTP_CONFIG for TEST_DOMAIN to mailpit, so at least one
+// channel is always usable here.
+// ---------------------------------------------------------------------------
+
+async function getManagedDomain(request: APIRequestContext, name: string) {
+  const res = await request.get(`${WORKER_URL}/admin/domains`, {
+    headers: ADMIN_HEADERS,
+  });
+  expect(res.ok()).toBe(true);
+  const body = await res.json();
+  return (body.domains || []).find((item: any) => item.name === name);
+}
+
+/** Add TEST_DOMAIN to the managed list when missing (kept for later tests). */
+async function ensureManagedDomain(request: APIRequestContext) {
+  const existing = await getManagedDomain(request, TEST_DOMAIN);
+  if (existing) {
+    return existing;
+  }
+  const add = await request.post(`${WORKER_URL}/admin/domains`, {
+    headers: ADMIN_HEADERS,
+    data: { name: TEST_DOMAIN },
+  });
+  expect(add.ok(), `failed to add ${TEST_DOMAIN}: ${await add.text()}`).toBe(true);
+  const added = await add.json();
+  return (added.domains || []).find((item: any) => item.name === TEST_DOMAIN);
+}
+
+function patchDomain(
+  request: APIRequestContext,
+  name: string,
+  data: Record<string, unknown>
+) {
+  return request.patch(`${WORKER_URL}/admin/domains/${name}`, {
+    headers: ADMIN_HEADERS,
+    data,
+  });
+}
+
+/** Restore "inherit the global limits" + "send enabled" for TEST_DOMAIN. */
+async function resetDomainOverrides(request: APIRequestContext) {
+  const res = await patchDomain(request, TEST_DOMAIN, {
+    sendDailyLimit: null,
+    sendMonthlyLimit: null,
+    sendEnabled: true,
+  });
+  if (!res.ok() && res.status() !== 404) {
+    throw new Error(`failed to reset domain overrides: ${res.status()} ${await res.text()}`);
+  }
+}
+
+/**
+ * Smallest per-domain limit that still lets one send through (= count + 1).
+ * Used instead of assuming a clean counter, because the per-domain counters
+ * live in the shared test database.
+ */
+async function probeDomainBaseline(
+  request: APIRequestContext,
+  jwt: string,
+  key: 'sendDailyLimit' | 'sendMonthlyLimit',
+  maxProbeLimit: number = 50
+): Promise<number> {
+  for (let limit = 1; limit <= maxProbeLimit; limit++) {
+    const save = await patchDomain(request, TEST_DOMAIN, { [key]: limit });
+    expect(save.ok()).toBe(true);
+
+    const probe = await request.post(`${WORKER_URL}/api/send_mail`, {
+      headers: { Authorization: `Bearer ${jwt}` },
+      data: {
+        from_name: 'probe',
+        to_name: '',
+        to_mail: 'recipient@test.example.com',
+        subject: `probe-domain-${key}-${limit}-${Date.now()}`,
+        content: 'probe',
+        is_html: false,
+      },
+    });
+    if (probe.ok()) {
+      return limit;
+    }
+  }
+  throw new Error(`Failed to probe per-domain baseline within ${maxProbeLimit}`);
+}
+
+async function sendOneMailInline(request: APIRequestContext, jwt: string, tag: string) {
+  return request.post(`${WORKER_URL}/api/send_mail`, {
+    headers: { Authorization: `Bearer ${jwt}` },
+    data: {
+      from_name: 'Domain Layer E2E',
+      to_name: 'Recipient',
+      to_mail: 'recipient@test.example.com',
+      subject: `domain-layer-${tag}-${Date.now()}`,
+      content: `Domain layer test body ${tag}`,
+      is_html: false,
+    },
+  });
+}
+
+test.describe('Send switches layer 2 (per-domain channel report + limits)', () => {
+  test.beforeEach(async ({ request }) => {
+    await deleteAllMailpitMessages(request);
+    // Global layer stays unlimited: only the per-domain layer is under test.
+    await resetLimitConfig(request);
+  });
+
+  test.afterEach(async ({ request }) => {
+    await resetLimitConfig(request);
+    await resetDomainOverrides(request);
+  });
+
+  test('domain list reports env channels and inherits limits by default', async ({ request }) => {
+    const domain = await ensureManagedDomain(request);
+    expect(domain.channels, 'channels report is missing').toBeTruthy();
+
+    for (const key of ['resend', 'smtp', 'binding']) {
+      expect(typeof domain.channels[key], `channels.${key}`).toBe('boolean');
+    }
+
+    // effective must be the first available channel in delivery priority order
+    const expected = domain.channels.resend
+      ? 'resend'
+      : domain.channels.smtp
+        ? 'smtp'
+        : domain.channels.binding
+          ? 'binding'
+          : 'none';
+    expect(domain.channels.effective).toBe(expected);
+    expect(domain.channels.effective).not.toBe('none');
+
+    // limits are unset by default => they inherit the global config
+    expect(domain.sendDailyLimit).toBe(null);
+    expect(domain.sendMonthlyLimit).toBe(null);
+  });
+
+  test('per-domain limits round-trip, validate and reset to inherit', async ({ request }) => {
+    await ensureManagedDomain(request);
+
+    const save = await patchDomain(request, TEST_DOMAIN, {
+      sendDailyLimit: 5,
+      sendMonthlyLimit: 50,
+    });
+    expect(save.ok()).toBe(true);
+    const saved = (await save.json()).domains.find((item: any) => item.name === TEST_DOMAIN);
+    expect(saved.sendDailyLimit).toBe(5);
+    expect(saved.sendMonthlyLimit).toBe(50);
+
+    for (const bad of [0, -1, 1.5, '5', 100001, true]) {
+      const res = await patchDomain(request, TEST_DOMAIN, { sendDailyLimit: bad });
+      expect(res.status(), `value: ${JSON.stringify(bad)}`).toBe(400);
+    }
+
+    const reset = await patchDomain(request, TEST_DOMAIN, {
+      sendDailyLimit: null,
+      sendMonthlyLimit: null,
+    });
+    expect(reset.ok()).toBe(true);
+    const cleared = (await reset.json()).domains.find((item: any) => item.name === TEST_DOMAIN);
+    expect(cleared.sendDailyLimit).toBe(null);
+    expect(cleared.sendMonthlyLimit).toBe(null);
+  });
+
+  test('unmanaged domains cannot carry a per-domain limit', async ({ request }) => {
+    const res = await patchDomain(request, 'not-managed.example.com', { sendDailyLimit: 1 });
+    expect(res.status()).toBe(404);
+  });
+
+  test('per-domain send switch off blocks that domain and back on restores it', async ({ request }) => {
+    await ensureManagedDomain(request);
+    const { jwt } = await createTestAddress(request, 'domain-send-off');
+    await requestSendAccess(request, jwt);
+
+    try {
+      const off = await patchDomain(request, TEST_DOMAIN, { sendEnabled: false });
+      expect(off.ok()).toBe(true);
+
+      const blocked = await sendOneMailInline(request, jwt, 'switch-off');
+      expect(blocked.ok()).toBe(false);
+      expect(await blocked.text()).toContain('Sending is disabled for this domain');
+
+      const on = await patchDomain(request, TEST_DOMAIN, { sendEnabled: true });
+      expect(on.ok()).toBe(true);
+
+      const restored = await sendOneMailInline(request, jwt, 'switch-on');
+      expect(restored.ok()).toBe(true);
+    } finally {
+      await deleteAddress(request, jwt);
+    }
+  });
+
+  test('per-domain daily limit blocks sends and clearing it restores sending', async ({ request }) => {
+    await ensureManagedDomain(request);
+    const { jwt } = await createTestAddress(request, 'domain-limit-daily');
+    await requestSendAccess(request, jwt);
+
+    try {
+      const baseline = await probeDomainBaseline(request, jwt, 'sendDailyLimit');
+      const save = await patchDomain(request, TEST_DOMAIN, { sendDailyLimit: baseline + 1 });
+      expect(save.ok()).toBe(true);
+
+      const allowed = await sendOneMailInline(request, jwt, 'daily-allowed');
+      expect(allowed.ok(), 'the send within the per-domain limit should succeed').toBe(true);
+
+      const blocked = await sendOneMailInline(request, jwt, 'daily-blocked');
+      expect(blocked.ok()).toBe(false);
+      expect(await blocked.text()).toContain('Server daily send quota has been reached');
+
+      // inherit the global limit again => the per-domain counter no longer applies
+      const cleared = await patchDomain(request, TEST_DOMAIN, { sendDailyLimit: null });
+      expect(cleared.ok()).toBe(true);
+
+      const restored = await sendOneMailInline(request, jwt, 'daily-restored');
+      expect(restored.ok(), 'clearing the per-domain limit should restore sending').toBe(true);
+    } finally {
+      await deleteAddress(request, jwt);
+    }
+  });
+
+  test('per-domain monthly limit blocks sends', async ({ request }) => {
+    await ensureManagedDomain(request);
+    const { jwt } = await createTestAddress(request, 'domain-limit-monthly');
+    await requestSendAccess(request, jwt);
+
+    try {
+      const baseline = await probeDomainBaseline(request, jwt, 'sendMonthlyLimit');
+      const save = await patchDomain(request, TEST_DOMAIN, { sendMonthlyLimit: baseline + 1 });
+      expect(save.ok()).toBe(true);
+
+      const allowed = await sendOneMailInline(request, jwt, 'monthly-allowed');
+      expect(allowed.ok(), 'the send within the per-domain limit should succeed').toBe(true);
+
+      const blocked = await sendOneMailInline(request, jwt, 'monthly-blocked');
+      expect(blocked.ok()).toBe(false);
+      expect(await blocked.text()).toContain('Server monthly send quota has been reached');
+    } finally {
+      await deleteAddress(request, jwt);
+    }
   });
 });

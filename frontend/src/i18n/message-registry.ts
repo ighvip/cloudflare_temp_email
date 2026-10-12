@@ -2036,8 +2036,8 @@ export const MESSAGE_REGISTRY = {
       "zh": "发信功能未启用"
     },
     "notEnabledHint": {
-      "en": "This feature is currently disabled. To use it, ask the admin to configure RESEND_API_KEY, SMTP_* or SEND_MAIL for at least one domain in the worker env.",
-      "zh": "该功能当前未启用。如需使用，请联系管理员在 Worker 环境变量中配置 RESEND_API_KEY、SMTP_* 或 SEND_MAIL（至少为一个域名开启）。"
+      "en": "This feature is currently disabled. To use it, ask the admin to configure RESEND_TOKEN (or RESEND_TOKEN_<DOMAIN>), SMTP_CONFIG, or the Cloudflare SEND_MAIL binding (with SEND_MAIL_DOMAINS allowing at least one domain) in the worker environment.",
+      "zh": "该功能当前未启用。如需使用，请联系管理员在 Worker 环境变量中配置 RESEND_TOKEN（或 RESEND_TOKEN_<域名>）、SMTP_CONFIG，或配置 Cloudflare send_email 绑定（SEND_MAIL）并确保至少有一个域名可用发信。"
     },
     "fromMailEmpty": {
       "en": "Sender address is empty",
