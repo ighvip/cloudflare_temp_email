@@ -112,6 +112,32 @@ export const isAnySendMailEnabled = (c: Context<HonoCustomType>): boolean => {
     return domains.some(domain => isSendMailEnabled(c, domain));
 }
 
+export type SendMailChannels = {
+    resend: boolean,
+    smtp: boolean,
+    binding: boolean,
+    effective: 'resend' | 'smtp' | 'binding' | 'none',
+}
+
+/**
+ * 发信三层开关的第二层：每域名通道。只读计算，密钥不落库——
+ * 通道完全来自环境变量（RESEND_TOKEN / SMTP_CONFIG / SEND_MAIL），
+ * 优先级与投递链路保持一致（resend → smtp → binding），供后台域名列表展示。
+ */
+export const getSendMailChannels = (
+    c: Context<HonoCustomType>,
+    mailDomain: string
+): SendMailChannels => {
+    const resend = !!(c.env.RESEND_TOKEN || c.env[
+        `RESEND_TOKEN_${mailDomain.replace(/\./g, "_").toUpperCase()}`
+    ]);
+    const smtpConfigMap = getJsonObjectValue<Record<string, WorkerMailerOptions>>(c.env.SMTP_CONFIG);
+    const smtp = !!getDomainMapValue(smtpConfigMap, mailDomain);
+    const binding = isSendMailBindingEnabled(c, mailDomain);
+    const effective = resend ? 'resend' : smtp ? 'smtp' : binding ? 'binding' : 'none';
+    return { resend, smtp, binding, effective };
+}
+
 /**
  * 问题6 批次1: the per-domain 发信 switch stored in D1 wins over the env
  * behaviour; a domain that is not in the stored list falls back to the

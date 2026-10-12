@@ -3949,6 +3949,18 @@ export const MESSAGE_REGISTRY = {
       "en": "Failed to add",
       "zh": "添加失败"
     },
+    "channel": {
+      "en": "Channel",
+      "zh": "通道"
+    },
+    "channelHint": {
+      "en": "Read-only: channels come from environment variables only (RESEND_TOKEN / SMTP_CONFIG / SEND_MAIL) and keys are never stored in the database. The highlighted channel is used first.",
+      "zh": "只读展示：通道仅来自环境变量（RESEND_TOKEN / SMTP_CONFIG / SEND_MAIL），密钥不写入数据库；高亮的通道优先用于投递。"
+    },
+    "channelNone": {
+      "en": "Not configured",
+      "zh": "未配置"
+    },
     "checkingDns": {
       "en": "Querying DNS (MX / TXT)…",
       "zh": "正在查询 DNS（MX / TXT）…"

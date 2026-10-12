@@ -12,6 +12,9 @@ const domains = ref([])
 const envDomains = ref([])
 const newDomain = ref('')
 
+// 只读展示用的通道顺序：与投递链路一致（resend → smtp → binding）
+const SEND_CHANNELS = ['resend', 'smtp', 'binding']
+
 // wrangler.toml DOMAINS 中尚未在本页纳管的域名（仍按环境变量行为运行）
 const envOnlyDomains = computed(() => {
     const managed = new Set(domains.value.map((item) => item.name))
@@ -195,6 +198,7 @@ onMounted(load)
                                 <th>{{ t('domain') }}</th>
                                 <th class="col-switch">{{ t('receive') }}</th>
                                 <th class="col-switch">{{ t('send') }}</th>
+                                <th class="col-channel">{{ t('channel') }}</th>
                                 <th class="col-time">{{ t('createdAt') }}</th>
                                 <th class="col-action">{{ t('action') }}</th>
                             </tr>
@@ -215,6 +219,15 @@ onMounted(load)
                                     <n-switch :value="row.sendEnabled" size="small"
                                         @update:value="(value) => onSendChange(row, value)" />
                                 </td>
+                                <td>
+                                    <div class="channel-cell">
+                                        <n-tag v-for="ch in SEND_CHANNELS" :key="ch" size="tiny" :bordered="false"
+                                            :type="row.channels?.[ch] ? 'primary' : 'default'"
+                                            :class="row.channels?.[ch] ? 'channel-on' : 'channel-off'">
+                                            {{ ch }}
+                                        </n-tag>
+                                    </div>
+                                </td>
                                 <td class="cell-muted">{{ (row.createdAt || '').slice(0, 10) || '-' }}</td>
                                 <td>
                                     <n-popconfirm @positive-click="removeDomain(row)">
@@ -232,6 +245,8 @@ onMounted(load)
                 <p v-if="envOnlyDomains.length" class="env-hint">
                     {{ t('envHint', { domains: envOnlyDomains.join('、') }) }}
                 </p>
+
+                <p class="env-hint">{{ t('channelHint') }}</p>
             </n-spin>
         </n-card>
 
@@ -449,7 +464,7 @@ onMounted(load)
 }
 
 .table-wrap n-table {
-    min-width: 560px;
+    min-width: 640px;
 }
 
 .domain-name {
@@ -466,6 +481,20 @@ onMounted(load)
 
 .col-switch {
     width: 96px;
+}
+
+.col-channel {
+    width: 190px;
+}
+
+.channel-cell {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.channel-off {
+    opacity: 0.3;
 }
 
 .col-time {

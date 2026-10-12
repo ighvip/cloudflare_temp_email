@@ -19,6 +19,7 @@
   - The `send_log` table requires a database migration first: `Admin -> Quick Setup -> Database -> Upgrade Database Schema`, or `POST /admin/db_migration`; without it, log writes only warn and never affect sending
 - feat: |Send| Per-address send balance control: atomically pre-deduct the balance before sending (reject when insufficient) and refund it automatically when sending fails; admins can add or subtract balance right in the "send access" dialog
 - feat: |Send| Move the default daily/monthly send limits (100/3000) into the worker: they now apply when no limit config was ever saved, and turning both switches off in the panel means unlimited; the admin send settings form reads its defaults from the worker
+- feat: |Send| Add a read-only Channel column to the admin domain list showing which send channels (resend → smtp → binding) are available for each managed domain, computed from environment variables only (keys are never stored in the database); the highlighted channel is the one actually used
 
 ### Bug Fixes
 

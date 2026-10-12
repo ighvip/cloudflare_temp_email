@@ -1,6 +1,6 @@
 import { Context } from 'hono';
 
-import { isSendMailEnabled } from '../common';
+import { getSendMailChannels, isSendMailEnabled, SendMailChannels } from '../common';
 import { MailDomainSetting } from '../models';
 import {
     getMailDomainSettings,
@@ -44,7 +44,7 @@ const dohQuery = async (
 }
 
 type DomainListPayload = {
-    domains: (MailDomainSetting & { inEnv: boolean })[],
+    domains: (MailDomainSetting & { inEnv: boolean, channels: SendMailChannels })[],
     envDomains: string[],
 }
 
@@ -57,6 +57,8 @@ const buildPayload = async (
         domains: stored.map((item) => ({
             ...item,
             inEnv: envDomains.includes(item.name),
+            // 只读通道信息：来自环境变量，密钥不落库
+            channels: getSendMailChannels(c, item.name),
         })),
         envDomains,
     };
