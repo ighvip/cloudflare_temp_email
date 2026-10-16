@@ -29,6 +29,7 @@
 - fix: |Home| Remove the logged-out first-run right panel's internal scrollbar and the clipped wave strip by un-pinning the panel from the left column height
 - fix: |Home| Fix the Stats card title wrapping on narrow widths, which grew the card by ~62px and shoved the FAQ banner below the hero while dragging the split; the title now always stays on one line (ellipsized) and the "public" badge yields on very narrow cards, keeping the card height constant in both collapsed and expanded states
 - fix: |i18n| Replace 100 placeholder strings in the ja locale (the hero title, feature cards, quick start, help page, redeem page and login guide showed "メインタイトル A", "機能 1", "トラブル 1", …) with full Japanese translations
+- fix: |i18n| Add the missing translation key for the send-limit column in the admin domain list (the header and limit editor popover used to render the raw key `views.admin.DomainSettings.sendLimit`), mirrored to zhTW / ko / ja; correct the env var names in the admin Send Mail disabled hint (`RESEND_API_KEY` → `RESEND_TOKEN` / `SMTP_CONFIG` / `SEND_MAIL`)
 
 ### Improvements
 

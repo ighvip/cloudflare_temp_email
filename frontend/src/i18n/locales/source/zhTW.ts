@@ -1023,6 +1023,7 @@ export const zhTWMessages = {
   "views.admin.DomainSettings.save": "保存",
   "views.admin.DomainSettings.saveFailed": "保存失敗",
   "views.admin.DomainSettings.send": "發信",
+  "views.admin.DomainSettings.sendLimit": "發信限額",
   "views.admin.DomainSettings.setupWizard": "接入嚮導",
   "views.admin.DomainSettings.spfFound": "已找到 v=spf1 記錄",
   "views.admin.DomainSettings.spfNotFound": "未找到 v=spf1 記錄（發信前建議補齊）",

@@ -4189,6 +4189,10 @@ export const MESSAGE_REGISTRY = {
       "en": "Send",
       "zh": "发信"
     },
+    "sendLimit": {
+      "en": "Send Limit",
+      "zh": "发信限额"
+    },
     "setupWizard": {
       "en": "Setup Wizard",
       "zh": "接入向导"
