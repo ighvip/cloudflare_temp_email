@@ -42,8 +42,12 @@ const loading = ref(false)
 const loadFailed = ref(false)
 const from = ref('USD')
 const to = ref('CNY')
-const amount = ref(1)
+// amount stays a string so an emptied box shows "-" instead of a fake 0
+const amountText = ref('1')
 let refreshTimer = null
+
+// digits and at most one dot (naive n-input allow-input filter)
+const permitNumber = (value) => !value || /^\d*\.?\d*$/.test(value)
 
 const options = computed(() => CURRENCIES.map((item) => ({
     value: item.code,
@@ -53,10 +57,25 @@ const options = computed(() => CURRENCIES.map((item) => ({
 
 const currencyName = (code) => t(`currency_${code}`)
 
-// naive-ui n-select takes render-label as a PROP (function), not a slot —
-// draw "flag + name CODE" for both the selected value and dropdown options
-const renderLabel = (option) => h('span', { class: 'er-option' }, [
-    h('img', { class: 'er-flag', src: option.flag, alt: '' }),
+// naive-ui n-select takes render-label as a PROP (function), not a slot.
+// The VNodes it creates are rendered inside naive-ui's subtree and never get
+// this component's scoped-CSS data attribute, so scoped .er-flag rules would
+// NOT apply (the img fell back to the SVG's native 512x512) — all sizing is
+// therefore inlined here.
+const FLAG_IMG_STYLE = {
+    width: '16px',
+    height: '16px',
+    borderRadius: '50%',
+    flexShrink: '0',
+    display: 'block',
+}
+const OPTION_STYLE = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+}
+const renderLabel = (option) => h('span', { style: OPTION_STYLE }, [
+    h('img', { src: option.flag, alt: '', draggable: 'false', style: FLAG_IMG_STYLE }),
     ` ${option.label}`,
 ])
 
@@ -83,10 +102,15 @@ const converted = computed(() => {
     const table = rates.value?.rates
     const fromRate = table?.[from.value]
     const toRate = table?.[to.value]
-    const value = Number(amount.value)
+    const text = amountText.value.trim()
+    const value = text ? Number(text) : NaN
     if (!fromRate || !toRate || !Number.isFinite(value)) return null
     return value * fromRate / toRate
 })
+
+const convertedText = computed(() => (
+    converted.value !== null ? converted.value.toFixed(2) : ''
+))
 
 // rates >= 1 keep 4 decimals, smaller ones need 6 to stay honest (KRW etc.)
 const formatRate = (rate) => (rate >= 1 ? rate.toFixed(4) : rate.toFixed(6))
@@ -154,15 +178,15 @@ onUnmounted(() => {
                     </div>
                 </div>
 
-                <!-- from row: currency picker + editable amount -->
+                <!-- from row: currency picker + editable amount, mirror of the row below -->
                 <div class="er-row">
-                    <div class="er-select">
+                    <div class="er-cell">
                         <n-select v-model:value="from" :options="options" filterable size="small"
                             :render-label="renderLabel" />
                     </div>
-                    <div class="er-amount">
-                        <n-input-number v-model:value="amount" :show-button="false" :min="0"
-                            size="small" />
+                    <div class="er-cell">
+                        <n-input v-model:value="amountText" size="small" :allow-input="permitNumber"
+                            placeholder="0" />
                     </div>
                 </div>
 
@@ -179,14 +203,14 @@ onUnmounted(() => {
                     </n-button>
                 </div>
 
-                <!-- to row: currency picker + readonly result -->
+                <!-- to row: identical geometry so all four boxes align corner to corner -->
                 <div class="er-row">
-                    <div class="er-select">
+                    <div class="er-cell">
                         <n-select v-model:value="to" :options="options" filterable size="small"
                             :render-label="renderLabel" />
                     </div>
-                    <div class="er-amount er-result">
-                        {{ converted !== null ? converted.toFixed(2) : '-' }}
+                    <div class="er-cell">
+                        <n-input :value="convertedText" readonly size="small" placeholder="-" />
                     </div>
                 </div>
 
@@ -245,7 +269,8 @@ onUnmounted(() => {
     font-weight: 400;
 }
 
-/* picker + amount row, flex shrinks the amount box on narrow screens */
+/* picker + amount row — both cells share one flex basis so the two rows
+   form a strict 2-column grid (four boxes, four aligned corners) */
 .er-row {
     display: flex;
     align-items: center;
@@ -253,47 +278,20 @@ onUnmounted(() => {
     margin-bottom: 8px;
 }
 
-.er-select {
-    flex: 1.15 1 0;
-    min-width: 0;
-}
-
-.er-amount {
+.er-cell {
     flex: 1 1 0;
     min-width: 0;
 }
 
-.er-option {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.er-flag {
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    flex-shrink: 0;
-}
+/* NOTE: the flag img + label wrapper inside n-select are rendered by
+   renderLabel (a naive-ui PROP function) inside naive-ui's own subtree, so
+   scoped .er-flag/.er-option rules can never match them — their size/radius
+   are inlined in renderLabel instead. */
 
 .er-swap-row {
     display: flex;
     justify-content: center;
-    margin: -2px 0 6px;
-}
-
-.er-result {
-    border: 1px solid var(--n-border-color, rgba(128, 128, 128, 0.25));
-    border-radius: 3px;
-    min-height: 34px;
-    display: flex;
-    align-items: center;
-    padding: 0 12px;
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    margin: -4px 0 2px;
 }
 
 .er-meta {

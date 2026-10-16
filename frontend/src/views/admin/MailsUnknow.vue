@@ -44,7 +44,7 @@ const deleteMail = async (curMailId) => {
 
         <section class="page-card">
             <MailBox class="mail-box" :enableUserDeleteEmail="true" :fetchMailData="fetchMailUnknowData"
-                :deleteMail="deleteMail" />
+                :deleteMail="deleteMail" :showSourceIp="true" />
             <EmptyState v-if="listEmpty" variant="inbox" :title="t('emptyTitle')" />
         </section>
     </div>

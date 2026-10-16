@@ -14,6 +14,7 @@ import mail_webhook_settings from './mail_webhook_settings'
 import oauth2_settings from './oauth2_settings'
 import worker_config from './worker_config'
 import admin_mail_api from './admin_mail_api'
+import mail_ip_api from './mail_ip_api'
 import { sendMailbyAdmin, sendMailByBindingAdmin } from './send_mail'
 import db_api from './db_api'
 import ip_blacklist_settings from './ip_blacklist_settings'
@@ -39,6 +40,8 @@ api.post('/admin/address/:id/reset_password', address_api.resetPassword)
 api.get('/admin/mails', admin_mail_api.getMails)
 api.get('/admin/mails_unknow', admin_mail_api.getUnknowMails)
 api.get('/admin/mails/:id', admin_mail_api.getMail)
+// sender IP + geolocation for the admin mail detail (lazy, cached in D1)
+api.get('/admin/mails/:id/ip_info', mail_ip_api.getMailIpInfo)
 api.delete('/admin/mails/:id', admin_mail_api.deleteMail)
 
 // address sender

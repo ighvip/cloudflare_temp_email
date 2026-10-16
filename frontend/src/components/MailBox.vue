@@ -55,6 +55,12 @@ const props = defineProps({
     default: false,
     required: false
   },
+  // admin mail detail: show the lazily resolved sender IP + geolocation tag
+  showSourceIp: {
+    type: Boolean,
+    default: false,
+    required: false
+  },
   enableMailReadStatus: {
     type: Boolean,
     default: false
@@ -501,6 +507,7 @@ onBeforeUnmount(() => {
             <MailContentRenderer :mail="curMail" :showEMailTo="showEMailTo"
               :enableUserDeleteEmail="enableUserDeleteEmail" :showReply="showReply" :showSaveS3="showSaveS3"
               :enableMailReadStatus="enableMailReadStatus" :onUpdateMailReadStatus="toggleCurrentMailUnread"
+              :showSourceIp="showSourceIp"
               :onDelete="deleteMail" :onReply="replyMail" :onForward="forwardMail" :onSaveToS3="saveToS3Proxy" />
           </n-card>
           <n-card :bordered="false" embedded class="mail-item" v-else>
@@ -609,6 +616,7 @@ onBeforeUnmount(() => {
             <MailContentRenderer :mail="curMail" :showEMailTo="showEMailTo"
               :enableUserDeleteEmail="enableUserDeleteEmail" :showReply="showReply" :showSaveS3="showSaveS3"
               :enableMailReadStatus="enableMailReadStatus" :onUpdateMailReadStatus="toggleCurrentMailUnread"
+              :showSourceIp="showSourceIp"
               :useUTCDate="useUTCDate" :onDelete="deleteMail" :onReply="replyMail" :onForward="forwardMail"
               :onSaveToS3="saveToS3Proxy" />
           </n-card>

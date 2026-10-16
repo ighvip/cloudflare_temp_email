@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, watch } from "vue";
+import { useI18n } from 'vue-i18n'
 import { useScopedI18n } from '@/i18n/app'
 import { CloudDownloadRound, ReplyFilled, ForwardFilled, FullscreenRound, ImageRound } from '@vicons/material'
 import ShadowHtmlComponent from "./ShadowHtmlComponent.vue";
@@ -7,6 +8,7 @@ import AiExtractInfo from "./AiExtractInfo.vue";
 import { getDownloadEmlUrl } from '../utils/email-parser';
 import { blockRemoteContent } from '../utils/remote-content-policy';
 import { utcToLocalDate } from '../utils';
+import { api } from '../api';
 import { useGlobalState } from '../store';
 
 const { preferShowTextMail, useIframeShowMail, useUTCDate, isDark, autoLoadRemoteImages } = useGlobalState();
@@ -58,6 +60,11 @@ const props = defineProps({
   onUpdateMailReadStatus: {
     type: Function,
     default: () => { }
+  },
+  // admin mail detail only: lazily resolve the sender IP + geolocation
+  showSourceIp: {
+    type: Boolean,
+    default: false
   }
 });
 
@@ -124,6 +131,48 @@ const handleSaveToS3 = async (filename, blob) => {
   }
 };
 
+// ---- admin-only sender IP geolocation ----
+// { ip, location } from /admin/mails/:id/ip_info; null until loaded.
+// The worker degrades to location:null on lookup failures, so the tag
+// simply falls back to the bare IP.
+const sourceIpInfo = ref(null);
+const { locale } = useI18n({ useScope: 'global' });
+
+const fetchSourceIp = async () => {
+  if (!props.showSourceIp || !props.mail?.id) return;
+  try {
+    const res = await api.fetch(`/admin/mails/${props.mail.id}/ip_info`, { showLoading: false });
+    sourceIpInfo.value = res && res.ip ? res : null;
+  } catch (error) {
+    console.warn('fetch mail ip info failed', error);
+    sourceIpInfo.value = null;
+  }
+};
+
+watch(() => props.mail.id, () => {
+  sourceIpInfo.value = null;
+  fetchSourceIp();
+}, { immediate: true });
+
+// localized country name via Intl (cn / us / ... -> 中国 / 美国 for zh);
+// city and region stay in their original English form from the geo source
+const sourceIpTag = computed(() => {
+  const info = sourceIpInfo.value;
+  if (!info?.ip) return '';
+  const location = info.location;
+  const parts = [info.ip];
+  if (location) {
+    let country = location.countryCode || '';
+    try {
+      country = new Intl.DisplayNames([locale.value], { type: 'region' })
+        .of(location.countryCode) || location.country || '';
+    } catch (e) { country = location.country || location.countryCode || ''; }
+    const place = [country, location.city].filter(Boolean).join(' ');
+    if (place) parts.push(place);
+  }
+  return `IP ${parts.join(' · ')}`;
+});
+
 </script>
 
 <template>
@@ -141,6 +190,9 @@ const handleSaveToS3 = async (filename, blob) => {
       </n-tag>
       <n-tag v-if="showEMailTo" type="info">
         TO: {{ mail.address }}
+      </n-tag>
+      <n-tag v-if="showSourceIp && sourceIpTag" type="info">
+        {{ sourceIpTag }}
       </n-tag>
 
       <!-- 操作按钮 -->

@@ -65,7 +65,7 @@ const deleteMail = async (curMailId) => {
                 </n-input-group>
             </div>
             <MailBox class="mail-box" :key="mailBoxKey" :enableUserDeleteEmail="true" :fetchMailData="fetchMailData"
-                :deleteMail="deleteMail" :showFilterInput="true" />
+                :deleteMail="deleteMail" :showFilterInput="true" :showSourceIp="true" />
             <EmptyState v-if="listEmpty" variant="inbox" :title="t('emptyTitle')" />
         </section>
     </div>
