@@ -17,6 +17,7 @@ import SendBox from '../components/SendBox.vue';
 import AutoReply from './index/AutoReply.vue';
 import AccountSettings from './index/AccountSettings.vue';
 import Appearance from './common/Appearance.vue';
+import ExchangeRate from './common/ExchangeRate.vue';
 import Webhook from './index/Webhook.vue';
 import Attachment from './index/Attachment.vue';
 import About from './common/About.vue';
@@ -393,6 +394,10 @@ onMounted(() => {
               </n-tab-pane>
               <n-tab-pane name="appearance" :tab="t('appearance')">
                 <Appearance :showUseSimpleIndex="true" />
+              </n-tab-pane>
+              <n-tab-pane v-if="openSettings.enableExchangeRate" name="exchange_rate"
+                :tab="t('exchangeRateTab')">
+                <ExchangeRate />
               </n-tab-pane>
               <n-tab-pane v-if="openSettings.enableAutoReply" name="auto_reply" :tab="t('auto_reply')">
                 <AutoReply />

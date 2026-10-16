@@ -59,6 +59,8 @@ const form = ref({
 const announcements = ref([])
 // header marquee switch — defaults on, persisted via generic /admin/config
 const announcementMarquee = ref(true)
+// exchange rate widget switch — defaults off, persisted via generic /admin/config
+const exchangeRateEnabled = ref(false)
 const newAnnouncement = ref('')
 const editingIndex = ref(-1)
 const editingContent = ref('')
@@ -110,6 +112,13 @@ const load = async () => {
     } catch (error) {
         // first time there may be no saved value yet (defaults to on)
         console.warn('load announcement marquee failed', error)
+    }
+    try {
+        const res = await api.fetch('/admin/config/exchange-rate-enabled', { showLoading: false })
+        exchangeRateEnabled.value = res?.value === 'true'
+    } catch (error) {
+        // first time there may be no saved value yet (defaults to off)
+        console.warn('load exchange rate switch failed', error)
     } finally {
         loading.value = false
     }
@@ -173,6 +182,22 @@ const persistMarquee = async () => {
             body: {
                 key: 'announcement-marquee',
                 value: String(announcementMarquee.value),
+            },
+        })
+        message.success(t('saveSuccess'))
+    } catch (error) {
+        message.error(error.message || t('saveFailed'))
+    }
+}
+
+const persistExchangeRate = async () => {
+    try {
+        await api.fetch('/admin/config', {
+            method: 'POST',
+            showLoading: false,
+            body: {
+                key: 'exchange-rate-enabled',
+                value: String(exchangeRateEnabled.value),
             },
         })
         message.success(t('saveSuccess'))
@@ -289,6 +314,12 @@ onMounted(load)
                         </template>
                     </n-form-item>
                 </n-form>
+                <div class="feature-switch-row">
+                    <span class="feature-switch-label">{{ t('exchangeRateLabel') }}</span>
+                    <n-switch v-model:value="exchangeRateEnabled" size="small"
+                        @update:value="persistExchangeRate" />
+                    <span class="form-hint">{{ t('exchangeRateHint') }}</span>
+                </div>
             </n-spin>
         </n-card>
 
@@ -456,6 +487,20 @@ onMounted(load)
 .form-hint {
     font-size: 12px;
     opacity: 0.7;
+}
+
+/* feature switch rows (exchange rate widget etc.) under the basic form */
+.feature-switch-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 4px;
+    flex-wrap: wrap;
+}
+
+.feature-switch-label {
+    font-size: 13px;
+    opacity: 0.85;
 }
 
 .announcement-form {

@@ -67,6 +67,7 @@ export const useGlobalState = createGlobalState(
             enableWebhook: false,
             isS3Enabled: false,
             enableSendMail: false,
+            enableExchangeRate: false,
             showGithub: true,
             showGithubForUser: true,
             disableAdminPasswordCheck: false,

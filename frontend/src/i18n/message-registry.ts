@@ -459,6 +459,10 @@ export const MESSAGE_REGISTRY = {
       "en": "Appearance",
       "zh": "外观"
     },
+    "exchangeRateTab": {
+      "en": "Exchange Rate",
+      "zh": "实时汇率"
+    },
     "auto_reply": {
       "en": "Auto Reply",
       "zh": "自动回复"
@@ -3326,6 +3330,100 @@ export const MESSAGE_REGISTRY = {
       "zh": "使用 UTC 时间"
     }
   },
+  "views.common.ExchangeRate": {
+    "swap": {
+      "en": "Swap",
+      "zh": "互换"
+    },
+    "updatedAt": {
+      "en": "Updated at {time}",
+      "zh": "更新时间 {time}"
+    },
+    "source": {
+      "en": "Source: {source}",
+      "zh": "数据来源：{source}"
+    },
+    "disclaimer": {
+      "en": "Rates are for reference only",
+      "zh": "数据仅供参考"
+    },
+    "staleHint": {
+      "en": "Live sources unreachable, showing the last available data",
+      "zh": "数据源暂不可用，以下为最近一次可用数据"
+    },
+    "unavailable": {
+      "en": "Rates are temporarily unavailable, please try again later",
+      "zh": "汇率暂时不可用，请稍后重试"
+    },
+    "retry": {
+      "en": "Retry",
+      "zh": "重试"
+    },
+    "source_sina": {
+      "en": "Sina Finance",
+      "zh": "新浪财经"
+    },
+    "source_tencent": {
+      "en": "Tencent Finance",
+      "zh": "腾讯财经"
+    },
+    "source_ecb": {
+      "en": "European Central Bank",
+      "zh": "欧洲央行"
+    },
+    "source_erapi": {
+      "en": "ExchangeRate-API",
+      "zh": "ExchangeRate-API"
+    },
+    "currency_CNY": {
+      "en": "Chinese Yuan",
+      "zh": "人民币"
+    },
+    "currency_USD": {
+      "en": "US Dollar",
+      "zh": "美元"
+    },
+    "currency_EUR": {
+      "en": "Euro",
+      "zh": "欧元"
+    },
+    "currency_JPY": {
+      "en": "Japanese Yen",
+      "zh": "日元"
+    },
+    "currency_HKD": {
+      "en": "Hong Kong Dollar",
+      "zh": "港币"
+    },
+    "currency_GBP": {
+      "en": "British Pound",
+      "zh": "英镑"
+    },
+    "currency_KRW": {
+      "en": "South Korean Won",
+      "zh": "韩元"
+    },
+    "currency_AUD": {
+      "en": "Australian Dollar",
+      "zh": "澳元"
+    },
+    "currency_CAD": {
+      "en": "Canadian Dollar",
+      "zh": "加元"
+    },
+    "currency_MOP": {
+      "en": "Macanese Pataca",
+      "zh": "澳门元"
+    },
+    "currency_THB": {
+      "en": "Thai Baht",
+      "zh": "泰铢"
+    },
+    "currency_TWD": {
+      "en": "New Taiwan Dollar",
+      "zh": "新台币"
+    }
+  },
   "views.admin.AccountSettings": {
     "actions": {
       "en": "Actions",
@@ -3806,6 +3904,14 @@ export const MESSAGE_REGISTRY = {
     "prefixHint": {
       "en": "Prefix appended when creating addresses (site-wide); it can be changed or cleared on the create page.",
       "zh": "创建邮箱时默认附加的前缀（全站生效），可在创建页单独修改或清空。"
+    },
+    "exchangeRateLabel": {
+      "en": "Exchange rate tool",
+      "zh": "实时汇率"
+    },
+    "exchangeRateHint": {
+      "en": "Show the exchange rate converter tab on the homepage right panel",
+      "zh": "在首页右栏标签栏显示「实时汇率」换算工具"
     },
     "statsCard": {
       "en": "Public Statistics",

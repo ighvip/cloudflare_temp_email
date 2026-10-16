@@ -8,6 +8,7 @@ import { getSitePrefix, resolveAnySendMailEnabled } from './common';
 import { getWebhookAttachment } from './open_api/webhook_attachment';
 import { getUptimePayload } from './uptime';
 import { getManagedDomains } from './mail_domains';
+import { getExchangeRates } from './exchange_rates';
 
 const api = new Hono<HonoCustomType>
 
@@ -20,6 +21,8 @@ const ANNOUNCEMENT_MARQUEE_KEY = 'admin-config:announcement-marquee';
 // public stats cache, refreshed at most once per interval
 const PUBLIC_STATS_CACHE_KEY = 'admin-config:public-stats-cache';
 const PUBLIC_STATS_CACHE_TTL_SECONDS = 60;
+// exchange rate widget switch ("true"/"false", default off when absent)
+const EXCHANGE_RATE_ENABLED_KEY = 'admin-config:exchange-rate-enabled';
 
 type SiteSettings = {
     title?: string;
@@ -199,6 +202,8 @@ api.get('/open_api/settings', async (c) => {
         "enableWebhook": utils.getBooleanValue(c.env.ENABLE_WEBHOOK),
         "isS3Enabled": isS3Enabled(c),
         "enableSendMail": await resolveAnySendMailEnabled(c),
+        // exchange rate widget: admin toggle, default off (stored "true" to enable)
+        "enableExchangeRate": (await getSetting(c, EXCHANGE_RATE_ENABLED_KEY)) === 'true',
         "version": CONSTANTS.VERSION,
         "showGithub": !utils.getBooleanValue(c.env.DISABLE_SHOW_GITHUB),
         "showGithubForUser": !utils.getBooleanValue(c.env.DISABLE_SHOW_GITHUB_FOR_USER),
@@ -292,6 +297,23 @@ api.get('/open_api/uptime', async (c) => {
 })
 
 api.get('/open_api/a/:mail_id/:index/:expires/:signature', getWebhookAttachment)
+
+// public exchange rates (12 currencies vs CNY hub), cached 60s, 4-layer fallback
+api.get('/open_api/exchange_rates', async (c) => {
+    if ((await getSetting(c, EXCHANGE_RATE_ENABLED_KEY)) !== 'true') {
+        return c.json({ enabled: false });
+    }
+    try {
+        const payload = await getExchangeRates(c);
+        if (!payload) {
+            return c.json({ enabled: true, error: true });
+        }
+        return c.json({ enabled: true, ...payload });
+    } catch (e) {
+        console.error('exchange rates failed', e);
+        return c.json({ enabled: true, error: true });
+    }
+})
 
 // public service status, used by homepage status widget
 api.get('/open_api/status', async (c) => {
