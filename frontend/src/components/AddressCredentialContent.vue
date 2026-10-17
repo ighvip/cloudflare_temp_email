@@ -93,7 +93,7 @@ const downloadTxt = () => {
     const link = document.createElement('a')
     const safeAddress = (props.address || 'mailbox').replace(/[@\s]+/g, '_')
     link.href = url
-    link.download = `tempemail-凭证-${safeAddress}.txt`
+    link.download = `tempemail-credentials-${safeAddress}.txt`
     document.body.appendChild(link)
     link.click()
     link.remove()

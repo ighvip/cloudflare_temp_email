@@ -92,7 +92,7 @@ async function email(message: ForwardableEmailMessage, env: Bindings, ctx: Execu
     await forwardEmail(message, env);
 
     // AI email content extraction
-    const aiExtractResult = await extractEmailInfo(parsedEmailContext, env, message_id, toAddress);
+    const aiExtractResult = await extractEmailInfo(parsedEmailContext, env, message_id, toAddress, storedMailId);
 
     // send email to telegram
     try {

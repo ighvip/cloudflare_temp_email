@@ -125,6 +125,11 @@ function blockCssUrls(cssText, onBlocked) {
 
 let purifier = null;
 let blockedCount = 0;
+// Set for the duration of a single blockRemoteContent() call. With the global
+// "load remote images" preference on, a render is allowed to keep remote URLs,
+// but the sanitizer must still run: DOMPurify drops <script>/<iframe>/on*
+// handlers and javascript: URLs regardless of this flag.
+let allowRemote = false;
 
 /**
  * An isolated DOMPurify instance. The hooks below must not reach the shared
@@ -138,6 +143,12 @@ function getPurifier() {
     purifier = DOMPurify(window);
 
     purifier.addHook('uponSanitizeAttribute', (node, data) => {
+        if (allowRemote) {
+            // Remote references were explicitly permitted for this render.
+            // DOMPurify's own pass still strips scripts, on* handlers and
+            // javascript: URLs -- only our network-blocking pass is skipped.
+            return;
+        }
         if (!URL_ATTRIBUTES.has(data.attrName)) {
             return;
         }
@@ -161,6 +172,9 @@ function getPurifier() {
     });
 
     purifier.addHook('afterSanitizeElements', (node) => {
+        if (allowRemote) {
+            return;
+        }
         if (node.tagName === 'STYLE') {
             const cleaned = blockCssUrls(node.textContent || '', () => { blockedCount += 1; });
             if (cleaned !== node.textContent) {
@@ -170,6 +184,9 @@ function getPurifier() {
     });
 
     purifier.addHook('afterSanitizeAttributes', (node) => {
+        if (allowRemote) {
+            return;
+        }
         const style = node.getAttribute && node.getAttribute('style');
         if (!style) {
             return;
@@ -196,25 +213,36 @@ function getPurifier() {
  * cleaner never saw.
  *
  * @param {string} html
+ * @param {{ allowRemote?: boolean }} [options] when `allowRemote` is true the
+ *   mail's own "load images" consent is honoured: remote image/CSS URLs are
+ *   kept. Sanitizing still happens in both modes.
  * @returns {{ html: string, blocked: number }} blocked counts the references removed
  */
-export function blockRemoteContent(html) {
+export function blockRemoteContent(html, options = {}) {
     if (!html || typeof html !== 'string') {
         return { html: html || '', blocked: 0 };
     }
 
     blockedCount = 0;
-    const sanitised = getPurifier().sanitize(html, {
-        FORBID_TAGS: FORBIDDEN,
-        // Mail layout leans on <style> blocks, so they are kept and their
-        // url() references filtered instead of dropping the tag wholesale.
-        // FORCE_BODY is what makes a leading <style> survive: without it the
-        // parser hoists it into <head> and DOMPurify discards it.
-        ADD_TAGS: ['style'],
-        FORCE_BODY: true,
-        ALLOWED_URI_REGEXP,
-        ALLOW_DATA_ATTR: true,
-    });
+    allowRemote = options.allowRemote === true;
+    let sanitised = '';
+    let blocked = 0;
+    try {
+        sanitised = getPurifier().sanitize(html, {
+            FORBID_TAGS: FORBIDDEN,
+            // Mail layout leans on <style> blocks, so they are kept and their
+            // url() references filtered instead of dropping the tag wholesale.
+            // FORCE_BODY is what makes a leading <style> survive: without it the
+            // parser hoists it into <head> and DOMPurify discards it.
+            ADD_TAGS: ['style'],
+            FORCE_BODY: true,
+            ALLOWED_URI_REGEXP,
+            ALLOW_DATA_ATTR: true,
+        });
+        blocked = allowRemote ? 0 : blockedCount;
+    } finally {
+        allowRemote = false;
+    }
 
-    return { html: sanitised, blocked: blockedCount };
+    return { html: sanitised, blocked };
 }

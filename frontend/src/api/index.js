@@ -86,10 +86,17 @@ const apiFetch = async (path, options = {}) => {
         if (customAuthHeader) headers['x-custom-auth'] = customAuthHeader;
         const adminAuthHeader = safeHeaderValue(adminAuth.value);
         if (adminAuthHeader) headers['x-admin-auth'] = adminAuthHeader;
+        // Authorization is the admin JWT on /admin/* and the mailbox token
+        // everywhere else. Previously the mailbox token was written last and
+        // clobbered the admin Bearer, so the admin JWT path (and its
+        // revocation list) was never exercised from the browser.
+        const isAdminPath = path.startsWith('/admin');
         const adminJwtHeader = safeBearerHeader(adminJwt.value);
-        if (adminJwtHeader) headers['Authorization'] = adminJwtHeader;
         const authorizationHeader = safeBearerHeader(jwt.value);
-        if (authorizationHeader) headers['Authorization'] = authorizationHeader;
+        const bearerHeader = isAdminPath
+            ? (adminJwtHeader || authorizationHeader)
+            : (authorizationHeader || adminJwtHeader);
+        if (bearerHeader) headers['Authorization'] = bearerHeader;
         // P0-B4 rework: per-tab admin gate session — every /admin/* call and
         // the heartbeat must carry the S token minted from the homepage entry
         const gateHeader = safeHeaderValue(getGateSession());

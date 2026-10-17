@@ -83,11 +83,14 @@ watch(() => props.mail.id, () => {
   showRemoteImages.value = false;
 });
 
+// Sanitizing is not optional: DOMPurify always runs, whether or not remote
+// images are permitted. Previously the "auto load remote images" preference
+// (default on) handed the raw body straight to v-html / the iframe, so any
+// inbound mail could execute script in the app origin. `allowRemote` only
+// disables the network-blocking pass, never the script/handler stripping.
 const processedMail = computed(() => {
-  if (autoLoadRemoteImages.value || showRemoteImages.value) {
-    return { message: props.mail.message, blocked: 0 };
-  }
-  const { html, blocked } = blockRemoteContent(props.mail.message);
+  const allowRemote = autoLoadRemoteImages.value || showRemoteImages.value;
+  const { html, blocked } = blockRemoteContent(props.mail.message, { allowRemote });
   return { message: html, blocked };
 });
 
@@ -183,7 +186,7 @@ const sourceIpTag = computed(() => {
         ID: {{ mail.id }}
       </n-tag>
       <n-tag type="info">
-        {{ utcToLocalDate(mail.created_at, useUTCDate.value) }}
+        {{ utcToLocalDate(mail.created_at, useUTCDate) }}
       </n-tag>
       <n-tag type="info">
         FROM: {{ mail.source }}
@@ -268,7 +271,8 @@ const sourceIpTag = computed(() => {
     <!-- 邮件内容 -->
     <div class="mail-content" :class="{ 'dark-mode': isDark }">
       <pre v-if="showTextMail" class="mail-text">{{ mail.text }}</pre>
-      <iframe v-else-if="useIframeShowMail" :srcdoc="processedMail.message" class="mail-iframe">
+      <iframe v-else-if="useIframeShowMail" :srcdoc="processedMail.message" class="mail-iframe"
+        sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox">
       </iframe>
       <ShadowHtmlComponent v-else :key="mail.id" :htmlContent="processedMail.message" :isDark="isDark" class="mail-html" />
     </div>
@@ -279,7 +283,8 @@ const sourceIpTag = computed(() => {
     <n-drawer-content :title="mail.subject" closable>
       <div class="fullscreen-mail-content" :class="{ 'dark-mode': isDark }">
         <pre v-if="showTextMail" class="mail-text">{{ mail.text }}</pre>
-        <iframe v-else-if="useIframeShowMail" :srcdoc="processedMail.message" class="mail-iframe">
+        <iframe v-else-if="useIframeShowMail" :srcdoc="processedMail.message" class="mail-iframe"
+          sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox">
         </iframe>
         <ShadowHtmlComponent v-else :key="mail.id" :htmlContent="processedMail.message" :isDark="isDark" class="mail-html" />
       </div>

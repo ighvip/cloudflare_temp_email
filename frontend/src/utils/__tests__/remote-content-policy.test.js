@@ -119,3 +119,50 @@ describe('危險導航協議', () => {
         expect(node.hasAttribute('href')).toBe(false);
     });
 });
+
+// P0: with the "auto load remote images" preference on (the default), the mail
+// body used to skip sanitizing altogether. blockRemoteContent(html,
+// { allowRemote: true }) must keep remote references while still stripping
+// everything executable.
+describe('allowRemote 仍淨化', () => {
+    it('遠端圖片保留，但 on* 事件處理器被移除', () => {
+        const r = blockRemoteContent(
+            `<img src="${T}" onerror="window.__xss=1">`, { allowRemote: true }
+        );
+        expect(r.html).toContain(T);
+        expect(r.html).not.toMatch(/onerror/i);
+        expect(r.blocked).toBe(0);
+    });
+
+    it('放行遠端時仍移除 script / iframe / javascript: 連結', () => {
+        const r = blockRemoteContent(
+            `<script>window.__xss=1</script><iframe src="${T}"></iframe>`
+            + `<a href="javascript:alert(1)">x</a>`,
+            { allowRemote: true }
+        );
+        expect(r.html).not.toMatch(/<script/i);
+        expect(r.html).not.toMatch(/<iframe/i);
+        expect(r.html).not.toMatch(/javascript:/i);
+    });
+
+    it('放行遠端時保留遠端 CSS url() 與遠端圖片', () => {
+        const r = blockRemoteContent(
+            `<style>.a{background:url("${T}")}</style><img src="${T}">`, { allowRemote: true }
+        );
+        expect(r.html).toContain(T);
+        expect(r.blocked).toBe(0);
+    });
+
+    it('預設（不帶選項）行為不變：仍阻斷遠端', () => {
+        const r = blockRemoteContent(`<img src="${T}">`);
+        expect(leaks(r.html)).toEqual([]);
+        expect(r.blocked).toBe(1);
+    });
+
+    it('allowRemote 不會洩漏到下一次呼叫', () => {
+        blockRemoteContent(`<img src="${T}">`, { allowRemote: true });
+        const r = blockRemoteContent(`<img src="${T}">`);
+        expect(leaks(r.html)).toEqual([]);
+        expect(r.blocked).toBe(1);
+    });
+});

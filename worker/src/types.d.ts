@@ -54,7 +54,6 @@ type Bindings = {
     ADMIN_PASSWORDS: string | string[] | undefined
     ADMIN_API_IP_WHITELIST: string | string[] | undefined
     ADMIN_PATH: string | undefined
-    ADMIN_GATE_TOKEN: string | undefined
     DISABLE_ADMIN_PASSWORD_CHECK: string | boolean | undefined
     JWT_SECRET: string
     BLACK_LIST: string | undefined
@@ -111,6 +110,8 @@ type Bindings = {
 
     // telegram config
     TELEGRAM_BOT_TOKEN: string
+    // optional fixed webhook secret; when unset one is generated and kept in KV
+    TELEGRAM_WEBHOOK_SECRET: string | undefined
     TG_MAX_ADDRESS: number | undefined
     TG_BOT_INFO: string | object | undefined
     TG_ALLOW_USER_LANG: string | boolean | undefined

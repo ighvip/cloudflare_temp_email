@@ -617,7 +617,7 @@ onBeforeUnmount(() => {
               :enableUserDeleteEmail="enableUserDeleteEmail" :showReply="showReply" :showSaveS3="showSaveS3"
               :enableMailReadStatus="enableMailReadStatus" :onUpdateMailReadStatus="toggleCurrentMailUnread"
               :showSourceIp="showSourceIp"
-              :useUTCDate="useUTCDate" :onDelete="deleteMail" :onReply="replyMail" :onForward="forwardMail"
+              :onDelete="deleteMail" :onReply="replyMail" :onForward="forwardMail"
               :onSaveToS3="saveToS3Proxy" />
           </n-card>
         </n-drawer-content>

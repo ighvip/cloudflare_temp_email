@@ -163,6 +163,27 @@ export const appendSendLog = async (
     }
 }
 
+// 已发送（sendbox）：地址维度保存真正投递出去的邮件。用户发信与管理员 binding
+// 发信都走这里，保证"已发送"是完整的投递记录。失败只告警，不影响发信主流程。
+export const appendSendbox = async (
+    c: Context<HonoCustomType>,
+    address: string,
+    body: Record<string, unknown>
+): Promise<boolean> => {
+    try {
+        const { success } = await c.env.DB.prepare(
+            `INSERT INTO sendbox (address, raw) VALUES (?, ?)`
+        ).bind(address, JSON.stringify(body)).run();
+        if (!success) {
+            console.warn(`Failed to save to sendbox for ${address}`);
+        }
+        return success;
+    } catch (e) {
+        console.warn(`Failed to save to sendbox for ${address}`);
+        return false;
+    }
+}
+
 export const sendMail = async (
     c: Context<HonoCustomType>, address: string,
     reqJson: {
@@ -301,23 +322,13 @@ export const sendMail = async (
     // update address updated_at
     updateAddressUpdatedAt(c, address);
     // save to sendbox
-    try {
-        const reqIp = c.req.raw.headers.get("cf-connecting-ip")
-        const geoData = new GeoData(reqIp, c.req.raw.cf as any);
-        const body = {
-            version: "v2",
-            ...reqJson,
-            geoData: geoData,
-        };
-        const { success: success2 } = await c.env.DB.prepare(
-            `INSERT INTO sendbox (address, raw) VALUES (?, ?)`
-        ).bind(address, JSON.stringify(body)).run();
-        if (!success2) {
-            console.warn(`Failed to save to sendbox for ${address}`);
-        }
-    } catch (e) {
-        console.warn(`Failed to save to sendbox for ${address}`);
-    }
+    const reqIp = c.req.raw.headers.get("cf-connecting-ip")
+    const geoData = new GeoData(reqIp, c.req.raw.cf as any);
+    await appendSendbox(c, address, {
+        version: "v2",
+        ...reqJson,
+        geoData: geoData,
+    });
 }
 
 api.post('/api/send_mail', async (c) => {

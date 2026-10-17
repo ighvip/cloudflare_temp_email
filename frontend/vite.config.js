@@ -33,7 +33,7 @@ export default defineConfig({
     Components({
       resolvers: [NaiveUiResolver()]
     }),
-    VitePWA({
+    ...(process.env.VITE_PWA_DISABLED === 'true' ? [] : [VitePWA({
       registerType: null,
       devOptions: {
         enabled: false
@@ -64,7 +64,7 @@ export default defineConfig({
           }
         ]
       }
-    })
+    })])
   ],
   resolve: {
     alias: [

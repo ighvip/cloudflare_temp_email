@@ -1,7 +1,7 @@
 import { Context } from "hono";
 import { CONSTANTS } from "../constants";
 import { AdminWebhookSettings, WebhookSettings, RawMailRow } from "../models";
-import { commonParseMail, sendWebhook } from "../common";
+import { commonParseMail, parseWebhookHeaders, sendWebhook } from "../common";
 import { resolveRawEmail } from "../gzip";
 import { getWebhookAttachments } from '../utils/webhook';
 import i18n from "../i18n";
@@ -29,6 +29,11 @@ async function saveWebhookSettings(c: Context<HonoCustomType>): Promise<Response
         return c.text(msgs.WebhookNotAllowedForUserMsg, 403);
     }
     const settings = await c.req.json<WebhookSettings>();
+    // Reject headers that are not a JSON object: a malformed value would throw
+    // at JSON.parse inside every later delivery.
+    if (settings.headers !== undefined && parseWebhookHeaders(settings.headers) === null) {
+        return c.text(msgs.InvalidRequestBodyMsg, 400);
+    }
     await c.env.KV.put(
         `${CONSTANTS.WEBHOOK_KV_USER_SETTINGS_KEY}:${address}`,
         JSON.stringify(settings));
@@ -58,7 +63,7 @@ async function testWebhookSettings(c: Context<HonoCustomType>): Promise<Response
     const raw = mailRow ? await resolveRawEmail(mailRow) : "";
     const parsedEmailContext: ParsedEmailContext = { rawEmail: raw };
     const parsedEmail = await commonParseMail(parsedEmailContext);
-    const res = await sendWebhook(settings, {
+    const res = await sendWebhook(c.env, settings, {
         attachments: await getWebhookAttachments(c.env, mailRow, parsedEmail?.attachments),
         id: mailId || "0",
         url: c.env.FRONTEND_URL ? `${c.env.FRONTEND_URL}?mail_id=${mailId}` : "",

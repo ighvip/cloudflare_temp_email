@@ -1,8 +1,10 @@
 import { Hono } from 'hono'
+import { Context } from 'hono'
 import { ServerResponse } from 'node:http'
 import { Writable } from 'node:stream'
 
 import { newTelegramBot, initTelegramBotCommands, sendMailToTelegram } from './telegram'
+import { CONSTANTS } from '../constants'
 import settings from './settings'
 import miniapp from './miniapp'
 import i18n from '../i18n'
@@ -32,7 +34,59 @@ api.use("/admin/telegram/*", async (c, next) => {
     return await next();
 });
 
+/**
+ * Secret Telegram echoes back in the X-Telegram-Bot-Api-Secret-Token header.
+ * TELEGRAM_WEBHOOK_SECRET wins when configured; otherwise a random secret is
+ * generated once and kept in KV (see ensureTelegramWebhookSecret).
+ */
+const getTelegramWebhookSecret = async (
+    c: Context<HonoCustomType>
+): Promise<string | undefined> => {
+    if (c.env.TELEGRAM_WEBHOOK_SECRET) {
+        return c.env.TELEGRAM_WEBHOOK_SECRET;
+    }
+    if (!c.env.KV) {
+        return undefined;
+    }
+    return await c.env.KV.get(CONSTANTS.TG_WEBHOOK_SECRET_KEY) || undefined;
+};
+
+const ensureTelegramWebhookSecret = async (
+    c: Context<HonoCustomType>
+): Promise<string> => {
+    const existing = await getTelegramWebhookSecret(c);
+    if (existing) {
+        return existing;
+    }
+    // Telegram only allows A-Z a-z 0-9 _ - inside the secret token.
+    const secret = crypto.randomUUID().replace(/-/g, '');
+    await c.env.KV.put(CONSTANTS.TG_WEBHOOK_SECRET_KEY, secret);
+    return secret;
+};
+
+/** Length-safe, constant-time-ish comparison (no early exit on content). */
+const secretsMatch = (a: string, b: string): boolean => {
+    if (a.length !== b.length) return false;
+    let diff = 0;
+    for (let i = 0; i < a.length; i++) {
+        diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+    }
+    return diff === 0;
+};
+
 api.post("/telegram/webhook", async (c) => {
+    // P0: the webhook URL is public and guessable. Telegram signs every update
+    // with the secret_token declared at setWebhook time; without this check
+    // anyone could POST forged updates and drive the bot.
+    const expected = await getTelegramWebhookSecret(c);
+    if (!expected) {
+        console.error("telegram webhook rejected: no secret configured; re-run the admin telegram init");
+        return c.text("Telegram webhook secret is not configured", 401);
+    }
+    const provided = c.req.header("X-Telegram-Bot-Api-Secret-Token") || "";
+    if (!secretsMatch(provided, expected)) {
+        return c.text("Unauthorized", 401);
+    }
     const token = c.env.TELEGRAM_BOT_TOKEN;
     const bot = newTelegramBot(c, token);
     let body = null;
@@ -58,7 +112,10 @@ api.post("/admin/telegram/init", async (c) => {
     const webhookUrl = `https://${domain}/telegram/webhook`;
     console.log(`setting webhook to ${webhookUrl}`);
     const bot = newTelegramBot(c, token);
-    await bot.telegram.setWebhook(webhookUrl)
+    // Declare the secret so Telegram signs every update with it; the webhook
+    // route refuses updates that do not carry the matching header.
+    const secret = await ensureTelegramWebhookSecret(c);
+    await bot.telegram.setWebhook(webhookUrl, { secret_token: secret })
     await initTelegramBotCommands(c, bot);
     return c.json({
         message: "webhook set successfully",
@@ -73,7 +130,11 @@ api.get("/admin/telegram/status", async (c) => {
     const bot = newTelegramBot(c, token);
     const info = await bot.telegram.getWebhookInfo()
     const commands = await bot.telegram.getMyCommands()
-    return c.json({ info, commands });
+    return c.json({
+        info,
+        commands,
+        secret_configured: !!(await getTelegramWebhookSecret(c)),
+    });
 });
 
 api.get("/admin/telegram/settings", settings.getTelegramSettings);

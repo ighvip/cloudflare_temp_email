@@ -145,12 +145,16 @@ async function extractWithCloudflareAI(
  * Shared by the Workers AI mode and the local rule mode.
  *
  * @param env - Cloudflare Workers environment bindings
- * @param message_id - The email message ID
+ * @param mailId - Primary key of the freshly stored raw_mails row (preferred)
+ * @param message_id - The email message ID (fallback when mailId is missing)
+ * @param address - The recipient address (scopes the fallback UPDATE)
  * @param result - The extraction result to persist
  */
 async function saveExtractMetadata(
     env: Bindings,
+    mailId: number | undefined | null,
     message_id: string | null,
+    address: string,
     result: ExtractResult
 ): Promise<void> {
     try {
@@ -159,10 +163,23 @@ async function saveExtractMetadata(
             extracted_at: new Date().toISOString()
         });
 
-        // Update the raw_mails record with metadata
+        // Prefer the inserted row id. message_id is nullable and not unique
+        // (duplicate Message-IDs, or NULL for mails without one), so a
+        // message_id-only UPDATE could match nothing or overwrite the metadata
+        // of an unrelated mail.
+        if (mailId != null) {
+            await env.DB.prepare(
+                `UPDATE raw_mails SET metadata = ? WHERE id = ? AND address = ?`
+            ).bind(metadata, mailId, address).run();
+            return;
+        }
+        if (!message_id) {
+            console.warn('AI extraction metadata not saved: no row id and no message id');
+            return;
+        }
         await env.DB.prepare(
-            `UPDATE raw_mails SET metadata = ? WHERE message_id = ?`
-        ).bind(metadata, message_id).run();
+            `UPDATE raw_mails SET metadata = ? WHERE message_id = ? AND address = ?`
+        ).bind(metadata, message_id, address).run();
     } catch (e) {
         console.error('AI extraction metadata save error:', e);
     }
@@ -253,13 +270,15 @@ function isAddressInAiAllowlist(settings: AiExtractSettings | null | undefined, 
  * @param env - Cloudflare Workers environment bindings
  * @param message_id - The email message ID
  * @param address - The recipient email address
+ * @param mailId - Primary key of the freshly stored raw_mails row, when known
  * @returns Promise<ExtractResult | null>
  */
 export async function extractEmailInfo(
     parsedEmailContext: ParsedEmailContext,
     env: Bindings,
     message_id: string | null,
-    address: string
+    address: string,
+    mailId?: number | null
 ): Promise<ExtractResult | null> {
     try {
         // Check if extraction is enabled via environment variable
@@ -287,7 +306,7 @@ export async function extractEmailInfo(
             const code = localContent ? extractCode(localContent) : null;
             if (!code) return null;
             const result: ExtractResult = { type: 'auth_code', result: code, result_text: '' };
-            await saveExtractMetadata(env, message_id, result);
+            await saveExtractMetadata(env, mailId, message_id, address, result);
             console.log(`Local code extraction completed for ${message_id}`);
             return result;
         };
@@ -322,7 +341,7 @@ export async function extractEmailInfo(
 
         // If extraction found something useful, save it to database
         if (result.type !== 'none' && result.result) {
-            await saveExtractMetadata(env, message_id, result);
+            await saveExtractMetadata(env, mailId, message_id, address, result);
             console.log(`AI extraction completed for ${message_id}: ${result.type}`);
         }
         return result;

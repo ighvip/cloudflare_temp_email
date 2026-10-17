@@ -152,3 +152,53 @@ CREATE TABLE IF NOT EXISTS send_log (
 CREATE INDEX IF NOT EXISTS idx_send_log_address ON send_log(address);
 
 CREATE INDEX IF NOT EXISTS idx_send_log_created_at ON send_log(created_at);
+
+CREATE TABLE IF NOT EXISTS login_attempts (
+    key TEXT PRIMARY KEY,
+    fail_count INTEGER NOT NULL DEFAULT 0,
+    first_fail_at INTEGER NOT NULL DEFAULT 0,
+    locked_until INTEGER NOT NULL DEFAULT 0,
+    updated_at INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS idx_login_attempts_locked_until ON login_attempts(locked_until);
+
+CREATE INDEX IF NOT EXISTS idx_login_attempts_updated_at ON login_attempts(updated_at);
+
+CREATE TABLE IF NOT EXISTS admin_token_blacklist (
+    jti TEXT PRIMARY KEY,
+    expires_at INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_admin_token_blacklist_expires ON admin_token_blacklist(expires_at);
+
+CREATE TABLE IF NOT EXISTS admin_gate_tokens (
+    token TEXT PRIMARY KEY,
+    created_at INTEGER NOT NULL,
+    expires_at INTEGER NOT NULL,
+    used_at INTEGER
+);
+
+CREATE INDEX IF NOT EXISTS idx_admin_gate_tokens_expires ON admin_gate_tokens(expires_at);
+
+CREATE TABLE IF NOT EXISTS admin_gate_sessions (
+    token TEXT PRIMARY KEY,
+    created_at INTEGER NOT NULL,
+    expires_at INTEGER NOT NULL,
+    last_seen INTEGER NOT NULL DEFAULT 0,
+    revoked_at INTEGER
+);
+
+CREATE INDEX IF NOT EXISTS idx_admin_gate_sessions_expires ON admin_gate_sessions(expires_at);
+
+CREATE TABLE IF NOT EXISTS uptime_heartbeats (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    monitor TEXT NOT NULL,
+    ts INTEGER NOT NULL,
+    up INTEGER NOT NULL,
+    latency_ms INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS idx_uptime_heartbeats_monitor_ts ON uptime_heartbeats(monitor, ts);
+
+CREATE INDEX IF NOT EXISTS idx_uptime_heartbeats_ts ON uptime_heartbeats(ts);

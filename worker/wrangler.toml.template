@@ -23,9 +23,10 @@ keep_vars = true
 # send_email = [
 #    { name = "SEND_MAIL" },
 # ]
-# SEND_MAIL_DOMAINS = ["example.com", "mail.example.com"]
 
 [vars]
+# 发信域名白名单（仅约束 SEND_MAIL binding）：必须放在 [vars] 内
+# SEND_MAIL_DOMAINS = ["example.com", "mail.example.com"]
 # DEFAULT_LANG = "zh"
 # TITLE = "Custom Title" # custom title
 # ANNOUNCEMENT = "Custom Announcement"

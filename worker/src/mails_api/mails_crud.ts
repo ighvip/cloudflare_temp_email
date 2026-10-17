@@ -54,10 +54,12 @@ const deleteMail = async (c: Context<HonoCustomType>) => {
     }
     const { address } = c.get("jwtPayload")
     const { id } = c.req.param();
-    // TODO: add toLowerCase() to handle old data
+    // Addresses are stored normalized (newAddress trims + lowercases); the
+    // other mail queries (clearInbox, read status, list) match on the JWT
+    // address as-is, so this one must too.
     const { success } = await c.env.DB.prepare(
         `DELETE FROM raw_mails WHERE address = ? and id = ? `
-    ).bind(address.toLowerCase(), id).run();
+    ).bind(address, id).run();
     return c.json({ success });
 };
 

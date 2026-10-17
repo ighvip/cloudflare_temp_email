@@ -3,7 +3,7 @@ export const CONSTANTS = {
 
     // DB Version
     DB_VERSION_KEY: 'db_version',
-    DB_VERSION: "v0.0.15",
+    DB_VERSION: "v0.0.16",
 
     // DB settings
     ADDRESS_BLOCK_LIST_KEY: 'address_block_list',
@@ -37,4 +37,7 @@ export const CONSTANTS = {
     // 发信全局主开关（D1 settings）— stored "true"/"false"；缺省视为开启
     // （行为退化为「由 env 通道 + 每域名发信开关共同决定」）
     SEND_MAIL_ENABLED_KEY: "send_mail_enabled",
+    // Telegram webhook 防伪造密钥（KV）— setWebhook 时下发，收到的 update 必须
+    // 带匹配的 X-Telegram-Bot-Api-Secret-Token
+    TG_WEBHOOK_SECRET_KEY: "temp-mail-telegram-webhook-secret",
 }

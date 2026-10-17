@@ -1759,6 +1759,18 @@ export const MESSAGE_REGISTRY = {
       "en": "Copy",
       "zh": "复制"
     },
+    "copyFailed": {
+      "en": "Failed to copy",
+      "zh": "复制失败"
+    },
+    "deleteMailFailed": {
+      "en": "Failed to delete mail",
+      "zh": "删除邮件失败"
+    },
+    "fetchMailFailed": {
+      "en": "Failed to fetch mails",
+      "zh": "获取邮件失败"
+    },
     "deleteSuccess": {
       "en": "Mail deleted successfully",
       "zh": "邮件删除成功"

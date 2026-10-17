@@ -242,7 +242,8 @@ const redeemRole = async (
         ).bind(
             encryptedResult, row.id, row.code, row.redeem_type, row.value,
         ),
-        // changes() refers to the preceding write in this batch.
+        // Statement 2 only writes the role when statement 1 actually reserved
+        // this code (changes() refers to the preceding statement in the batch).
         c.env.DB.prepare(
             `INSERT INTO user_roles(user_id, role_text)
              SELECT ?, ? WHERE changes() = 1
@@ -251,10 +252,14 @@ const redeemRole = async (
              WHERE user_roles.role_text IS NULL OR user_roles.role_text = ''
              OR user_roles.role_text = excluded.role_text OR user_roles.role_text = ?`
         ).bind(user.id, redeemValue.role, defaultRole),
+        // Consume the code. Matching on the freshly written `result` (unique to
+        // this redemption) keeps this statement independent of cross-statement
+        // changes(); the results[2].meta.changes === 1 check below is still the
+        // atomicity guard.
         c.env.DB.prepare(
             `UPDATE redeem_codes
              SET redeemed = 1, redeemed_at = datetime('now'), updated_at = datetime('now')
-             WHERE id = ? AND result = ? AND redeemed = 0 AND changes() = 1`
+             WHERE id = ? AND result = ? AND redeemed = 0`
         ).bind(row.id, encryptedResult),
         c.env.DB.prepare(
             `UPDATE redeem_codes SET result = NULL

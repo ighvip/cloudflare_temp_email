@@ -88,6 +88,10 @@ const deleteAddress = async (c: Context<HonoCustomType>) => {
             + ` (select name from address where id = ?) `
         ).bind(id),
         c.env.DB.prepare(
+            `DELETE FROM send_log WHERE address IN`
+            + ` (select name from address where id = ?) `
+        ).bind(id),
+        c.env.DB.prepare(
             `DELETE FROM auto_reply_mails WHERE address IN`
             + ` (select name from address where id = ?) `
         ).bind(id),

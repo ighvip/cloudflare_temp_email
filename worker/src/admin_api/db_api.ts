@@ -21,6 +21,8 @@ CREATE INDEX IF NOT EXISTS idx_raw_mails_created_at ON raw_mails(created_at);
 
 CREATE INDEX IF NOT EXISTS idx_raw_mails_message_id ON raw_mails(message_id);
 
+CREATE INDEX IF NOT EXISTS idx_raw_mails_is_unread ON raw_mails(is_unread);
+
 CREATE TABLE IF NOT EXISTS address (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT UNIQUE,
@@ -125,6 +127,8 @@ CREATE INDEX IF NOT EXISTS idx_user_passkeys_user_id ON user_passkeys(user_id);
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_user_passkeys_user_id_passkey_id ON user_passkeys(user_id, passkey_id);
 
+CREATE INDEX IF NOT EXISTS idx_user_passkeys_passkey_id ON user_passkeys(passkey_id);
+
 CREATE TABLE IF NOT EXISTS redeem_codes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     code TEXT UNIQUE NOT NULL,
@@ -164,6 +168,10 @@ CREATE TABLE IF NOT EXISTS login_attempts (
     locked_until INTEGER NOT NULL DEFAULT 0,
     updated_at INTEGER NOT NULL DEFAULT 0
 );
+
+CREATE INDEX IF NOT EXISTS idx_login_attempts_locked_until ON login_attempts(locked_until);
+
+CREATE INDEX IF NOT EXISTS idx_login_attempts_updated_at ON login_attempts(updated_at);
 
 CREATE TABLE IF NOT EXISTS admin_token_blacklist (
     jti TEXT PRIMARY KEY,

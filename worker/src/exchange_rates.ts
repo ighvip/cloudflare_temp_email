@@ -166,8 +166,14 @@ const buildPayload = async (): Promise<ExchangeRatesPayload | null> => {
         }
     };
     const noteLatest = (time: string) => {
-        // ISO 字符串按字典序比较即可（同一 +08:00 偏移）
-        if (time && time > updatedAt) updatedAt = time;
+        // Sources report in different zones (the er-api fallback uses UTC "Z"),
+        // so compare absolute instants -- lexicographic comparison would pick
+        // the wrong "latest" across timezone formats.
+        const candidate = Date.parse(time);
+        const current = Date.parse(updatedAt);
+        if (Number.isFinite(candidate) && (!Number.isFinite(current) || candidate > current)) {
+            updatedAt = time;
+        }
     };
 
     const sina = await fetchSinaRates();

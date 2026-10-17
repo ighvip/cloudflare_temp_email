@@ -24,7 +24,29 @@
 - feat: |首页| 右栏新增「实时汇率」换算工具（位于「外观」之后），支持 12 种常用货币（人民币 / 美元 / 欧元 / 日元 / 港币 / 英镑 / 韩元 / 澳元 / 加元 / 澳门元 / 泰铢 / 新台币）两两互换与双向速览，币种下拉带国旗图标且支持搜索，PC / 手机窄屏自适应；数据经 `/open_api/exchange_rates` 提供，新浪行情为主源（分钟级），依次回退腾讯 / 欧洲央行 / ExchangeRate-API，60 秒缓存、实时源全挂时展示最近一次可用数据并标注来源与更新时间；后台「站点设置」新增开关（默认关闭，开启后右栏才显示该标签页），适配 Windows 环境使用内联 SVG 国旗而非 emoji
 - feat: |后台| 邮件详情新增发件来源 IP 标签（邮件 / 未知邮件页）：从邮件头最外层 Received 解析发件方 MTA 的 IP，查询 ip.guhong.vip（ip-api 兼容格式 `/json/?query=IP`）获取归属地与运营商，按 IP 在 D1 缓存 30 天；查询超时或站点不可用时自动降级为只显示 IP，首页不受影响；需在 Cloudflare WAF 添加自定义规则，为 `ip.guhong.vip/json/` 路径与固定 User-Agent `tempemail-iplookup/1.0` 跳过 Managed Challenge，否则查询会被防护页拦截而只显示裸 IP
 
+### Security Fixes
+
+- 邮件正文渲染统一强制净化：`processedMail` 无论「自动加载远程图片」是否开启都先经过 DOMPurify（关闭网络阻断 pass、剥离 `on*` 事件 / `<script>` / `<iframe>` / `javascript:` 等可执行内容）；两处 iframe 增加 `sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"`；后台「已发送」详情（SendBox）的 v-html 同样强制净化。此前默认开启远程图片时原始正文会直接进入 shadow DOM / iframe（`srcdoc` 路径可执行脚本）。新增 5 条单测（`<img onerror>` 在允许远程图片模式下也剥离处理器、仅网络阻断 pass 放行）；线上双路径（shadow 与 iframe）实测确认 payload 不执行、正文正常渲染
+- 邮箱 / 管理员 Authorization 头按路径选择：`/admin/*` 使用管理员 JWT，其余路径使用邮箱 token；修复邮箱 token 无条件写在最后、覆盖管理员 Bearer 的问题（浏览器此前永远走不到管理员 JWT / 撤销名单路径）
+- Telegram webhook 防伪造：`setWebhook` 下发 `secret_token`（`TELEGRAM_WEBHOOK_SECRET` 环境变量优先，未配置时生成随机值存入 KV `temp-mail-telegram-webhook-secret`），`/telegram/webhook` 校验 `X-Telegram-Bot-Api-Secret-Token`（常量时间比较）；未配置密钥的部署返回 401（fail-closed，需管理员重新执行一次 telegram 初始化）。本地 harness 实测四档：无密钥 401 / 无 header 401 / 错误 header 401 / 正确 header 通过认证
+- Webhook 交付加固：新增 `parseWebhookHeaders`，保存时校验 headers 必须是 JSON 对象（用户与后台 webhook 保存接口实测 400）；交付携带 HMAC-SHA256 签名（`X-Webhook-Signature: sha256=<hex>`，`HMAC(JWT_SECRET, "${ts}.${body}")` + `X-Webhook-Timestamp`，本地验签通过且重试间保持稳定）；失败重试 3 次（300/900ms，仅 5xx/408/429 与网络错误可重试，本地实测全失败时恰好 3 次后停止）
+
 ### Bug Fixes
+
+- fix: |数据| 数据库迁移补齐 5 张表与索引（`login_attempts` / `admin_token_blacklist` / `admin_gate_tokens` / `admin_gate_sessions` / `uptime_heartbeats`），`DB_VERSION` 升至 `v0.0.16`；线上已执行迁移（`GET /admin/db_version` 确认 `v0.0.16` 且 4 个新索引均生效）
+- fix: |数据| AI 提取元数据改写目标行：优先按刚入库邮件的 `id + address` 定位（`WHERE id = ? AND address = ?`），无 `id` 时 `message_id` 也追加地址作用域；修复重复 Message-ID / 空 Message-ID 时误写或不写的问题（D1 实测旧语句同 id 两行同改、新语句只改最新一行）
+- fix: |数据| 列表 `offset` / `limit` 改为 `Number.isInteger` 校验，非数字（如 `?offset=abc`）返回 400 而非 500（三个列表接口线上实测 400）
+- fix: |数据| 自动回复设置保存前归一化 `subject` / `message`（`undefined` 不再抛 500）；禁用自动回复的保存可省略正文
+- fix: |数据| 删除邮箱级联 `send_log`（单地址与批量两条路径均补 `DELETE FROM send_log`），修复删除后发信日志残留
+- fix: |发信| 管理员 binding 发信与用户发信统一写入 `sendbox`（新增共享 `appendSendbox`），后台「已发送」成为完整投递记录
+- fix: |发信| 自动回复接入站点发信总开关与每域名发信开关：总开关 `send_mail_enabled=false` 或该域名 `sendEnabled=false` 时不再自动回复；未纳管域名与未配置开关的部署行为不变（本地 harness 对真实 `email()` 处理链实测：基线触发、总开关关闭不触发、每域关闭不触发、每域开启触发、仅关闭其它域名仍触发）
+- fix: |兑换码| 兑换三语句拆掉跨语句 `changes() = 1` 依赖：消耗语句改为按本次新写入的 `result` 匹配；`results[2].meta.changes === 1` 仍为原子性守卫
+- fix: |发信| 发信域名白名单（`SEND_MAIL_DOMAINS`）移入 `[vars]` 段，修复 wrangler 顶层未知字段告警（仅约束 SEND_MAIL binding，部署日志已确认生效）
+- fix: |i18n| SimpleIndex 极简模式三处硬编码中文改为 i18n 键（复制失败 / 删除邮件失败 / 获取邮件失败），registry + ja / ko / zhTW 同步补齐，四语言键集 0 缺 0 多
+- fix: |前端| 下载凭证文件名中的中文改为 `tempemail-credentials-<addr>.txt`；删除 `MailBox` 未声明的 `useUTCDate` prop 透传；`MailContentRenderer` 模板中 `useUTCDate.value` 改为自动解包的 `useUTCDate`
+- fix: |PWA| `build:pages:nopwa` 在 POSIX / CI 下真正生效：`VITE_PWA_DISABLED=true` 时不引入 VitePWA 插件（实测带开关无 `sw.js` / `registerSW.js`，不带开关生成 `sw.js`）
+- fix: |汇率| 「最新更新时间」跨时区比较错误：各数据源时区不一致（er-api 回退用 UTC），改为按绝对时刻比较
+- fix: |Telegram| webhook 路由补齐缺失的 `Context` 类型导入
 
 - fix: |收件| 黑名单同时检查 SMTP 信封发件人与邮件头 From 的全部邮箱地址，任意一个命中即拒收；独立解析地址，避免正文解析失败或多个发件地址导致漏拦截；地址解析异常时保留原有信封检查
 - fix: |AI 识别| `ai` 模式下地址未命中 AI 提取白名单时只跳过 Workers AI 调用，仍回退到本地规则提取验证码

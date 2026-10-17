@@ -8,7 +8,7 @@ import { unbindTelegramByAddress } from './telegram_api/common';
 import { CONSTANTS } from './constants';
 import { AddressCreationSettings, AdminWebhookSettings, ExtractResult, WebhookMail, WebhookSettings } from './models';
 import i18n from './i18n';
-import { formatWebhookBody, getWebhookAttachments } from './utils/webhook';
+import { formatWebhookBody, getSigningKey, getWebhookAttachments } from './utils/webhook';
 
 const DEFAULT_NAME_REGEX = /[^a-z0-9]/g;
 const DEFAULT_RANDOM_SUBDOMAIN_LENGTH = 8;
@@ -181,6 +181,15 @@ export const resolveSendMailBindingEnabled = async (
  * - 缺省 / `true` → 交给环境通道与每域名开关（resolveSendMailEnabled）决定。
  * 语义与 isPrefixEnabled 保持一致（stored !== false 即视为开启）。
  */
+/**
+ * The inbound `email()` handler runs outside Hono's request lifecycle, but the
+ * send switches live in the D1 `settings` table and are read through helpers
+ * that only touch `c.env`. This adapter lets those helpers be reused as-is
+ * (read-only settings lookups) instead of duplicating a settings reader.
+ */
+export const envOnlyContext = (env: Bindings): Context<HonoCustomType> =>
+    ({ env } as unknown as Context<HonoCustomType>);
+
 export const isGlobalSendMailEnabled = async (
     c: Context<HonoCustomType>
 ): Promise<boolean> => {
@@ -758,6 +767,10 @@ const batchDeleteAddressWithData = async (
         `SELECT name FROM address WHERE ${addressQueryCondition})`
     ).run();
     await c.env.DB.prepare(
+        `DELETE FROM send_log WHERE address IN ( ` +
+        `SELECT name FROM address WHERE ${addressQueryCondition})`
+    ).run();
+    await c.env.DB.prepare(
         `DELETE FROM auto_reply_mails WHERE address IN ( ` +
         `SELECT name FROM address WHERE ${addressQueryCondition})`
     ).run();
@@ -815,6 +828,9 @@ export const deleteAddressWithData = async (
     const { success: sendboxSuccess } = await c.env.DB.prepare(
         `DELETE FROM sendbox WHERE address = ? `
     ).bind(address).run();
+    const { success: sendLogSuccess } = await c.env.DB.prepare(
+        `DELETE FROM send_log WHERE address = ? `
+    ).bind(address).run();
     const { success: addressSuccess } = await c.env.DB.prepare(
         `DELETE FROM users_address WHERE address_id = ? `
     ).bind(address_id).run();
@@ -824,7 +840,7 @@ export const deleteAddressWithData = async (
     const { success } = await c.env.DB.prepare(
         `DELETE FROM address WHERE name = ? `
     ).bind(address).run();
-    if (!success || !mailSuccess || !sendboxSuccess || !addressSuccess || !sendAccess || !autoReplySuccess) {
+    if (!success || !mailSuccess || !sendboxSuccess || !sendLogSuccess || !addressSuccess || !sendAccess || !autoReplySuccess) {
         throw new Error(msgs.OperationFailedMsg)
     }
     return true;
@@ -846,10 +862,12 @@ export const handleListQuery = async (
     if (typeof offset === "string") {
         offset = parseInt(offset);
     }
-    if (!limit || limit < 0 || limit > 100) {
+    // Number.isInteger also rejects NaN from a non-numeric query string
+    // ("?offset=abc" used to be bound straight into the SQL and 500'd).
+    if (!Number.isInteger(limit) || !limit || limit < 0 || limit > 100) {
         return c.text(msgs.InvalidLimitMsg, 400)
     }
-    if (offset == null || offset == undefined || offset < 0) {
+    if (!Number.isInteger(offset) || offset == null || offset == undefined || offset < 0) {
         return c.text(msgs.InvalidOffsetMsg, 400)
     }
     const orderClause = orderBy || 'id desc';
@@ -893,8 +911,9 @@ export const handleMailListQuery = async (
     const msgs = i18n.getMessagesbyContext(c);
     if (typeof limit === "string") limit = parseInt(limit);
     if (typeof offset === "string") offset = parseInt(offset);
-    if (!limit || limit < 0 || limit > 100) return c.text(msgs.InvalidLimitMsg, 400);
-    if (offset == null || offset == undefined || offset < 0) return c.text(msgs.InvalidOffsetMsg, 400);
+    // Number.isInteger also rejects NaN from a non-numeric query string.
+    if (!Number.isInteger(limit) || !limit || limit < 0 || limit > 100) return c.text(msgs.InvalidLimitMsg, 400);
+    if (!Number.isInteger(offset) || offset == null || offset == undefined || offset < 0) return c.text(msgs.InvalidOffsetMsg, 400);
     const orderClause = orderBy || 'id desc';
     const resultsQuery = `${query} order by ${orderClause} limit ? offset ?`;
     const { results } = await c.env.DB.prepare(resultsQuery).bind(
@@ -1010,21 +1029,85 @@ export const getAllowDomains = async (c: Context<HonoCustomType>): Promise<strin
     return getManagedDomains(c);
 }
 
-export async function sendWebhook(
-    settings: WebhookSettings, formatMap: WebhookMail
-): Promise<{ success: boolean, message?: string }> {
-    // send webhook
-    const body = formatWebhookBody(settings.body, formatMap);
-    const response = await fetch(settings.url, {
-        method: settings.method,
-        headers: JSON.parse(settings.headers),
-        body: body
-    });
-    if (!response.ok) {
-        console.log("send webhook error", response.status, response.statusText);
-        return { success: false, message: `send webhook error: ${response.status} ${response.statusText}` };
+const WEBHOOK_MAX_ATTEMPTS = 3;
+const WEBHOOK_RETRY_DELAYS_MS = [300, 900];
+const webhookEncoder = new TextEncoder();
+
+/**
+ * Webhook `headers` arrives as a JSON string from the admin form. A malformed
+ * value used to throw out of JSON.parse and abort the whole delivery; now it is
+ * reported as a failure and values are coerced to strings.
+ */
+export function parseWebhookHeaders(
+    headers: string | undefined | null
+): Record<string, string> | null {
+    try {
+        const parsed = JSON.parse(headers || "{}");
+        if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+            return null;
+        }
+        const result: Record<string, string> = {};
+        for (const [key, value] of Object.entries(parsed)) {
+            if (value == null) continue;
+            result[key] = typeof value === "string" ? value : String(value);
+        }
+        return result;
+    } catch (error) {
+        console.warn("invalid webhook headers JSON", error);
+        return null;
     }
-    return { success: true }
+}
+
+const toHex = (bytes: Uint8Array): string =>
+    Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+
+export async function sendWebhook(
+    env: Bindings, settings: WebhookSettings, formatMap: WebhookMail
+): Promise<{ success: boolean, message?: string }> {
+    const body = formatWebhookBody(settings.body, formatMap);
+    const headers = parseWebhookHeaders(settings.headers);
+    if (!headers) {
+        return { success: false, message: "send webhook error: invalid headers JSON" };
+    }
+    // Signed so the receiver can verify the payload came from us and reject
+    // replays: X-Webhook-Signature = HMAC-SHA256(JWT_SECRET, `${ts}.${body}`).
+    const timestamp = Math.floor(Date.now() / 1000).toString();
+    try {
+        const signature = await crypto.subtle.sign(
+            'HMAC', await getSigningKey(env.JWT_SECRET),
+            webhookEncoder.encode(`${timestamp}.${body}`)
+        );
+        headers['X-Webhook-Timestamp'] = timestamp;
+        headers['X-Webhook-Signature'] = `sha256=${toHex(new Uint8Array(signature))}`;
+    } catch (error) {
+        console.warn("webhook signing failed", error);
+    }
+    let message = "";
+    for (let attempt = 0; attempt < WEBHOOK_MAX_ATTEMPTS; attempt++) {
+        try {
+            const response = await fetch(settings.url, {
+                method: settings.method,
+                headers: headers,
+                body: body
+            });
+            if (response.ok) {
+                return { success: true };
+            }
+            message = `send webhook error: ${response.status} ${response.statusText}`;
+            // Retry only transient failures; a plain 4xx is permanent.
+            const retryable = response.status >= 500
+                || response.status === 408 || response.status === 429;
+            if (!retryable) break;
+        } catch (error) {
+            message = `send webhook error: ${(error as Error)?.message || error}`;
+        }
+        const delay = WEBHOOK_RETRY_DELAYS_MS[attempt];
+        if (delay !== undefined) {
+            await new Promise((resolve) => setTimeout(resolve, delay));
+        }
+    }
+    console.log(message);
+    return { success: false, message };
 }
 
 export async function triggerWebhook(
@@ -1088,7 +1171,7 @@ export async function triggerWebhook(
         aiExtractResultText: usableAiExtract?.result_text || "",
     }
     for (const settings of webhookList) {
-        const res = await sendWebhook(settings, webhookMail);
+        const res = await sendWebhook(c.env, settings, webhookMail);
         if (!res.success) {
             console.error(res.message);
         }

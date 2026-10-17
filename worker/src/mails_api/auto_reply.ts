@@ -32,10 +32,14 @@ export default {
         const { address } = c.get("jwtPayload");
         const { auto_reply } = await c.req.json();
         const { name, subject, source_prefix, message, enabled } = auto_reply;
-        if ((!subject || !message) && enabled) {
+        // A "disable auto reply" save may legitimately omit subject/message;
+        // normalise before touching .length (undefined used to throw a 500).
+        const subjectText = typeof subject === "string" ? subject : "";
+        const messageText = typeof message === "string" ? message : "";
+        if ((!subjectText || !messageText) && enabled) {
             return c.text(msgs.InvalidAutoReplyMsg, 400)
         }
-        else if (subject.length > 255 || message.length > 255) {
+        else if (subjectText.length > 255 || messageText.length > 255) {
             return c.text(msgs.SubjectOrMessageTooLongMsg, 400)
         }
         const { success } = await c.env.DB.prepare(
@@ -44,7 +48,7 @@ export default {
             + ` VALUES (?, ?, ?, ?, ?, ?)`
         ).bind(
             name || '', address, source_prefix || '',
-            subject || '', message || '', enabled ? 1 : 0
+            subjectText, messageText, enabled ? 1 : 0
         ).run();
         if (!success) {
             return c.text(msgs.OperationFailedMsg, 500)

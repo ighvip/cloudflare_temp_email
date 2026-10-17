@@ -1,7 +1,8 @@
 import { Context } from "hono";
 import { resolveSendMailBindingEnabled } from "../common";
 import i18n from "../i18n";
-import { sendMail, appendSendLog } from "../mails_api/send_mail_api";
+import { sendMail, appendSendLog, appendSendbox } from "../mails_api/send_mail_api";
+import { GeoData } from "../models";
 import { ensureSendMailLimit, increaseSendMailLimitCount } from "../mails_api/send_mail_limit_utils";
 import { getSendMailOverride } from "../mail_domains";
 import { getMailDomain } from "../utils";
@@ -105,6 +106,21 @@ export const sendMailByBindingAdmin = async (c: Context<HonoCustomType>) => {
             },
             channel: "binding_admin",
             status: "success",
+        });
+        // Raw admin sends also land in "Sent" so the sendbox stays a complete
+        // delivery log, matching the user send path.
+        await appendSendbox(c, fromMail || "", {
+            version: "v2",
+            from_name: typeof from === "string" ? "" : (from?.name || ""),
+            to_mail: typeof to === "string" ? to : to?.email,
+            to_name: typeof to === "string" ? "" : (to?.name || ""),
+            subject: typeof subject === "string" ? subject : "",
+            content: html || text || "",
+            is_html: !!html,
+            geoData: new GeoData(
+                c.req.raw.headers.get("cf-connecting-ip"),
+                c.req.raw.cf as any
+            ),
         });
     } catch (e) {
         console.error("Admin raw send_mail failed", e);
