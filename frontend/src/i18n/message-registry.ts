@@ -42,6 +42,33 @@ export const MESSAGE_REGISTRY = {
       "zh": "URL 不能为空"
     }
   },
+  "components.PwaInstall": {
+    "title": { "en": "Install this app", "zh": "安装到桌面" },
+    "desc": {
+      "en": "Add it to your home screen and open it like a native app.",
+      "zh": "添加到主屏幕，像 App 一样一键打开。"
+    },
+    "install": { "en": "Install", "zh": "安装" },
+    "installing": { "en": "Installing…", "zh": "安装中…" },
+    "later": { "en": "Not now", "zh": "以后再说" },
+    "iosTitle": { "en": "Add to Home Screen", "zh": "添加到主屏幕" },
+    "iosStep1": {
+      "en": "Tap the Share button in Safari's toolbar",
+      "zh": "点击 Safari 工具栏上的「分享」按钮"
+    },
+    "iosStep2": {
+      "en": "Choose \"Add to Home Screen\"",
+      "zh": "选择「添加到主屏幕」"
+    },
+    "iosStep3": {
+      "en": "Tap \"Add\" to finish",
+      "zh": "点击「添加」完成"
+    },
+    "iosTip": {
+      "en": "On iPhone and iPad the icon is taken from this page, and iOS caches it — remove and add it again to refresh the icon.",
+      "zh": "iPhone / iPad 的图标取自本页面且由 iOS 缓存，换图标后需要删除再重新添加。"
+    }
+  },
   "components.MailBox": {
     "attachments": {
       "en": "Show Attachments",

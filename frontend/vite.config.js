@@ -34,7 +34,11 @@ export default defineConfig({
       resolvers: [NaiveUiResolver()]
     }),
     ...(process.env.VITE_PWA_DISABLED === 'true' ? [] : [VitePWA({
-      registerType: null,
+      // autoUpdate: the new service worker activates immediately instead of
+      // waiting for every tab to close. Without it the previous SW keeps
+      // serving its precached manifest.webmanifest, so icon/manifest changes
+      // would not reach returning visitors.
+      registerType: 'autoUpdate',
       devOptions: {
         enabled: false
       },
@@ -50,17 +54,36 @@ export default defineConfig({
         short_name: 'Temp-Mail',
         description: 'Temp-Mail - Temporary Email',
         theme_color: '#ffffff',
+        background_color: '#ffffff',
+        display: 'standalone',
+        start_url: '/',
+        scope: '/',
+        lang: 'zh',
+        categories: ['utilities', 'productivity'],
         icons: [
+          {
+            src: '/pwa-192x192.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'any'
+          },
+          {
+            src: '/pwa-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any'
+          },
+          {
+            src: '/pwa-maskable-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable'
+          },
           {
             src: '/logo.svg',
             sizes: 'any',
             type: 'image/svg+xml',
             purpose: 'any'
-          },
-          {
-            src: '/logo.png',
-            sizes: '192x192',
-            type: 'image/png'
           }
         ]
       }

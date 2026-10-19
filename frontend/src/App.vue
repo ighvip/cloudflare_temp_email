@@ -9,6 +9,7 @@ import { useGlobalState } from './store'
 import { useIsMobile } from './utils/composables'
 import Header from './views/Header.vue';
 import Footer from './views/Footer.vue';
+import PwaInstall from './components/PwaInstall.vue';
 import { api } from './api'
 import { getNaiveLocaleConfig } from './i18n/naive-locale'
 import { DEFAULT_LOCALE, isSupportedLocale, siteDefaultLocale } from './i18n/utils'
@@ -196,6 +197,7 @@ onMounted(async () => {
             </n-gi>
           </n-grid>
           <n-back-top />
+          <PwaInstall />
         </n-message-provider>
       </n-notification-provider>
     </n-spin>
