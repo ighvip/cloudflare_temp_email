@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex">
+  <title>当前离线 - Temp-Mail</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --fg: #1a1a1a;
+      --bg: #ffffff;
+      --muted: rgba(26, 26, 26, 0.62);
+      --line: rgba(128, 128, 128, 0.35);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --fg: #eeeeee;
+        --bg: #101014;
+        --muted: rgba(238, 238, 238, 0.62);
+        --line: rgba(238, 238, 238, 0.26);
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: var(--bg);
+      color: var(--fg);
+      font-family: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .card {
+      width: 100%;
+      max-width: 420px;
+      padding: 28px 24px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      text-align: center;
+    }
+
+    .logo {
+      width: 48px;
+      height: 48px;
+      color: var(--fg);
+    }
+
+    h1 {
+      margin: 18px 0 8px;
+      font-size: 17px;
+      font-weight: 600;
+      letter-spacing: 0.2px;
+    }
+
+    p {
+      margin: 0;
+      font-size: 13px;
+      line-height: 1.7;
+      color: var(--muted);
+    }
+
+    button {
+      margin-top: 20px;
+      padding: 8px 20px;
+      font: inherit;
+      font-size: 13px;
+      color: var(--bg);
+      background: var(--fg);
+      border: 1px solid var(--fg);
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    button:active {
+      opacity: 0.75;
+    }
+
+    .hint {
+      margin-top: 12px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+  </style>
+</head>
+
+<body>
+  <main class="card">
+    <svg class="logo" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <rect x="6" y="18" width="52" height="34" rx="6" stroke="currentColor" stroke-width="4" />
+      <path d="M9 23 L32 40 L55 23" stroke="currentColor" stroke-width="4" stroke-linecap="round"
+        stroke-linejoin="round" />
+      <rect x="22" y="6" width="20" height="16" rx="2" stroke="currentColor" stroke-width="3" />
+      <path d="M26 12 H38" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" />
+      <path d="M26 17 H34" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" />
+    </svg>
+    <h1 id="title">当前离线</h1>
+    <p id="desc">页面需要联网才能收发邮件，请检查网络后重试。</p>
+    <button id="retry" type="button">重新加载</button>
+    <p class="hint" id="hint">网络恢复后会自动刷新</p>
+  </main>
+
+  <script>
+    (function () {
+      var copy = {
+        zh: {
+          lang: 'zh',
+          title: '当前离线',
+          desc: '页面需要联网才能收发邮件，请检查网络后重试。',
+          retry: '重新加载',
+          hint: '网络恢复后会自动刷新',
+        },
+        en: {
+          lang: 'en',
+          title: 'You are offline',
+          desc: 'Temp-Mail needs a connection to fetch your mail. Check your network and try again.',
+          retry: 'Reload',
+          hint: 'This page reloads automatically once you are back online',
+        },
+        ja: {
+          lang: 'ja',
+          title: 'オフラインです',
+          desc: 'メールの送受信にはネットワーク接続が必要です。接続を確認して再試行してください。',
+          retry: '再読み込み',
+          hint: 'オンラインに戻ると自動的に再読み込みします',
+        },
+        ko: {
+          lang: 'ko',
+          title: '오프라인 상태입니다',
+          desc: '메일을 주고받으려면 네트워크 연결이 필요합니다. 연결을 확인한 뒤 다시 시도해 주세요.',
+          retry: '다시 불러오기',
+          hint: '온라인 상태가 되면 자동으로 새로고침됩니다',
+        },
+      };
+
+      var raw = (navigator.language || 'zh').toLowerCase();
+      var key = raw.indexOf('zh') === 0 && raw.indexOf('tw') > -1 ? 'zh' : raw.split('-')[0];
+      if (!copy[key]) key = 'en';
+      var t = copy[key];
+
+      document.documentElement.lang = t.lang;
+      document.title = t.title + ' - Temp-Mail';
+      document.getElementById('title').textContent = t.title;
+      document.getElementById('desc').textContent = t.desc;
+      document.getElementById('hint').textContent = t.hint;
+
+      var retry = document.getElementById('retry');
+      retry.textContent = t.retry;
+      retry.addEventListener('click', function () {
+        location.replace('/');
+      });
+
+      // come back on our own as soon as the network is usable again
+      window.addEventListener('online', function () {
+        setTimeout(function () {
+          location.replace('/');
+        }, 400);
+      });
+    })();
+  </script>
+</body>
+
+</html>

@@ -9,6 +9,20 @@ import i18n from '../../i18n'
 import PwaInstall from '../PwaInstall.vue'
 
 const DISMISS_KEY = 'pwaInstallHideUntil'
+const VARIANT_KEY = 'pwaIconVariant'
+
+const resetHeadLinks = () => {
+    document.head.querySelectorAll('link[rel="manifest"], link[rel="apple-touch-icon"]').forEach((l) => l.remove())
+    const manifest = document.createElement('link')
+    manifest.rel = 'manifest'
+    manifest.href = '/manifest.webmanifest'
+    const apple = document.createElement('link')
+    apple.rel = 'apple-touch-icon'
+    apple.href = '/apple-touch-icon.png'
+    document.head.append(manifest, apple)
+}
+
+const headLink = (rel) => document.head.querySelector(`link[rel="${rel}"]`).getAttribute('href')
 
 const flush = async () => {
     for (let i = 0; i < 3; i++) {
@@ -80,6 +94,7 @@ beforeEach(() => {
     setMatchMedia(false)
     setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/140.0.0.0 Safari/537.36')
     window.localStorage.clear()
+    resetHeadLinks()
 })
 
 afterEach(() => {
@@ -179,6 +194,42 @@ describe('PwaInstall prompt', () => {
             const guide = document.body.textContent || ''
             expect(guide).toContain('添加到主屏幕')
             expect(guide).toContain('「分享」')
+        } finally {
+            page.unmount()
+        }
+    })
+
+    it('switches the install icon between light and dark plates', async () => {
+        const page = await mountPrompt('/')
+        try {
+            fireInstallPrompt()
+            await flush()
+
+            expect(headLink('manifest')).toBe('/manifest.webmanifest')
+            expect(headLink('apple-touch-icon')).toBe('/apple-touch-icon.png')
+
+            const swatches = page.banner().querySelectorAll('.pwa-swatch')
+            expect(swatches).toHaveLength(2)
+            swatches[1].click()
+            await flush()
+
+            expect(headLink('manifest')).toBe('/manifest-dark.webmanifest')
+            expect(headLink('apple-touch-icon')).toBe('/apple-touch-icon-dark.png')
+            expect(window.localStorage.getItem(VARIANT_KEY)).toBe('dark')
+            expect(swatches[1].className).toContain('is-active')
+            expect(page.banner().querySelector('.pwa-install-preview').getAttribute('src'))
+                .toBe('/pwa-192x192-dark.png')
+        } finally {
+            page.unmount()
+        }
+    })
+
+    it('restores the saved icon plate on the next visit', async () => {
+        window.localStorage.setItem(VARIANT_KEY, 'dark')
+        const page = await mountPrompt('/')
+        try {
+            expect(headLink('manifest')).toBe('/manifest-dark.webmanifest')
+            expect(headLink('apple-touch-icon')).toBe('/apple-touch-icon-dark.png')
         } finally {
             page.unmount()
         }

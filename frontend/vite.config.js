@@ -44,8 +44,21 @@ export default defineConfig({
       },
       workbox: {
         disableDevLogs: true,
-        globPatterns: [],
-        runtimeCaching: [],
+        // Only the offline page is precached: a cached app shell would go
+        // stale between deploys, and mail needs the network anyway.
+        globPatterns: ['offline.html'],
+        // Navigations always hit the network so a redeploy is picked up at
+        // once; when the network is unreachable the precached offline page
+        // replaces the browser's own error screen.
+        runtimeCaching: [
+          {
+            urlPattern: ({ request }) => request.mode === 'navigate',
+            handler: 'NetworkOnly',
+            options: {
+              precacheFallback: { fallbackURL: 'offline.html' },
+            },
+          },
+        ],
         navigateFallback: null,
         cleanupOutdatedCaches: true,
       },

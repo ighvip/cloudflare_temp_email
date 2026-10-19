@@ -51,6 +51,9 @@ export const MESSAGE_REGISTRY = {
     "install": { "en": "Install", "zh": "安装" },
     "installing": { "en": "Installing…", "zh": "安装中…" },
     "later": { "en": "Not now", "zh": "以后再说" },
+    "iconStyle": { "en": "Icon style", "zh": "图标样式" },
+    "iconLight": { "en": "Light plate", "zh": "白底黑信封" },
+    "iconDark": { "en": "Dark plate", "zh": "黑底白信封" },
     "iosTitle": { "en": "Add to Home Screen", "zh": "添加到主屏幕" },
     "iosStep1": {
       "en": "Tap the Share button in Safari's toolbar",
