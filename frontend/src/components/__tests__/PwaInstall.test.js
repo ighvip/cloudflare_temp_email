@@ -8,8 +8,20 @@ import { NMessageProvider } from 'naive-ui'
 import i18n from '../../i18n'
 import PwaInstall from '../PwaInstall.vue'
 
-const DISMISS_KEY = 'pwaInstallHideUntil'
+const COLLAPSE_KEY = 'pwaInstallCollapsed'
+const AUTO_SHOWN_KEY = 'pwaInstallAutoShownOn'
+const INSTALLED_KEY = 'pwaInstallInstalled'
 const VARIANT_KEY = 'pwaIconVariant'
+
+const CHROME_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36'
+const IOS_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1'
+const FIREFOX_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:130.0) Gecko/20100101 Firefox/130.0'
+
+const today = () => {
+    const now = new Date()
+    const pad = (n) => String(n).padStart(2, '0')
+    return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
+}
 
 const resetHeadLinks = () => {
     document.head.querySelectorAll('link[rel="manifest"], link[rel="apple-touch-icon"]').forEach((l) => l.remove())
@@ -24,17 +36,10 @@ const resetHeadLinks = () => {
 
 const headLink = (rel) => document.head.querySelector(`link[rel="${rel}"]`).getAttribute('href')
 
-const flush = async () => {
+// the component auto-shows on a timer, so every suite runs on fake timers
+const flush = async (ms = 0) => {
     for (let i = 0; i < 3; i++) {
-        await new Promise((resolve) => setTimeout(resolve, 0))
-        await nextTick()
-    }
-}
-
-// same settle helper for suites that run on fake timers
-const flushFake = async () => {
-    for (let i = 0; i < 3; i++) {
-        await vi.advanceTimersByTimeAsync(0)
+        await vi.advanceTimersByTimeAsync(ms)
         await nextTick()
     }
 }
@@ -56,7 +61,7 @@ const setUserAgent = (ua) => {
     Object.defineProperty(window.navigator, 'userAgent', { value: ua, configurable: true })
 }
 
-const mountPrompt = async (path = '/', settle = flush) => {
+const mountPrompt = async (path = '/') => {
     const router = createRouter({
         history: createMemoryHistory(),
         routes: [{ path: '/:pathMatch(.*)*', component: { render: () => null } }],
@@ -72,14 +77,16 @@ const mountPrompt = async (path = '/', settle = flush) => {
     app.use(router)
     app.use(i18n)
     app.mount(el)
-    await settle()
+    await flush()
 
     const banner = () => document.body.querySelector('.pwa-install')
+    const button = (label) =>
+        Array.from(document.body.querySelectorAll('button')).find((b) => b.textContent.includes(label))
     const unmount = () => {
         app.unmount()
         el.remove()
     }
-    return { banner, unmount }
+    return { banner, button, unmount }
 }
 
 const fireInstallPrompt = () => {
@@ -91,9 +98,11 @@ const fireInstallPrompt = () => {
 }
 
 beforeEach(() => {
+    vi.useFakeTimers()
     setMatchMedia(false)
-    setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/140.0.0.0 Safari/537.36')
+    setUserAgent(CHROME_UA)
     window.localStorage.clear()
+    window.sessionStorage.clear()
     resetHeadLinks()
 })
 
@@ -103,59 +112,105 @@ afterEach(() => {
 })
 
 describe('PwaInstall prompt', () => {
-    it('stays hidden until the browser announces installability', async () => {
+    it('auto-shows on the homepage and books the daily slot', async () => {
         const page = await mountPrompt('/')
         try {
             expect(page.banner()).toBeNull()
 
+            // 1200ms fallback: no need to wait for beforeinstallprompt at all
+            await flush(1200)
+
+            expect(page.banner()).not.toBeNull()
+            expect(page.banner().textContent).toContain('安装到桌面')
+            expect(window.localStorage.getItem(AUTO_SHOWN_KEY)).toBe(today())
+        } finally {
+            page.unmount()
+        }
+    })
+
+    it('shows it immediately when the browser announces installability', async () => {
+        const page = await mountPrompt('/')
+        try {
             const event = fireInstallPrompt()
             await flush()
 
             expect(event.defaultPrevented).toBe(true)
             expect(page.banner()).not.toBeNull()
-            expect(page.banner().textContent).toContain('安装到桌面')
+            expect(window.localStorage.getItem(AUTO_SHOWN_KEY)).toBe(today())
         } finally {
             page.unmount()
         }
     })
 
-    it('"later" hides the prompt and remembers it for a few days', async () => {
+    it('books the daily slot only once, even for a second tab', async () => {
+        const first = await mountPrompt('/')
+        try {
+            await flush(1200)
+            expect(first.banner()).not.toBeNull()
+        } finally {
+            first.unmount()
+        }
+
+        // localStorage is shared, so a brand new tab the same day stays quiet
+        const second = await mountPrompt('/')
+        try {
+            await flush(1200)
+            expect(second.banner()).toBeNull()
+        } finally {
+            second.unmount()
+        }
+    })
+
+    it('"收起" hides the card and stays quiet in this tab', async () => {
+        const page = await mountPrompt('/')
+        try {
+            await flush(1200)
+            const collapse = page.banner().querySelector('.pwa-collapse')
+            expect(collapse).toBeTruthy()
+            expect(collapse.getAttribute('title')).toContain('收起')
+            collapse.click()
+            await flush(50)
+
+            expect(page.banner()).toBeNull()
+            expect(window.sessionStorage.getItem(COLLAPSE_KEY)).toBe('1')
+            // nothing permanent was written: the promise is "not today, this tab"
+            expect(window.localStorage.getItem(AUTO_SHOWN_KEY)).toBe(today())
+        } finally {
+            page.unmount()
+        }
+    })
+
+    it('stays quiet in a tab where the visitor already collapsed it', async () => {
+        window.sessionStorage.setItem(COLLAPSE_KEY, '1')
+        window.localStorage.removeItem(AUTO_SHOWN_KEY)
         const page = await mountPrompt('/')
         try {
             fireInstallPrompt()
-            await flush()
-
-            const laterButton = Array.from(page.banner().querySelectorAll('button'))
-                .find((button) => button.textContent.includes('以后再说'))
-            expect(laterButton).toBeTruthy()
-            laterButton.click()
-            await flush()
-
+            await flush(1200)
             expect(page.banner()).toBeNull()
-            expect(Number(window.localStorage.getItem(DISMISS_KEY))).toBeGreaterThan(Date.now())
         } finally {
             page.unmount()
         }
     })
 
-    it('does not prompt while the prompt is snoozed', async () => {
-        window.localStorage.setItem(DISMISS_KEY, String(Date.now() + 864e5))
+    it('does not prompt again on a fresh visit once the app is installed', async () => {
+        window.localStorage.setItem(INSTALLED_KEY, '1')
         const page = await mountPrompt('/')
         try {
             fireInstallPrompt()
-            await flush()
+            await flush(1200)
             expect(page.banner()).toBeNull()
         } finally {
             page.unmount()
         }
     })
 
-    it('does not prompt when already running as an installed app', async () => {
+    it('does not prompt inside an installed window', async () => {
         setMatchMedia(true)
         const page = await mountPrompt('/')
         try {
             fireInstallPrompt()
-            await flush()
+            await flush(1200)
             expect(page.banner()).toBeNull()
         } finally {
             page.unmount()
@@ -166,34 +221,91 @@ describe('PwaInstall prompt', () => {
         const page = await mountPrompt('/admin')
         try {
             fireInstallPrompt()
-            await flush()
+            await flush(1200)
             expect(page.banner()).toBeNull()
         } finally {
             page.unmount()
         }
     })
 
-    it('falls back to the iOS "Add to Home Screen" guide (no beforeinstallprompt on iOS)', async () => {
-        vi.useFakeTimers()
-        setUserAgent('Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1')
-
-        const page = await mountPrompt('/', flushFake)
+    it('auto-shows on iOS too, with the "Add to Home Screen" wording', async () => {
+        setUserAgent(IOS_UA)
+        const page = await mountPrompt('/')
         try {
-            await vi.advanceTimersByTimeAsync(6000)
-            await nextTick()
+            expect(page.banner()).toBeNull()
+            await flush(6000)
 
             expect(page.banner()).not.toBeNull()
-            expect(page.banner().textContent).toContain('安装到桌面')
+            expect(page.banner().textContent).toContain('分享')
+            expect(window.localStorage.getItem(AUTO_SHOWN_KEY)).toBe(today())
+        } finally {
+            page.unmount()
+        }
+    })
 
-            const installButton = Array.from(page.banner().querySelectorAll('button'))
-                .find((button) => button.textContent.includes('安装'))
-            expect(installButton).toBeTruthy()
-            installButton.click()
-            await flushFake()
+    it('walks iOS through the manual guide', async () => {
+        setUserAgent(IOS_UA)
+        const page = await mountPrompt('/')
+        try {
+            await flush(6000)
+            page.button('安装').click()
+            await flush()
 
             const guide = document.body.textContent || ''
             expect(guide).toContain('添加到主屏幕')
             expect(guide).toContain('「分享」')
+            expect(guide).toContain('图标')
+        } finally {
+            page.unmount()
+        }
+    })
+
+    it('walks desktop Chromium through the address-bar guide', async () => {
+        const page = await mountPrompt('/')
+        try {
+            await flush(1200)
+            expect(page.banner().textContent).toContain('桌面')
+
+            page.button('安装').click()
+            await flush()
+
+            const guide = document.body.textContent || ''
+            expect(guide).toContain('地址栏')
+            expect(guide).toContain('安装 Temp-Mail')
+        } finally {
+            page.unmount()
+        }
+    })
+
+    it('walks Android through the browser-menu guide', async () => {
+        setUserAgent('Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Mobile Safari/537.36')
+        const page = await mountPrompt('/')
+        try {
+            await flush(1200)
+            page.button('安装').click()
+            await flush()
+
+            const guide = document.body.textContent || ''
+            expect(guide).toContain('「⋮」菜单')
+            expect(guide).toContain('「安装应用」')
+        } finally {
+            page.unmount()
+        }
+    })
+
+    it('tells unsupported browsers (Firefox) what to use instead', async () => {
+        setUserAgent(FIREFOX_UA)
+        const page = await mountPrompt('/')
+        try {
+            await flush(1200)
+            expect(page.banner()).not.toBeNull()
+            expect(page.banner().textContent).toContain('不支持')
+
+            page.button('安装').click()
+            await flush()
+
+            const guide = document.body.textContent || ''
+            expect(guide).toContain('不支持把网页安装为应用')
         } finally {
             page.unmount()
         }
@@ -202,8 +314,7 @@ describe('PwaInstall prompt', () => {
     it('switches the install icon between light and dark plates', async () => {
         const page = await mountPrompt('/')
         try {
-            fireInstallPrompt()
-            await flush()
+            await flush(1200)
 
             expect(headLink('manifest')).toBe('/manifest.webmanifest')
             expect(headLink('apple-touch-icon')).toBe('/apple-touch-icon.png')

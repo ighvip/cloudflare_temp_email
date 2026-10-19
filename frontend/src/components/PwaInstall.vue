@@ -5,24 +5,39 @@ import { useScopedI18n } from '@/i18n/app'
 import { resolveSupportedLocale } from '@/i18n/utils'
 
 // Proactive PWA install prompt.
-// - Chromium (Chrome / Edge / Android): we catch `beforeinstallprompt` and
-//   offer a one-tap install; the browser's own banner is suppressed by
-//   preventDefault so the site stays in control of wording and timing.
-// - iOS / iPadOS Safari: no `beforeinstallprompt` exists, so after the
-//   visitor settles on the homepage we show the manual
-//   "Share -> Add to Home Screen" guide instead.
-// Dismissing hides the prompt for a few days; an installed app never sees it.
+//
+// When it shows
+//   * homepage only, never inside an installed window, never again once the
+//     app has been installed, never after the visitor collapsed it in this
+//     tab, and at most once per calendar day — that daily cap is the "one
+//     per session / per day" limit, so on a phone the card never comes back
+//     the same day either.
+//   * every browser auto-shows it: Chromium fires `beforeinstallprompt`
+//     (one-tap install, we preventDefault so the site keeps control of the
+//     wording), while iOS / Android / Firefox / desktop Safari get it from a
+//     timer and, on click, a step-by-step guide that matches their browser.
+//
+// "收起" (collapse) means "not in this tab, not today" — a fresh visit
+// tomorrow brings the card back, which is why the button is not called
+// "never show again".
 //
 // Icon choice: the installed icon is a snapshot taken by the OS, so the
-// visitor can pick a plate style here; the manifest link and the
-// apple-touch-icon are swapped before they add it to the home screen.
+// visitor picks a plate style here; the manifest link and the
+// apple-touch-icon are swapped before the app is added to the home screen.
 
 const { t } = useScopedI18n('components.PwaInstall')
 const route = useRoute()
 
-const DISMISS_KEY = 'pwaInstallHideUntil'
+const COLLAPSE_KEY = 'pwaInstallCollapsed' // sessionStorage — this tab only
+const AUTO_SHOWN_KEY = 'pwaInstallAutoShownOn' // localStorage — 'YYYY-MM-DD'
+const INSTALLED_KEY = 'pwaInstallInstalled' // localStorage — permanent
 const VARIANT_KEY = 'pwaIconVariant'
-const HIDE_DAYS = 3
+
+const AUTO_DELAY_MS = 1200 // fallback for browsers that never fire the event
+const IOS_AUTO_DELAY_MS = 6000 // iOS has no install event at all
+// Firefox / desktop Safari cannot install web apps. They still get the card
+// (the guide explains what to use instead); flip to false to leave them alone.
+const AUTO_SHOW_UNSUPPORTED = true
 
 const VARIANTS = {
     light: {
@@ -37,7 +52,7 @@ const VARIANTS = {
     },
 }
 
-const readStorage = (key) => {
+const readLocal = (key) => {
     try {
         return window.localStorage.getItem(key)
     } catch {
@@ -45,11 +60,42 @@ const readStorage = (key) => {
     }
 }
 
-const variant = ref(readStorage(VARIANT_KEY) === 'dark' ? 'dark' : 'light')
+const writeLocal = (key, value) => {
+    try {
+        window.localStorage.setItem(key, value)
+    } catch {
+        // private mode: the prompt simply returns next visit
+    }
+}
+
+const readSession = (key) => {
+    try {
+        return window.sessionStorage.getItem(key)
+    } catch {
+        return null
+    }
+}
+
+const writeSession = (key, value) => {
+    try {
+        window.sessionStorage.setItem(key, value)
+    } catch {
+        // private mode: only the daily cap applies
+    }
+}
+
+// local calendar day, not UTC, so the cap flips at the visitor's midnight
+const today = () => {
+    const now = new Date()
+    const pad = (n) => String(n).padStart(2, '0')
+    return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
+}
+
+const variant = ref(readLocal(VARIANT_KEY) === 'dark' ? 'dark' : 'light')
 const deferredPrompt = ref(null)
 const visible = ref(false)
 const busy = ref(false)
-const showIosGuide = ref(false)
+const showGuide = ref(false)
 let showTimer = null
 
 const variantConfig = computed(() => VARIANTS[variant.value] || VARIANTS.light)
@@ -67,11 +113,7 @@ const applyVariant = (next) => {
 const setVariant = (next) => {
     variant.value = next === 'dark' ? 'dark' : 'light'
     applyVariant(variant.value)
-    try {
-        window.localStorage.setItem(VARIANT_KEY, variant.value)
-    } catch {
-        // private mode: the choice simply is not remembered
-    }
+    writeLocal(VARIANT_KEY, variant.value)
 }
 
 const isStandalone = () =>
@@ -84,16 +126,54 @@ const isIosDevice = computed(() => {
         || (ua.includes('Macintosh') && 'ontouchend' in document)
 })
 
+const platform = computed(() => {
+    if (isIosDevice.value) return 'ios'
+    const ua = window.navigator.userAgent || ''
+    if (/Android/.test(ua)) return 'android'
+    if (/Chrome\/\d|Chromium\/\d|Edg[A-Z]?\//.test(ua) && !/Firefox\//.test(ua)) return 'desktop'
+    return 'unsupported'
+})
+
+// the card copy follows the browser, the guide explains what that browser needs
+const description = computed(() => {
+    if (platform.value === 'ios') return t('descIos')
+    if (platform.value === 'desktop') return t('descDesktop')
+    if (platform.value === 'unsupported') return t('descUnsupported')
+    return t('desc')
+})
+
+const guideTitle = computed(() => (platform.value === 'ios' ? t('iosTitle') : t('guideTitle')))
+
+const guideSteps = computed(() => {
+    if (platform.value === 'ios') return [t('iosStep1'), t('iosStep2'), t('iosStep3')]
+    if (platform.value === 'android') return [t('androidStep1'), t('androidStep2'), t('androidStep3')]
+    if (platform.value === 'desktop') return [t('desktopStep1'), t('desktopStep2'), t('desktopStep3')]
+    return []
+})
+
 const isHome = computed(() => {
     const segments = (route.path || '/').split('/').filter(Boolean)
     if (segments.length && resolveSupportedLocale(segments[0])) segments.shift()
     return segments.length === 0
 })
 
-const hiddenByUser = () => Number(readStorage(DISMISS_KEY) || 0) > Date.now()
+const collapsedInThisTab = () => readSession(COLLAPSE_KEY) === '1'
+const shownToday = () => readLocal(AUTO_SHOWN_KEY) === today()
+const alreadyInstalled = () => isStandalone() || readLocal(INSTALLED_KEY) === '1'
 
+const mayAutoShow = () =>
+    isHome.value
+    && !alreadyInstalled()
+    && !collapsedInThisTab()
+    && !shownToday()
+    && (AUTO_SHOW_UNSUPPORTED || platform.value !== 'unsupported')
+
+// Revealing is what costs the daily quota: once the card has been on screen
+// today, neither the browser event nor the fallback timer can bring it back.
 const reveal = () => {
-    if (isHome.value && !isStandalone() && !hiddenByUser()) visible.value = true
+    if (!mayAutoShow()) return
+    visible.value = true
+    writeLocal(AUTO_SHOWN_KEY, today())
 }
 
 const onBeforeInstallPrompt = (event) => {
@@ -103,17 +183,19 @@ const onBeforeInstallPrompt = (event) => {
 }
 
 const onInstalled = () => {
+    writeLocal(INSTALLED_KEY, '1')
     visible.value = false
     deferredPrompt.value = null
 }
 
 const install = async () => {
-    const prompt = deferredPrompt.value
-    if (!prompt) {
-        showIosGuide.value = true
+    if (!deferredPrompt.value) {
+        // no one-tap install available in this browser: show the how-to
+        showGuide.value = true
         return
     }
     busy.value = true
+    const prompt = deferredPrompt.value
     try {
         prompt.prompt()
         await prompt.userChoice
@@ -124,13 +206,11 @@ const install = async () => {
     }
 }
 
-const later = () => {
+// "收起": gone for this tab (and, thanks to the daily cap, for today).
+// A fresh visit brings the prompt back — no permanent opt-out here.
+const collapse = () => {
     visible.value = false
-    try {
-        window.localStorage.setItem(DISMISS_KEY, String(Date.now() + HIDE_DAYS * 864e5))
-    } catch {
-        // private mode: the prompt simply returns next visit
-    }
+    writeSession(COLLAPSE_KEY, '1')
 }
 
 // apply the remembered plate style as early as possible
@@ -139,9 +219,9 @@ applyVariant(variant.value)
 onMounted(() => {
     window.addEventListener('beforeinstallprompt', onBeforeInstallPrompt)
     window.addEventListener('appinstalled', onInstalled)
-    // iOS has no installability signal, so offer the guide once the
-    // visitor has settled on the homepage
-    if (isIosDevice.value && !isStandalone()) showTimer = setTimeout(reveal, 6000)
+    if (!mayAutoShow()) return
+    const delay = platform.value === 'ios' ? IOS_AUTO_DELAY_MS : AUTO_DELAY_MS
+    showTimer = setTimeout(reveal, delay)
 })
 
 onUnmounted(() => {
@@ -152,39 +232,56 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <div v-if="visible" class="pwa-install" role="dialog" aria-live="polite">
-        <img class="pwa-install-preview" :src="variantConfig.preview" :alt="t('iconStyle')" width="32" height="32" />
+    <Transition name="pwa-slide">
+        <div v-if="visible" class="pwa-install" role="dialog" aria-live="polite" :aria-label="t('title')">
+            <img class="pwa-install-preview" :src="variantConfig.preview" :alt="t('iconStyle')" width="32"
+                height="32" />
 
-        <div class="pwa-install-text">
-            <div class="pwa-install-title">{{ t('title') }}</div>
-            <div class="pwa-install-desc">{{ t('desc') }}</div>
+            <div class="pwa-install-text">
+                <div class="pwa-install-title">{{ t('title') }}</div>
+                <div class="pwa-install-desc">{{ description }}</div>
+            </div>
+
+            <div class="pwa-install-swatches" role="radiogroup" :aria-label="t('iconStyle')">
+                <button type="button" class="pwa-swatch" :class="{ 'is-active': variant === 'light' }"
+                    :aria-label="t('iconLight')" :aria-pressed="variant === 'light'" :title="t('iconLight')"
+                    @click="setVariant('light')">
+                    <img :src="VARIANTS.light.preview" alt="" />
+                </button>
+                <button type="button" class="pwa-swatch" :class="{ 'is-active': variant === 'dark' }"
+                    :aria-label="t('iconDark')" :aria-pressed="variant === 'dark'" :title="t('iconDark')"
+                    @click="setVariant('dark')">
+                    <img :src="VARIANTS.dark.preview" alt="" />
+                </button>
+            </div>
+
+            <div class="pwa-install-actions">
+                <button type="button" class="pwa-collapse" :title="t('collapseHint')" :aria-label="t('collapseHint')"
+                    @click="collapse">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        <path d="M6 9.5L12 15.5L18 9.5" stroke="currentColor" stroke-width="1.8"
+                            stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                </button>
+                <n-button size="small" type="primary" :loading="busy" @click="install">
+                    <template #icon>
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                            <path d="M12 4v10M12 14l-3.5-3.5M12 14l3.5-3.5" stroke="currentColor" stroke-width="1.8"
+                                stroke-linecap="round" stroke-linejoin="round" />
+                            <path d="M5 15v2.5A1.5 1.5 0 0 0 6.5 19h11a1.5 1.5 0 0 0 1.5-1.5V15" stroke="currentColor"
+                                stroke-width="1.8" stroke-linecap="round" />
+                        </svg>
+                    </template>
+                    {{ busy ? t('installing') : t('install') }}
+                </n-button>
+            </div>
         </div>
+    </Transition>
 
-        <div class="pwa-install-swatches" role="radiogroup" :aria-label="t('iconStyle')">
-            <button type="button" class="pwa-swatch" :class="{ 'is-active': variant === 'light' }"
-                :aria-label="t('iconLight')" :aria-pressed="variant === 'light'" :title="t('iconLight')"
-                @click="setVariant('light')">
-                <img :src="VARIANTS.light.preview" alt="" />
-            </button>
-            <button type="button" class="pwa-swatch" :class="{ 'is-active': variant === 'dark' }"
-                :aria-label="t('iconDark')" :aria-pressed="variant === 'dark'" :title="t('iconDark')"
-                @click="setVariant('dark')">
-                <img :src="VARIANTS.dark.preview" alt="" />
-            </button>
-        </div>
-
-        <div class="pwa-install-actions">
-            <n-button size="small" @click="later">{{ t('later') }}</n-button>
-            <n-button size="small" type="primary" :loading="busy" @click="install">
-                {{ busy ? t('installing') : t('install') }}
-            </n-button>
-        </div>
-    </div>
-
-    <n-modal v-model:show="showIosGuide" preset="card" :title="t('iosTitle')" style="max-width: 460px;">
-        <ol class="pwa-install-steps">
-            <li>
-                <span class="pwa-install-step-icon" aria-hidden="true">
+    <n-modal v-model:show="showGuide" preset="card" :title="guideTitle" style="max-width: 460px;">
+        <ol v-if="guideSteps.length" class="pwa-install-steps">
+            <li v-for="(step, index) in guideSteps" :key="index">
+                <span v-if="index === 0" class="pwa-install-step-icon" aria-hidden="true">
                     <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M12 16V4M12 4L7.5 8.5M12 4l4.5 4.5" stroke="currentColor" stroke-width="1.8"
                             stroke-linecap="round" stroke-linejoin="round" />
@@ -192,11 +289,11 @@ onUnmounted(() => {
                             stroke-linecap="round" />
                     </svg>
                 </span>
-                {{ t('iosStep1') }}
+                {{ step }}
             </li>
-            <li>{{ t('iosStep2') }}</li>
-            <li>{{ t('iosStep3') }}</li>
         </ol>
+
+        <p v-else class="pwa-install-tip pwa-install-tip--first">{{ t('unsupportedText') }}</p>
 
         <div class="pwa-install-ios-icons">
             <span class="pwa-install-ios-label">{{ t('iconStyle') }}</span>
@@ -212,7 +309,11 @@ onUnmounted(() => {
             </button>
         </div>
 
-        <p class="pwa-install-tip">{{ t('iosTip') }}</p>
+        <p v-if="platform === 'ios'" class="pwa-install-tip">{{ t('iosTip') }}</p>
+
+        <div class="pwa-install-guide-foot">
+            <n-button size="small" @click="showGuide = false">{{ t('gotIt') }}</n-button>
+        </div>
     </n-modal>
 </template>
 
@@ -220,15 +321,18 @@ onUnmounted(() => {
 /* monochrome, 12px card radius, no red — the site's design system */
 .pwa-install {
     position: fixed;
-    left: 50%;
+    /* centred with auto margins instead of translateX(-50%) so the enter/leave
+       transition is free to own `transform` */
+    left: 0;
+    right: 0;
     bottom: 16px;
-    transform: translateX(-50%);
+    margin: 0 auto;
+    width: max-content;
+    max-width: min(94vw, 520px);
     z-index: 900;
     display: flex;
     align-items: center;
     gap: 10px;
-    width: max-content;
-    max-width: min(94vw, 520px);
     padding: 10px 12px;
     border: 1px solid rgba(128, 128, 128, 0.35);
     border-radius: 12px;
@@ -242,6 +346,38 @@ html.dark .pwa-install {
     color: #eee;
     border-color: rgba(238, 238, 238, 0.25);
     box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
+}
+
+/* "收起" lifts the card away and it slides back on the next visit */
+.pwa-slide-enter-active {
+    transition: opacity 0.2s ease, transform 0.22s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.pwa-slide-leave-active {
+    transition: opacity 0.16s ease, transform 0.16s ease;
+}
+
+.pwa-slide-enter-from,
+.pwa-slide-leave-to {
+    opacity: 0;
+    transform: translateY(8px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+    /* No animation — and, just as important, no waiting on a frame before the
+       card becomes visible (rAF is paused in hidden tabs, which would leave
+       the card stuck at opacity 0 until the tab is looked at). */
+    .pwa-slide-enter-from,
+    .pwa-slide-leave-to {
+        opacity: 1;
+        transform: none;
+    }
+
+    .pwa-slide-enter-active,
+    .pwa-slide-leave-active {
+        transition: none;
+    }
 }
 
 .pwa-install-preview {
@@ -307,6 +443,31 @@ html.dark .pwa-install {
     display: flex;
     align-items: center;
     gap: 8px;
+}
+
+/* icon-only "collapse", matching the swatch chrome */
+.pwa-collapse {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 1px solid rgba(128, 128, 128, 0.45);
+    border-radius: 8px;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    transition: border-color 0.15s, opacity 0.15s;
+}
+
+.pwa-collapse:hover {
+    border-color: currentColor;
+}
+
+.pwa-collapse svg {
+    width: 16px;
+    height: 16px;
 }
 
 .pwa-install-steps {
@@ -375,17 +536,27 @@ html.dark .pwa-install {
     text-align: left;
 }
 
-/* phones: drop the description and let the buttons fall to a second row
+.pwa-install-tip--first {
+    margin-top: 0;
+}
+
+.pwa-install-guide-foot {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 18px;
+}
+
+/* phones: drop the description and let the actions fall to a second row
    instead of squeezing the title */
 @media (max-width: 640px) {
     .pwa-install {
         bottom: 96px;
-        flex-wrap: wrap;
-        width: auto;
         left: 12px;
         right: 12px;
-        transform: none;
+        margin: 0;
+        width: auto;
         max-width: none;
+        flex-wrap: wrap;
     }
 
     .pwa-install-desc {

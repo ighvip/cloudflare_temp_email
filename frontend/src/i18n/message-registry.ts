@@ -48,13 +48,59 @@ export const MESSAGE_REGISTRY = {
       "en": "Add it to your home screen and open it like a native app.",
       "zh": "添加到主屏幕，像 App 一样一键打开。"
     },
+    "descIos": {
+      "en": "Tap \"Install\" and follow the two steps: Share → Add to Home Screen.",
+      "zh": "点「安装」后按提示两步添加（分享 → 添加到主屏幕）。"
+    },
+    "descDesktop": {
+      "en": "Install it once, then open it from your desktop like an app.",
+      "zh": "安装一次后即可从桌面直接打开，像 App 一样收信。"
+    },
+    "descUnsupported": {
+      "en": "This browser cannot install web apps — try Chrome, Edge or Safari.",
+      "zh": "当前浏览器不支持网页安装，可改用 Chrome、Edge 或 Safari。"
+    },
     "install": { "en": "Install", "zh": "安装" },
     "installing": { "en": "Installing…", "zh": "安装中…" },
-    "later": { "en": "Not now", "zh": "以后再说" },
+    "collapse": { "en": "Minimize", "zh": "收起" },
+    "collapseHint": {
+      "en": "Minimize (we will remind you next time)",
+      "zh": "收起（下次打开仍会提醒）"
+    },
     "iconStyle": { "en": "Icon style", "zh": "图标样式" },
-    "iconLight": { "en": "Light plate", "zh": "白底黑信封" },
-    "iconDark": { "en": "Dark plate", "zh": "黑底白信封" },
+    "iconLight": { "en": "Black on white", "zh": "白底黑信封" },
+    "iconDark": { "en": "White on black", "zh": "黑底白信封" },
+    "guideTitle": { "en": "Install this app", "zh": "安装到桌面" },
     "iosTitle": { "en": "Add to Home Screen", "zh": "添加到主屏幕" },
+    "androidStep1": {
+      "en": "Open the \"⋮\" menu in your browser",
+      "zh": "点击浏览器右上角「⋮」菜单"
+    },
+    "androidStep2": {
+      "en": "Choose \"Install app\" or \"Add to Home screen\"",
+      "zh": "选择「安装应用」或「添加到主屏幕」"
+    },
+    "androidStep3": {
+      "en": "Tap \"Confirm\" to finish",
+      "zh": "点击「确认」完成"
+    },
+    "desktopStep1": {
+      "en": "Click the install icon in the address bar, or open the \"⋮\" menu",
+      "zh": "点击地址栏右侧的「安装」图标，或打开浏览器「⋮」菜单"
+    },
+    "desktopStep2": {
+      "en": "Choose \"Install Temp-Mail\"",
+      "zh": "选择「安装 Temp-Mail」"
+    },
+    "desktopStep3": {
+      "en": "Click \"Install\" to confirm",
+      "zh": "点击「安装」确认"
+    },
+    "unsupportedText": {
+      "en": "This browser cannot install web apps. Use Chrome / Edge (Android, desktop) or Safari (iPhone / iPad).",
+      "zh": "当前浏览器不支持把网页安装为应用，可改用 Chrome / Edge（安卓、桌面）或 Safari（iPhone / iPad）。"
+    },
+    "gotIt": { "en": "Got it", "zh": "知道了" },
     "iosStep1": {
       "en": "Tap the Share button in Safari's toolbar",
       "zh": "点击 Safari 工具栏上的「分享」按钮"
