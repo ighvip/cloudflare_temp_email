@@ -29,6 +29,15 @@ const fetchMailData = async (limit, offset) => {
     );
 }
 
+// lightweight probe used by the mailbox live refresh
+const fetchMailVersion = async () => {
+    return await api.fetch(
+        `/user_api/mails/version`
+        + (addressFilter.value ? `?address=${encodeURIComponent(addressFilter.value)}` : ''),
+        { showLoading: false }
+    );
+}
+
 const fetchAddresData = async () => {
     try {
         const { results } = await api.fetch(
@@ -70,6 +79,6 @@ onMounted(() => {
         </n-input-group>
         <div style="margin-top: 10px;"></div>
         <MailBox :key="mailBoxKey" :enableUserDeleteEmail="openSettings.enableUserDeleteEmail" :fetchMailData="fetchMailData"
-            :deleteMail="deleteMail" :showFilterInput="true" />
+            :fetchMailVersion="fetchMailVersion" :deleteMail="deleteMail" :showFilterInput="true" />
     </div>
 </template>

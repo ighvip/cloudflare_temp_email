@@ -20,6 +20,22 @@ const listMails = async (c: Context<HonoCustomType>) => {
     );
 };
 
+// Cheap "is there anything new?" probe for the live mailbox refresh.
+// Reads a single index entry (address + newest rowid) and deliberately does
+// not touch the address activity timestamp: the client calls this every few
+// seconds, so it must stay read-only and cost ~1 row.
+const getMailsVersion = async (c: Context<HonoCustomType>) => {
+    const { address } = c.get("jwtPayload")
+    if (!address) {
+        return c.json({ "error": "No address" }, 400)
+    }
+    c.header('Cache-Control', 'no-store')
+    const latestId = await c.env.DB.prepare(
+        `SELECT id FROM raw_mails where address = ? order by id desc limit 1`
+    ).bind(address).first("id")
+    return c.json({ latestId: latestId || 0 })
+}
+
 const updateMailReadStatus = async (c: Context<HonoCustomType>) => {
     if (!getBooleanValue(c.env.ENABLE_MAIL_READ_STATUS)) {
         return c.json({ error: 'Mail read status is disabled' }, 403);
@@ -111,4 +127,4 @@ const clearSentItems = async (c: Context<HonoCustomType>) => {
     return c.json({ success });
 };
 
-export default { listMails, getMail, updateMailReadStatus, deleteMail, getSettings, deleteAddress, clearInbox, clearSentItems };
+export default { listMails, getMailsVersion, getMail, updateMailReadStatus, deleteMail, getSettings, deleteAddress, clearInbox, clearSentItems };

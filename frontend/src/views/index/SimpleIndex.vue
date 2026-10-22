@@ -122,12 +122,55 @@ watch(currentPage, () => {
     fetchMails()
 })
 
+// 实时刷新：每 3 秒探测一次最新邮件 id（服务端只读 1 条索引），
+// 只有真的有新邮件时才重新拉取，且仅在第 1 页、标签页可见时探测。
+const LIVE_CHECK_EVERY_TICKS = 3
+const LIVE_ERROR_BACKOFF_MS = 15000
+const liveRefreshAvailable = ref(true)
+let liveTick = 0
+let liveBackoffUntil = 0
+let liveBusy = false
+
+const pageVisible = () => typeof document === 'undefined' || document.visibilityState !== 'hidden'
+
+const checkLiveRefresh = async () => {
+    if (!liveRefreshAvailable.value || liveBusy) return
+    if (!pageVisible() || loading.value || !isFirstPage.value || !settings.value.address) return
+    if (Date.now() < liveBackoffUntil) return
+    liveBusy = true
+    try {
+        const version = await api.fetch('/api/mails/version', { showLoading: false })
+        const remoteId = Number(version && version.latestId) || 0
+        const currentId = Number(currentMail.value && currentMail.value.id) || 0
+        if (remoteId > 0 && remoteId !== currentId) {
+            await fetchMails()
+        }
+    } catch (error) {
+        // 老版本 worker 没有该接口或网络抖动：退避，别每秒重试
+        if (error && error.status === 404) liveRefreshAvailable.value = false
+        liveBackoffUntil = Date.now() + LIVE_ERROR_BACKOFF_MS
+    } finally {
+        liveBusy = false
+    }
+}
+
+const onVisibilityChange = () => {
+    if (!pageVisible()) return
+    currentAutoRefreshInterval.value = 60
+    void checkLiveRefresh()
+}
+
 onMounted(async () => {
     await api.getSettings()
     await fetchMails()
 
     // 启动自动刷新
     timer.value = setInterval(async () => {
+        liveTick++
+        if (liveTick % LIVE_CHECK_EVERY_TICKS === 0) {
+            void checkLiveRefresh()
+        }
+
         if (!isFirstPage.value) {
             currentAutoRefreshInterval.value = 60
             return
@@ -137,10 +180,13 @@ onMounted(async () => {
             await refreshMails()
         }
     }, 1000)
+
+    document.addEventListener('visibilitychange', onVisibilityChange)
 })
 
 onBeforeUnmount(() => {
     clearInterval(timer.value)
+    document.removeEventListener('visibilitychange', onVisibilityChange)
 })
 </script>
 
@@ -193,7 +239,7 @@ onBeforeUnmount(() => {
                 </n-flex>
                 <div v-if="isFirstPage" style="text-align: center; margin-top: 12px;">
                     <n-text depth="3" size="12">
-                        {{ t('refreshAfter', { msg: Math.max(0, currentAutoRefreshInterval) }) }}
+                        {{ liveRefreshAvailable ? t('liveRefresh') : t('refreshAfter', { msg: Math.max(0, currentAutoRefreshInterval) }) }}
                     </n-text>
                 </div>
             </n-card>

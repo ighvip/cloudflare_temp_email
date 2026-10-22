@@ -159,6 +159,10 @@ export const MESSAGE_REGISTRY = {
       "en": "Filter current page",
       "zh": "过滤当前页"
     },
+    "liveRefresh": {
+      "en": "New mail appears instantly",
+      "zh": "有新邮件会实时显示"
+    },
     "multiAction": {
       "en": "Multi Action",
       "zh": "多选"
@@ -1854,6 +1858,10 @@ export const MESSAGE_REGISTRY = {
     "exitSimpleIndex": {
       "en": "Exit Simple",
       "zh": "退出极简"
+    },
+    "liveRefresh": {
+      "en": "New mail appears instantly",
+      "zh": "有新邮件会实时显示"
     },
     "mailCount": {
       "en": "{current} / {total} emails",

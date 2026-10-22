@@ -185,6 +185,13 @@ const fetchMailData = async (limit, offset) => {
   return await api.fetch(`/api/mails?limit=${limit}&offset=${offset}`);
 };
 
+// lightweight probe used by the mailbox live refresh
+const fetchMailVersion = async () => {
+  // a single-mail deep link is not a mailbox view, nothing to watch
+  if (mailIdQuery.value > 0) return { latestId: 0 };
+  return await api.fetch('/api/mails/version', { showLoading: false });
+};
+
 const deleteMail = async (curMailId) => {
   await api.fetch(`/api/mails/${curMailId}`, { method: 'DELETE' });
 };
@@ -378,7 +385,7 @@ onMounted(() => {
                 </div>
                 <MailBox :key="mailBoxKey" :showEMailTo="false" :showReply="openSettings.enableSendMail" :showSaveS3="openSettings.isS3Enabled"
                   :saveToS3="saveToS3" :enableUserDeleteEmail="openSettings.enableUserDeleteEmail"
-                  :fetchMailData="fetchMailData" :deleteMail="deleteMail" :showFilterInput="true"
+                  :fetchMailData="fetchMailData" :fetchMailVersion="fetchMailVersion" :deleteMail="deleteMail" :showFilterInput="true"
                   :enableMailReadStatus="openSettings.enableMailReadStatus" :updateMailReadStatus="updateMailReadStatus"
                   :narrow="true" />
               </n-tab-pane>

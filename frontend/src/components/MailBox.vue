@@ -30,6 +30,14 @@ const props = defineProps({
     default: () => { },
     required: true
   },
+  // Optional cheap "newest mail id" probe. When the parent provides it the
+  // mailbox checks it every few seconds, so new mail shows up almost
+  // immediately instead of waiting for the auto refresh interval.
+  fetchMailVersion: {
+    type: Function,
+    default: null,
+    required: false
+  },
   deleteMail: {
     type: Function,
     default: () => { },
@@ -191,23 +199,64 @@ const multiActionDeleteProgress = ref({ percentage: 0, tip: '0/0' })
 
 const { t } = useScopedI18n('components.MailBox')
 
-const setupAutoRefresh = async (autoRefresh) => {
-  // auto refresh every configAutoRefreshInterval seconds
-  autoRefreshInterval.value = configAutoRefreshInterval.value;
-  if (autoRefresh) {
-    clearInterval(timer.value);
-    timer.value = setInterval(async () => {
-      if (loading.value) return;
-      autoRefreshInterval.value--;
-      if (autoRefreshInterval.value <= 0) {
-        autoRefreshInterval.value = configAutoRefreshInterval.value;
-        await backFirstPageAndRefresh();
-      }
-    }, 1000)
-  } else {
-    clearInterval(timer.value)
-    timer.value = null
+// Live refresh: probe the newest mail id every few seconds (one index row on
+// the server) and reload the list only when it actually changed. Runs only
+// while the tab is visible and the list is on page 1, so a background tab or
+// a paginated view costs nothing.
+const LIVE_CHECK_EVERY_TICKS = 3
+const LIVE_ERROR_BACKOFF_MS = 15000
+const liveProbeBroken = ref(false)
+const liveRefreshAvailable = computed(() => typeof props.fetchMailVersion === 'function' && !liveProbeBroken.value)
+const newestMailId = computed(() => {
+  if (page.value !== 1 || rawData.value.length === 0) return 0
+  return Number(rawData.value[0].id) || 0
+})
+const pageVisible = () => typeof document === 'undefined' || document.visibilityState !== 'hidden'
+let liveTick = 0
+let liveBackoffUntil = 0
+let liveBusy = false
+
+const checkLiveRefresh = async () => {
+  if (!liveRefreshAvailable.value || liveBusy) return
+  if (!pageVisible() || loading.value || page.value !== 1) return
+  if (Date.now() < liveBackoffUntil) return
+  liveBusy = true
+  try {
+    const version = await props.fetchMailVersion()
+    const remoteId = Number(version && version.latestId) || 0
+    if (remoteId > 0 && remoteId !== newestMailId.value) {
+      // keep whatever is being read open; new mail just shows up on top
+      await refresh({ keepSelection: true })
+    }
+  } catch (error) {
+    // older worker without the endpoint, or a network hiccup: back off
+    if (error && error.status === 404) liveProbeBroken.value = true
+    liveBackoffUntil = Date.now() + LIVE_ERROR_BACKOFF_MS
+  } finally {
+    liveBusy = false
   }
+}
+
+const setupAutoRefresh = async (autoRefresh) => {
+  // auto refresh every configAutoRefreshInterval seconds, plus the live probe
+  autoRefreshInterval.value = configAutoRefreshInterval.value;
+  clearInterval(timer.value)
+  timer.value = null
+  liveTick = 0
+  if (!autoRefresh) return
+  timer.value = setInterval(async () => {
+    if (loading.value) return;
+    autoRefreshInterval.value--;
+    liveTick++;
+    if (liveTick % LIVE_CHECK_EVERY_TICKS === 0) {
+      void checkLiveRefresh();
+    }
+    if (autoRefreshInterval.value <= 0) {
+      autoRefreshInterval.value = configAutoRefreshInterval.value;
+      // full reload without resetting the page or closing the open mail
+      if (pageVisible()) await refresh({ keepSelection: true });
+    }
+  }, 1000)
 }
 
 watch(autoRefresh, async (autoRefresh, old) => {
@@ -220,7 +269,10 @@ watch([page, pageSize], async ([page, pageSize], [oldPage, oldPageSize]) => {
   }
 })
 
-const refresh = async () => {
+const refresh = async (options = {}) => {
+  // background refreshes (auto / live) keep the currently opened mail open
+  const keepSelection = options.keepSelection === true;
+  const previousMail = keepSelection ? curMail.value : null;
   try {
     const { results, count: totalCount } = await props.fetchMailData(
       pageSize.value, (page.value - 1) * pageSize.value
@@ -233,9 +285,13 @@ const refresh = async () => {
     if (totalCount > 0) {
       count.value = totalCount;
     }
-    curMail.value = null;
-    if (!compact.value && !mailListView.value && data.value.length > 0) {
-      curMail.value = data.value[0];
+    if (previousMail) {
+      curMail.value = data.value.find(mail => mail.id === previousMail.id) || null;
+    } else {
+      curMail.value = null;
+      if (!compact.value && !mailListView.value && data.value.length > 0) {
+        curMail.value = data.value[0];
+      }
     }
   } catch (error) {
     message.error(error.message || "error");
@@ -373,12 +429,21 @@ const multiActionDownload = async () => {
   }
 }
 
+// coming back to the tab: probe right away instead of waiting for the next tick
+const onVisibilityChange = () => {
+  if (!pageVisible() || !autoRefresh.value) return;
+  autoRefreshInterval.value = configAutoRefreshInterval.value;
+  void checkLiveRefresh();
+}
+
 onMounted(async () => {
   await refresh();
+  document.addEventListener('visibilitychange', onVisibilityChange)
 });
 
 onBeforeUnmount(() => {
   clearInterval(timer.value)
+  document.removeEventListener('visibilitychange', onVisibilityChange)
 })
 </script>
 
@@ -417,7 +482,7 @@ onBeforeUnmount(() => {
             show-size-picker />
           <n-switch v-model:value="autoRefresh" :round="false">
             <template #checked>
-              {{ t('refreshAfter', { msg: autoRefreshInterval }) }}
+              {{ liveRefreshAvailable ? t('liveRefresh') : t('refreshAfter', { msg: autoRefreshInterval }) }}
             </template>
             <template #unchecked>
               {{ t('autoRefresh') }}
@@ -567,7 +632,7 @@ onBeforeUnmount(() => {
         <n-pagination v-model:page="page" v-model:page-size="pageSize" :item-count="count" simple size="small" />
         <n-switch v-model:value="autoRefresh" size="small" :round="false">
           <template #checked>
-            {{ t('refreshAfter', { msg: autoRefreshInterval }) }}
+            {{ liveRefreshAvailable ? t('liveRefresh') : t('refreshAfter', { msg: autoRefreshInterval }) }}
           </template>
           <template #unchecked>
             {{ t('autoRefresh') }}

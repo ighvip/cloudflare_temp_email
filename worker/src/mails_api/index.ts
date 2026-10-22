@@ -27,6 +27,8 @@ api.post('/api/attachment/get_url', s3_attachment.getSignedGetUrl)
 
 // mail crud
 api.get('/api/mails', mails_crud.listMails)
+// must stay before any `/api/mails/:id` GET handler (there is none today)
+api.get('/api/mails/version', mails_crud.getMailsVersion)
 api.get('/api/mail/:mail_id', mails_crud.getMail)
 api.delete('/api/mails/:id', mails_crud.deleteMail)
 api.patch('/api/mails/:id/read', mails_crud.updateMailReadStatus)
